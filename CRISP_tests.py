@@ -108,6 +108,12 @@ def binary_chemical_similarity():
     print(distance3)
 
 def main():
+    tot = 0
+    for x in range(20):
+        for y in range(19-x):
+           tot+=1
+    print(tot)
+    return
     oxi2p_chemical_similarity()
 
 
