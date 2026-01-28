@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Pairwise Periodic Table (1–83)</title>
+
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    padding: 20px;
+  }
+
+  .table {
+    display: grid;
+    grid-template-columns: repeat(18, 56px);
+    grid-auto-rows: 56px;
+    gap: 4px;
+  }
+
+  .element {
+    border: 1px solid #bbb;
+    background: #eee;
+    cursor: pointer;
+    position: relative;
+    text-align: center;
+    transition: background 0.15s;
+  }
+
+  .element.selected {
+    outline: 3px solid black;
+  }
+
+  .symbol {
+    font-weight: bold;
+    font-size: 15px;
+    margin-top: 6px;
+  }
+
+  .value {
+    font-size: 11px;
+    margin-top: 2px;
+  }
+
+  .tooltip {
+    display: none;
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: black;
+    color: white;
+    padding: 4px 6px;
+    font-size: 11px;
+    white-space: nowrap;
+    z-index: 10;
+  }
+
+  .element:hover .tooltip {
+    display: block;
+  }
+</style>
+</head>
+<body>
+
+<h2>Chemical similarity based on the crystal isometry principle for 2+ oxidation state</h2>
+<p>The similarity score is the average "distance" between compounds with the same stoiciometry and one different element
+represented as the value between them. Values are not scaled between elements. i.e. a distance of 0.2 for Ca is not the same
+as a distance of 0.2 for Ba and so on</p>
+<input type="file" id="csvInput" accept=".csv">
+
+<div class="table" id="table"></div>
+
+<script>
+/* ---------- Element layout (1–83) ---------- */
+const elements = [
+  ["H",1,1],["He",1,18],
+  ["Li",2,1],["Be",2,2],["B",2,13],["C",2,14],["N",2,15],["O",2,16],["F",2,17],["Ne",2,18],
+  ["Na",3,1],["Mg",3,2],["Al",3,13],["Si",3,14],["P",3,15],["S",3,16],["Cl",3,17],["Ar",3,18],
+  ["K",4,1],["Ca",4,2],["Sc",4,3],["Ti",4,4],["V",4,5],["Cr",4,6],["Mn",4,7],["Fe",4,8],
+  ["Co",4,9],["Ni",4,10],["Cu",4,11],["Zn",4,12],["Ga",4,13],["Ge",4,14],["As",4,15],["Se",4,16],["Br",4,17],["Kr",4,18],
+  ["Rb",5,1],["Sr",5,2],["Y",5,3],["Zr",5,4],["Nb",5,5],["Mo",5,6],["Tc",5,7],["Ru",5,8],
+  ["Rh",5,9],["Pd",5,10],["Ag",5,11],["Cd",5,12],["In",5,13],["Sn",5,14],["Sb",5,15],["Te",5,16],["I",5,17],["Xe",5,18],
+  ["Cs",6,1],["Ba",6,2],
+  ["La",6,3],["Ce",7,4],["Pr",7,5],["Nd",7,6],["Pm",7,7],["Sm",7,8],["Eu",7,9],["Gd",7,10],
+  ["Tb",7,11],["Dy",7,12],["Ho",7,13],["Er",7,14],["Tm",7,15],["Yb",7,16],["Lu",7,17],
+  ["Hf",6,4],["Ta",6,5],["W",6,6],["Re",6,7],["Os",6,8],["Ir",6,9],["Pt",6,10],["Au",6,11],["Hg",6,12],
+  ["Tl",6,13],["Pb",6,14],["Bi",6,15]
+];
+
+/* ---------- Build table ---------- */
+const table = document.getElementById("table");
+const elDivs = {};
+elements.forEach(([s,r,c]) => {
+  const d = document.createElement("div");
+  d.className = "element";
+  d.style.gridRow = r;
+  d.style.gridColumn = c;
+  d.innerHTML = `
+    <div class="symbol">${s}</div>
+    <div class="value"></div>
+    <div class="tooltip"></div>
+  `;
+  d.onclick = () => lockSelection(s);
+  d.onmouseenter = () => previewSelection(s);
+  d.onmouseleave = () => restoreSelection();
+  table.appendChild(d);
+  elDivs[s] = d;
+});
+
+/* ---------- Pairwise matrix ---------- */
+let matrix = {};
+let lockedSymbol = null;
+
+/* ---------- CSV loader ---------- */
+document.getElementById("csvInput").addEventListener("change", e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => parseCSV(reader.result);
+  reader.readAsText(file);
+});
+
+function parseCSV(csv) {
+  matrix = {};
+  const rows = csv.trim().split("\n").map(r => r.split(","));
+  const symbols = rows[0].slice(1);
+
+  for (let i = 1; i < rows.length; i++) {
+    const rowSym = rows[i][0];
+    matrix[rowSym] = {};
+    for (let j = 1; j < rows[i].length; j++) {
+      const colSym = symbols[j - 1];
+      const v = parseFloat(rows[i][j]);
+      if (!isNaN(v)) matrix[rowSym][colSym] = v;
+    }
+  }
+}
+
+/* ---------- Visualization helpers ---------- */
+function applyMapping(sym, markSelected) {
+  clearDisplay();
+  if (!matrix[sym]) return;
+
+  if (markSelected) elDivs[sym].classList.add("selected");
+
+  const vals = Object.values(matrix[sym]);
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
+
+  for (const other in matrix[sym]) {
+    if (!elDivs[other] || other === sym) continue;
+    const v = matrix[sym][other];
+    const t = (v - min) / (max - min || 1);
+    const color = `hsl(${240 - t * 240}, 70%, 60%)`;
+
+    const el = elDivs[other];
+    el.style.background = color;
+    el.querySelector(".value").textContent = v.toFixed(2);
+    el.querySelector(".tooltip").textContent = `${sym} ↔ ${other}: ${v}`;
+  }
+}
+
+function clearDisplay() {
+  Object.values(elDivs).forEach(d => {
+    d.classList.remove("selected");
+    d.style.background = "#eee";
+    d.querySelector(".value").textContent = "";
+    d.querySelector(".tooltip").textContent = "";
+  });
+}
+
+/* ---------- Interaction modes ---------- */
+function previewSelection(sym) {
+  applyMapping(sym, false);
+}
+
+function lockSelection(sym) {
+  lockedSymbol = sym;
+  applyMapping(sym, true);
+}
+
+function restoreSelection() {
+  if (lockedSymbol) applyMapping(lockedSymbol, true);
+  else clearDisplay();
+}
+</script>
+
+</body>
+</html>

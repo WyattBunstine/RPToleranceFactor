@@ -1125,7 +1125,7 @@ def old_plot():
 
 def load_dataset(paper_dataset = False, artif_dataset = False):
 
-    raw_df = pd.read_csv("Utils/RP_Datasets/Ruddlesden-Popper_expanded_data_test.csv")
+    raw_df = pd.read_csv("RP_Datasets/Ruddlesden-Popper_expanded_data_test.csv")
     print(len(raw_df))
     df = pandas.DataFrame(
         columns=["struct", "n", "A", "B", "X", "Aox", "Box", "Cox", "RaIX", "RaXII", "Rb", "Rc", "exp", "EAH",
@@ -1150,7 +1150,7 @@ def load_dataset(paper_dataset = False, artif_dataset = False):
             columns=["struct", "n", "A", "B", "X", "RaIX", "Rb", "Rc", "RaXII", "Aox", "Box", "Cox", "EAH", "exp",
                      "isperov", "SG"])
     if artif_dataset:
-        artif_df = pd.read_csv("Utils/RP_Datasets/Ruddlesden-Popper_artificial_data.csv")
+        artif_df = pd.read_csv("RP_Datasets/Ruddlesden-Popper_artificial_data.csv")
         print(artif_df)
         print(raw_df)
         raw_df = pd.concat([raw_df,artif_df])
@@ -1413,6 +1413,186 @@ def plot():
 
     plt.show()
 
+    show_theoretical = False
+    show_non_perov = True
+    labels = True
+
+    df, maxn, neq0 = load_dataset(artif_dataset=True)
+
+    oxi_probs = get_ICSD_oxi_state_probs()
+
+    fig, ax = plt.subplots()
+
+    x_vals_exp, y_vals_exp, c_exp = [], [], []
+
+    x_vals_t, y_vals_t, c_t = [], [], []
+
+    x_vals_non_perov, y_vals_non_perov, c_non_perov = [], [], []
+
+    tot = 0
+    num = 0
+    perovs = 0
+    rps = 0
+    for index, row in df.iterrows():
+        if row["n"] >= 0:
+            #if not pymatgen.core.periodic_table.get_el_sp(row["X"]).is_chalcogen: continue
+            if not row["X"] == "O": continue
+
+            n = row["n"]
+            if row["X"] == "H": row["Rc"] = 1.4
+            if row["B"] == "Mn" and row["Box"] == 6: row["Rb"] = 0.255
+
+            no_IX_XII = False
+
+            #if row["RaIX"] == 0.0 and row["RaXII"] == 0.0: row["RaIX"], row["RaXII"], no_IX_XII = 10, -10, True
+            #if row["RaIX"] == 0.0: row["RaIX"], no_IX_XII = row["RaXII"] * 0.911, True
+            #if row["RaXII"] == 0.0: row["RaXII"], no_IX_XII = row["RaIX"] / 0.911, True
+
+            if row["RaIX"] == 0.0 and row["RaXII"] == 0.0: row["RaIX"], row["RaXII"], no_IX_XII = 10, -15+ index * 0.0001, True
+            if row["RaIX"] == 0.0: row["RaXII"], no_IX_XII = -5+ index * 0.0001, True
+            if row["RaXII"] == 0.0: row["RaXII"], no_IX_XII = -10+ index * 0.0001, True
+
+            t = get_tolerance_factor("GS", row)
+
+
+
+            y_val = (n + index * 0.0001)
+            name = row["A"] + row["B"] + row["X"]
+
+            t = row["RaXII"]
+            y_val = row["Rb"]
+
+            if (not row["exp"]) and row["isperov"]:
+                name = row["A"] + row["B"] + row["X"]
+                if name != "":
+                    if row["n"] == 0: perovs+=1
+                    else: rps+=1
+
+                    x_vals_exp.append(t)
+                    y_vals_exp.append(y_val)
+                    if name not in neq0: c_exp.append(1.5)
+                    else: c_exp.append(maxn[name])
+
+                    if name in maxn.keys() and t > 0:
+                        tot += (t - maxn[name]) ** 2
+                        num += 1
+            elif (row["exp"]) and (row["isperov"]):
+                name = row["A"] + row["B"] + row["X"]
+                if name != "":
+                    x_vals_t.append(t)
+                    y_vals_t.append(y_val)
+                    if no_IX_XII:
+                        c_t.append(1.5)
+                    else:
+                        c_t.append(maxn[name])
+            elif (not row["exp"]) and (not row["isperov"]):
+                name = row["A"] + row["B"] + row["X"]
+                if name != "":
+                    x_vals_non_perov.append(t)
+                    y_vals_non_perov.append(y_val)
+                    if no_IX_XII or name not in neq0 or maxn[name] == 0:
+                        c_non_perov.append(3.5)
+                    else:
+                        c_non_perov.append(maxn[name])
+
+            if (((not row["exp"]) and (row["isperov"] or show_non_perov) and row["n"] > -1) or (
+                    show_theoretical and row["n"] >= 0)) and labels:
+                text = r"$" + row["A"] + "_" + str(int(n + 1)) + row["B"] + "_" + str(int(n)) + row["X"] + "_{" + str(
+                    int(3 * n + 1)) + "}$ " + str(row["SG"])
+                #text = str(row["SG"])
+                if n == 0 and row["isperov"]:
+                    print("ysey")
+                if False:
+                    ax.text(t, y_val, text, rotation=50, fontsize=10, alpha=0.25, color="red")
+                else:
+                    ax.text(t, y_val, text, rotation=50, fontsize=10, alpha=0.25, color="black")
+
+    scatter = ax.scatter(x_vals_exp, y_vals_exp, c=c_exp, marker="o", cmap="Dark2", vmin=0, s=100, vmax=5,
+                         label="Experimental structures")
+    if show_theoretical:
+        ax.scatter(x_vals_t, y_vals_t, c=c_t, marker="x", cmap="Dark2", vmin=0, s=100, vmax=5,
+                   label="Theoretical structures")
+
+    if show_non_perov:
+        ax.scatter(x_vals_non_perov, y_vals_non_perov, c=c_non_perov, marker="_", cmap="Dark2", vmin=0, s=100, vmax=5,
+                   label="Non Perovskite/Ruddlesden-Popper structures")
+
+    print("num_exp_perovs: " + str(perovs) + "\nnum_exp_rps: " + str(rps))
+
+    plt.legend()
+    ax.set_xlabel("Tolerance factor (T)")
+    ax.set_ylabel("Homology (n number)")
+
+    ax.set_xlabel("Radius of A site")
+    ax.set_ylabel("Radius of B site")
+    #ax.set_ylim([-0.1, 5.5])
+    #ax.set_xlim([0.0, 1])
+    ax.set_title(r"Tolerance Factor")
+    ax.grid()
+
+    fig.colorbar(scatter, ax=ax, label="Max Homology")
+
+    plt.show()
+
+
+def bar_plot():
+    df, maxn, neq0 = load_dataset(artif_dataset=False)
+
+    fig, ax = plt.subplots()
+    bin_width = 0.1
+    bins = np.arange(0.5,1.3,bin_width)
+    perov_bins = np.zeros(len(bins))
+    RP_bins = np.zeros(len(bins))
+    non_perov_bins = np.zeros(len(bins))
+    non_RP_bins = np.zeros(len(bins))
+    for index, row in df.iterrows():
+        if row["n"] >= 0:
+            if not pymatgen.core.periodic_table.get_el_sp(row["X"]).is_chalcogen: continue
+            # if not row["X"] == "O": continue
+
+            if row["X"] == "H": row["Rc"] = 1.4
+            if row["B"] == "Mn" and row["Box"] == 6: row["Rb"] = 0.255
+
+            # if row["RaIX"] == 0.0 and row["RaXII"] == 0.0: row["RaIX"], row["RaXII"], no_IX_XII = 10, -10, True
+            # if row["RaIX"] == 0.0: row["RaIX"], no_IX_XII = row["RaXII"] * 0.911, True
+            # if row["RaXII"] == 0.0: row["RaXII"], no_IX_XII = row["RaIX"] / 0.911, True
+
+            if row["RaIX"] == 0.0 and row["RaXII"] == 0.0: row["RaIX"], row[
+                "RaXII"], no_IX_XII = 10, -15 + index * 0.0001, True
+            if row["RaIX"] == 0.0: row["RaXII"], no_IX_XII = -5 + index * 0.0001, True
+            if row["RaXII"] == 0.0: row["RaXII"], no_IX_XII = -10 + index * 0.0001, True
+
+            t = get_tolerance_factor("GS", row)
+            bin = np.argmin(np.abs(bins-t))
+
+            if row["isperov"]:
+                if row["n"] == 0:
+                    perov_bins[bin] +=1
+                else:
+                    RP_bins[bin] +=1
+            else:
+                if row["n"] == 0:
+                    non_perov_bins[bin] += 1
+                else:
+                    non_RP_bins[bin] +=1
+    bottom = np.zeros(len(bins))
+    ax.bar(bins, perov_bins, bin_width, label="Perovskites", bottom=bottom)
+    bottom += perov_bins
+    ax.bar(bins, non_perov_bins, bin_width, label=r"Non-perovskites $ABX_3$", bottom=bottom)
+    bottom += non_perov_bins
+    ax.bar(bins, RP_bins, bin_width, label="Ruddlesden-Poppers", bottom=bottom)
+    bottom += RP_bins
+    ax.bar(bins, non_RP_bins, bin_width, label=r"non-Ruddlesden-Popper $A_{n+1}B_nX_{3n+1}$", bottom=bottom)
+
+    plt.legend()
+    ax.set_xlabel("Tolerance factor (unitless)")
+    ax.set_ylabel("Number of materials")
+
+    ax.set_title(r"Goldschmidt Tolerance Factor")
+    ax.grid()
+
+    plt.show()
+
 
 def plot_3d():
     show_theoretical = False
@@ -1520,7 +1700,6 @@ def plot_3d():
 
 
 if __name__ == "__main__":
-    gen_all_combinations()
-    plot()
+    bar_plot()
     #search_all()
     #make_raw_csv_all()
