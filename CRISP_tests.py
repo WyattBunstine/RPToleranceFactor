@@ -9,6 +9,7 @@ import pandas as pd
 import os
 import time
 from matplotlib import pyplot as plt
+import pickle
 
 
 def sym_scores_debug():
@@ -53,18 +54,18 @@ def plot_214():
 def oxi2p_chemical_similarity(download=False):
     target_oxi_state = 2
     data_loc = "data/cifs/"
-    data_files_name = "scores_2+_unnorm"
+    data_files_name = "scores_2+_unnorm_all_materials"
     if download:
         API_KEY = "cZPQqY0nH2aOGBqCGBfbibyF00XJZXWh"
         with MPRester(API_KEY) as mpr:
             MP_mats = mpr.materials.summary.search(num_elements=(2, 5), all_fields=False, energy_above_hull=(0.0, 0.1),
-                                                elements=["O"], fields=["composition", "material_id", "structure",
+                                                fields=["composition", "material_id", "structure",
                                                         "energy_above_hull",
                                                         "theoretical"],theoretical=False)
 
         for mat in MP_mats:
             mat["structure"].to(
-                filename=data_loc + mat["composition"].reduced_formula + ".cif")
+                filename=data_loc + mat["composition"].reduced_formula + "_"+ mat["material_id"] + ".cif")
     mats = []
     k = 100
     num_dir = len(os.listdir(data_loc))
@@ -72,7 +73,7 @@ def oxi2p_chemical_similarity(download=False):
         if ".cif" in file:
             print("file num " + str(index) + " of " + str(num_dir),end="\r")
             struct = pymatgen.core.Structure.from_file(data_loc + file)
-            if len(struct.sites) < k:
+            if len(struct.sites) < k/2:
                 oxi_states = struct.composition.oxi_state_guesses()
                 if len(oxi_states) == 0:
                     oxi_states = struct.composition.oxi_state_guesses(all_oxi_states=True)
@@ -81,6 +82,9 @@ def oxi2p_chemical_similarity(download=False):
                     #crystal.cell = crystal.cell / numpy.linalg.norm(crystal.cell)
                     pdd = amd.PDD(crystal, k)
                     mats.append([struct.composition, pdd, oxi_states[0]])
+    with open(data_files_name + "_k" + str(k) + ".pickle", "wb") as f:
+        pickle.dump(mats, f)
+
     data_points = [[[] for x in range(83)] for x in range(83)]
     data_array = np.zeros((83, 83, 3))
     element_total_structures = np.zeros(83)
