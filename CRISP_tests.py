@@ -52,7 +52,8 @@ def plot_214():
 
 def oxi2p_chemical_similarity(download=False):
     target_oxi_state = 2
-    data_loc = "data/oxi2p_cifs/"
+    data_loc = "data/cifs/"
+    data_files_name = "scores_2+_unnorm"
     if download:
         API_KEY = "cZPQqY0nH2aOGBqCGBfbibyF00XJZXWh"
         with MPRester(API_KEY) as mpr:
@@ -65,7 +66,7 @@ def oxi2p_chemical_similarity(download=False):
             mat["structure"].to(
                 filename=data_loc + mat["composition"].reduced_formula + ".cif")
     mats = []
-    k = 50
+    k = 100
     num_dir = len(os.listdir(data_loc))
     for index, file in enumerate(os.listdir(data_loc)):
         if ".cif" in file:
@@ -77,11 +78,12 @@ def oxi2p_chemical_similarity(download=False):
                     oxi_states = struct.composition.oxi_state_guesses(all_oxi_states=True)
                 if len(oxi_states) > 0 and target_oxi_state in [oxi_states[0][x] for x in oxi_states[0].keys()]:
                     crystal = amd.CifReader(data_loc + file).read()
-                    crystal.cell = crystal.cell / numpy.linalg.norm(crystal.cell)
+                    #crystal.cell = crystal.cell / numpy.linalg.norm(crystal.cell)
                     pdd = amd.PDD(crystal, k)
                     mats.append([struct.composition, pdd, oxi_states[0]])
-
-    data_array = np.zeros((83, 83, 2))
+    data_points = [[[] for x in range(83)] for x in range(83)]
+    data_array = np.zeros((83, 83, 3))
+    element_total_structures = np.zeros(83)
     elm_1 = 0
     elm_2 = 0
     start = time.time()
@@ -99,6 +101,7 @@ def oxi2p_chemical_similarity(download=False):
             for index_2, mat_2 in enumerate(mats[index_1+1:]):
                 comp_2 = mat_2[0].reduced_composition
                 comp_2_pdd = mat_2[1]
+                comp_2_oxi_states = mat_2[2]
                 if comp_1.anonymized_formula != comp_2.anonymized_formula: continue
                 if comp_1.reduced_formula == comp_2.reduced_formula: continue
                 same_formula = True
@@ -106,7 +109,8 @@ def oxi2p_chemical_similarity(download=False):
                 for tmp_elm_2 in comp_2.elements:
                     if tmp_elm_2 in comp_1.elements and comp_1[tmp_elm_2] == comp_2[tmp_elm_2]:
                         continue
-                    elif (elm_2 == 0 or elm_2 == tmp_elm_2) and comp_1[elm_1] == comp_2[tmp_elm_2]:
+                    elif ((elm_2 == 0 or elm_2 == tmp_elm_2) and comp_1[elm_1] == comp_2[tmp_elm_2] and
+                          comp_2_oxi_states[tmp_elm_2.symbol] == target_oxi_state):
                         elm_2 = tmp_elm_2
                     else:
                         same_formula = False
@@ -114,14 +118,16 @@ def oxi2p_chemical_similarity(download=False):
                 if elm_2.Z > 83: continue
 
                 distance1 = amd.EMD(comp_1_pdd, comp_2_pdd)
+                element_total_structures[elm_1.Z-1] += 1
                 data_array[elm_1.Z-1][elm_2.Z-1][0] += distance1
                 data_array[elm_1.Z-1][elm_2.Z-1][1] += 1
                 data_array[elm_2.Z - 1][elm_1.Z - 1][0] += distance1
                 data_array[elm_2.Z - 1][elm_1.Z - 1][1] += 1
+                data_points[elm_1.Z-1][elm_2.Z-1].append(distance1)
+                data_points[elm_2.Z - 1][elm_1.Z - 1].append(distance1)
 
 
-    similarity_scores = np.zeros((83, 83))
-    scimilarity_stdev = np.zeros((83,83))
+    similarity_scores = np.zeros((83,83))
     for i in range(83):
         for j in range(83):
             if data_array[i][j][1] != 0:
@@ -131,7 +137,30 @@ def oxi2p_chemical_similarity(download=False):
 
     elements = [pymatgen.core.periodic_table.Element.from_Z(x).symbol for x in range(1, 84)]
     df = pd.DataFrame(similarity_scores, index=elements, columns=elements)
-    df.to_csv("scores_2+_norm.csv", index=True, header=True)
+    df.to_csv(data_files_name + "_values.csv", index=True, header=True)
+
+    scimilarity_stdev = np.zeros((83,83))
+    for i in range(83):
+        for j in range(83):
+            for x in data_points[i][j]:
+                scimilarity_stdev[i][j] += ((x - similarity_scores[i][j])**2)/len(data_points[i][j])
+
+    elements = [pymatgen.core.periodic_table.Element.from_Z(x).symbol for x in range(1, 84)]
+    df = pd.DataFrame(scimilarity_stdev, index=elements, columns=elements)
+    df.to_csv(data_files_name + "_stdev.csv", index=True, header=True)
+
+    total_samples = np.zeros((83, 83))
+    for i in range(83):
+        for j in range(83):
+            if i == j:
+                total_samples[i][j] = element_total_structures[i]
+            else:
+                total_samples[i][j] = len(data_points[i][j])
+
+    elements = [pymatgen.core.periodic_table.Element.from_Z(x).symbol for x in range(1, 84)]
+    df = pd.DataFrame(total_samples, index=elements, columns=elements)
+    df.to_csv(data_files_name + "_samples.csv", index=True, header=True)
+
 
 
 def binary_chemical_similarity():
@@ -174,8 +203,8 @@ def binary_chemical_similarity():
 
 def main():
     #binary_chemical_similarity()
-    #oxi2p_chemical_similarity()
-    plot_214()
+    oxi2p_chemical_similarity()
+    #plot_214()
 
 if __name__ =="__main__":
     main()

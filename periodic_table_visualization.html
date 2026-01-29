@@ -15,6 +15,7 @@
     grid-template-columns: repeat(18, 56px);
     grid-auto-rows: 56px;
     gap: 4px;
+    overflow: visible;
   }
 
   .element {
@@ -42,7 +43,8 @@
   }
 
   .tooltip {
-    display: none;
+    display: block;
+    visibility: hidden;
     position: absolute;
     bottom: 100%;
     left: 50%;
@@ -56,6 +58,7 @@
   }
 
   .element:hover .tooltip {
+    visibility: visible;
     display: block;
   }
 </style>
@@ -67,6 +70,8 @@
 represented as the value between them. Values are not scaled between elements. i.e. a distance of 0.2 for Ca is not the same
 as a distance of 0.2 for Ba and so on</p>
 <input type="file" id="csvInput" accept=".csv">
+<input type="file" id="stdevInput" accept=".csv">
+<input type="file" id="totalsInput" accept=".csv">
 
 <div class="table" id="table"></div>
 
@@ -81,8 +86,8 @@ const elements = [
   ["Rb",5,1],["Sr",5,2],["Y",5,3],["Zr",5,4],["Nb",5,5],["Mo",5,6],["Tc",5,7],["Ru",5,8],
   ["Rh",5,9],["Pd",5,10],["Ag",5,11],["Cd",5,12],["In",5,13],["Sn",5,14],["Sb",5,15],["Te",5,16],["I",5,17],["Xe",5,18],
   ["Cs",6,1],["Ba",6,2],
-  ["La",6,3],["Ce",7,4],["Pr",7,5],["Nd",7,6],["Pm",7,7],["Sm",7,8],["Eu",7,9],["Gd",7,10],
-  ["Tb",7,11],["Dy",7,12],["Ho",7,13],["Er",7,14],["Tm",7,15],["Yb",7,16],["Lu",7,17],
+  ["La",7,3],["Ce",7,4],["Pr",7,5],["Nd",7,6],["Pm",7,7],["Sm",7,8],["Eu",7,9],["Gd",7,10],
+  ["Tb",7,11],["Dy",7,12],["Ho",7,13],["Er",7,14],["Tm",7,15],["Yb",7,16],["Lu",6,3],
   ["Hf",6,4],["Ta",6,5],["W",6,6],["Re",6,7],["Os",6,8],["Ir",6,9],["Pt",6,10],["Au",6,11],["Hg",6,12],
   ["Tl",6,13],["Pb",6,14],["Bi",6,15]
 ];
@@ -109,6 +114,8 @@ elements.forEach(([s,r,c]) => {
 
 /* ---------- Pairwise matrix ---------- */
 let matrix = {};
+let stdevMatrix = {};
+let totals = {};
 let lockedSymbol = null;
 
 /* ---------- CSV loader ---------- */
@@ -117,6 +124,22 @@ document.getElementById("csvInput").addEventListener("change", e => {
   if (!file) return;
   const reader = new FileReader();
   reader.onload = () => parseCSV(reader.result);
+  reader.readAsText(file);
+});
+
+document.getElementById("stdevInput").addEventListener("change", e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => parseStdevCSV(reader.result);
+  reader.readAsText(file);
+});
+
+document.getElementById("totalsInput").addEventListener("change", e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => parseTotalsCSV(reader.result);
   reader.readAsText(file);
 });
 
@@ -136,6 +159,40 @@ function parseCSV(csv) {
   }
 }
 
+function parseTotalsCSV(csv) {
+  totals = {};
+  const rows = csv.trim().split("\n").map(r => r.split(","));
+  const symbols = rows[0].slice(1);
+
+  for (let i = 1; i < rows.length; i++) {
+    const rowSym = rows[i][0];
+    totals[rowSym] = {};
+    for (let j = 1; j < rows[i].length; j++) {
+      const colSym = symbols[j - 1];
+      const v = parseFloat(rows[i][j]);
+      if (!isNaN(v)) totals[rowSym][colSym] = v;
+    }
+  }
+}
+
+
+function parseStdevCSV(csv) {
+  stdevMatrix = {};
+  const rows = csv.trim().split("\n").map(r => r.split(","));
+  const symbols = rows[0].slice(1);
+
+  for (let i = 1; i < rows.length; i++) {
+    const rowSym = rows[i][0];
+    stdevMatrix[rowSym] = {};
+    for (let j = 1; j < rows[i].length; j++) {
+      const colSym = symbols[j - 1];
+      const v = parseFloat(rows[i][j]);
+      if (!isNaN(v)) stdevMatrix[rowSym][colSym] = v;
+    }
+  }
+}
+
+
 /* ---------- Visualization helpers ---------- */
 function applyMapping(sym, markSelected) {
   clearDisplay();
@@ -149,14 +206,28 @@ function applyMapping(sym, markSelected) {
 
   for (const other in matrix[sym]) {
     if (!elDivs[other] || other === sym) continue;
+
     const v = matrix[sym][other];
+    const sd = stdevMatrix?.[sym]?.[other];
+    const total = totals?.[sym]?.[other];
+
     const t = (v - min) / (max - min || 1);
     const color = `hsl(${240 - t * 240}, 70%, 60%)`;
 
     const el = elDivs[other];
     el.style.background = color;
-    el.querySelector(".value").textContent = v.toFixed(2);
-    el.querySelector(".tooltip").textContent = `${sym} ↔ ${other}: ${v}`;
+
+    // Main number shown in cell
+    el.querySelector(".value").textContent =
+      sd !== undefined ? `${v.toFixed(2)} ± ${sd.toFixed(2)}` : v.toFixed(2);
+
+    // Tooltip
+    el.querySelector(".tooltip").innerHTML = `
+      ${sym} ↔ ${other}<br>
+      Distance: ${v.toFixed(3)}<br>
+      Std dev: ${sd !== undefined ? sd.toFixed(3) : "N/A"}<br>
+      Samples: ${total ?? "N/A"}
+    `;
   }
 }
 
@@ -165,7 +236,7 @@ function clearDisplay() {
     d.classList.remove("selected");
     d.style.background = "#eee";
     d.querySelector(".value").textContent = "";
-    d.querySelector(".tooltip").textContent = "";
+    //d.querySelector(".tooltip").textContent = "";
   });
 }
 

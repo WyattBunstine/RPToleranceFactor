@@ -1700,6 +1700,7 @@ def plot_3d():
 
 
 if __name__ == "__main__":
-    bar_plot()
+    #bar_plot()
     #search_all()
     #make_raw_csv_all()
+    plot()
