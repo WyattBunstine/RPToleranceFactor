@@ -1125,7 +1125,7 @@ def old_plot():
 
 def load_dataset(paper_dataset = False, artif_dataset = False):
 
-    raw_df = pd.read_csv("RP_Datasets/Ruddlesden-Popper_expanded_data_test.csv")
+    raw_df = pd.read_csv("RP_Datasets/cif_datasets/Ruddlesden-Popper_expanded_data_test.csv")
     print(len(raw_df))
     df = pandas.DataFrame(
         columns=["struct", "n", "A", "B", "X", "Aox", "Box", "Cox", "RaIX", "RaXII", "Rb", "Rc", "exp", "EAH",
@@ -1150,7 +1150,7 @@ def load_dataset(paper_dataset = False, artif_dataset = False):
             columns=["struct", "n", "A", "B", "X", "RaIX", "Rb", "Rc", "RaXII", "Aox", "Box", "Cox", "EAH", "exp",
                      "isperov", "SG"])
     if artif_dataset:
-        artif_df = pd.read_csv("RP_Datasets/Ruddlesden-Popper_artificial_data.csv")
+        artif_df = pd.read_csv("RP_Datasets/cif_datasets/Ruddlesden-Popper_artificial_data.csv")
         print(artif_df)
         print(raw_df)
         raw_df = pd.concat([raw_df,artif_df])

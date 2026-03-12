@@ -1,0 +1,22 @@
+{
+  "candidate_count": 1159,
+  "processed_count": 1159,
+  "rp_like_true": 112,
+  "rp_like_false": 1047,
+  "errors": 0,
+  "mean_rp_confidence_all": 0.461983,
+  "mean_rp_confidence_true": 0.935723,
+  "results_csv": "RP_Datasets/rp_like_214_all_results.csv",
+  "thresholds": {
+    "strict_connectivity": true,
+    "min_rp_stoich_score": 0.7,
+    "min_octa_fraction_score": 0.2,
+    "min_layered_network_score": 0.35,
+    "min_rp_confidence": 0.6,
+    "min_b_octahedral_site_count": 8,
+    "min_b_site_octa_fraction": 0.5,
+    "min_b_largest_network_fraction": 0.25,
+    "min_b_mean_degree": 1.5,
+    "min_b_corner_sharing_fraction": 0.0
+  }
+}

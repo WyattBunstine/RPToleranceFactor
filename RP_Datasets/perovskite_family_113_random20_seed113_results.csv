@@ -1,0 +1,21 @@
+file,formula,classification,family_match,confidence,anion_to_cation_ratio,score_abx3_like,score_layered_rp_like,network_score,a_site_coordination_fraction
+data/cifs/BaBiO3_mp-23482.cif,Ba1 Bi1 O3,likely perovskite-family (ABX3/double-perovskite-like),True,0.985,1.5,1.0,0.882352941176471,0.8999999999999999,0.5
+data/cifs/BaLiH3_mp-23818.cif,Ba1 Li1 H3,likely perovskite-family (ABX3/double-perovskite-like),True,0.887,1.5,1.0,0.882352941176471,0.7499999999999999,0.5
+data/cifs/BaMnO3_mp-1205336.cif,Ba1 Mn1 O3,likely perovskite-family (ABX3/double-perovskite-like),True,0.717,1.5,1.0,0.882352941176471,0.48749999999999993,0.5
+data/cifs/Ca3GeN_mp-11822.cif,Ca3 Ge1 N1,unlikely perovskite-family,False,0.0,0.6666666666666666,0.0,0.0,0.0,0.0
+data/cifs/CeSiAs3_mp-1204796.cif,Ce1 Si1 As3,unlikely perovskite-family,False,0.4,1.5,1.0,0.882352941176471,0.0,0.0
+data/cifs/FeBiO3_mp-23501.cif,Fe1 Bi1 O3,unlikely perovskite-family,False,0.663,1.5,1.0,0.882352941176471,0.40384615384615385,0.0
+data/cifs/HoGaO3_mp-755416.cif,Ho1 Ga1 O3,likely perovskite-family (ABX3/double-perovskite-like),True,0.985,1.5,1.0,0.882352941176471,0.8999999999999999,0.5
+data/cifs/InCo3N_mp-1068786.cif,In1 Co3 N1,unlikely perovskite-family,False,0.0,0.25,0.0,0.0,0.0,0.0
+data/cifs/KCrF3_mp-556365.cif,K1 Cr1 F3,likely perovskite-family (ABX3/double-perovskite-like),True,0.985,1.5,1.0,0.882352941176471,0.8999999999999999,0.5
+data/cifs/KFeBr3_mp-23348.cif,K1 Fe1 Br3,likely perovskite-family (ABX3/double-perovskite-like),True,0.717,1.5,1.0,0.882352941176471,0.48749999999999993,0.5
+data/cifs/KHgF3_mp-7483.cif,K1 Hg1 F3,likely perovskite-family (ABX3/double-perovskite-like),True,0.985,1.5,1.0,0.882352941176471,0.8999999999999999,0.5
+data/cifs/LaFeGe3_mp-19743.cif,La1 Fe1 Ge3,likely perovskite-family (ABX3/double-perovskite-like),True,0.79,1.5,1.0,0.882352941176471,0.6,0.5
+data/cifs/NaHgCl3_mp-608490.cif,Na1 Hg1 Cl3,unlikely perovskite-family,False,0.634,1.5,1.0,0.882352941176471,0.36,0.0
+data/cifs/NaMnCl3_mp-27176.cif,Na1 Mn1 Cl3,unlikely perovskite-family,False,0.663,1.5,1.0,0.882352941176471,0.40384615384615385,0.0
+data/cifs/NdNiSb3_mp-571167.cif,Nd1 Ni1 Sb3,likely perovskite-family (ABX3/double-perovskite-like),True,0.823,1.5,1.0,0.882352941176471,0.65,0.5
+data/cifs/Pr3AlN_mp-1094072.cif,Pr3 Al1 N1,unlikely perovskite-family,False,0.0,0.25,0.0,0.0,0.0,0.0
+data/cifs/ReO3F_mp-573051.cif,Re1 O3 F1,unlikely perovskite-family,False,0.074,4.0,0.0,0.0,0.0375,0.0
+data/cifs/SrMnO3_mp-1017466.cif,Sr1 Mn1 O3,likely perovskite-family (ABX3/double-perovskite-like),True,0.965,1.5,1.0,0.882352941176471,0.8699999999999999,0.5
+data/cifs/TiZnO3_mp-14142.cif,Ti1 Zn1 O3,unlikely perovskite-family,False,0.663,1.5,1.0,0.882352941176471,0.40384615384615385,0.0
+data/cifs/ZrPbS3_mp-20244.cif,Zr1 Pb1 S3,likely perovskite-family (ABX3/double-perovskite-like),True,0.717,1.5,1.0,0.882352941176471,0.48749999999999993,0.5

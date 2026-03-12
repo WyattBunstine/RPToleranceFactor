@@ -1,0 +1,14 @@
+{
+  "candidate_count": 1481,
+  "processed_count": 1481,
+  "family_match_true": 490,
+  "family_match_false": 991,
+  "errors": 0,
+  "classification_counts": {
+    "unlikely perovskite-family": 991,
+    "likely perovskite-family (ABX3/double-perovskite-like)": 490
+  },
+  "mean_confidence_all": 0.503854,
+  "mean_confidence_true": 0.993845,
+  "results_csv": "RP_Datasets/perovskite_family_113_all1481_results.csv"
+}
