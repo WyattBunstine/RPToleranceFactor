@@ -66,6 +66,7 @@ def oxi2p_chemical_similarity(download=False):
         for mat in MP_mats:
             mat["structure"].to(
                 filename=data_loc + mat["composition"].reduced_formula + "_"+ mat["material_id"] + ".cif")
+    return
     mats = []
     k = 100
     num_dir = len(os.listdir(data_loc))
@@ -207,7 +208,7 @@ def binary_chemical_similarity():
 
 def main():
     #binary_chemical_similarity()
-    oxi2p_chemical_similarity()
+    oxi2p_chemical_similarity(True)
     #plot_214()
 
 if __name__ =="__main__":

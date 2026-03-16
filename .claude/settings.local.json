@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(venv/Scripts/python.exe -c \":*)",
+      "Read(//tmp/**)",
+      "Bash(cd \"C:/Users/wyatt/PycharmProjects/RPToleranceFactor\" && venv/Scripts/python.exe -m py_compile crystal_graph_v2.py && echo \"syntax OK\" 2>&1)",
+      "Bash(cd \"C:/Users/wyatt/PycharmProjects/RPToleranceFactor\" && venv/Scripts/python.exe test_v2.py)",
+      "Bash(cd \"C:/Users/wyatt/PycharmProjects/RPToleranceFactor\" && venv/Scripts/python.exe -c \"import pymatgen; print\\(pymatgen.__version__\\)\")",
+      "Bash(cd \"C:/Users/wyatt/PycharmProjects/RPToleranceFactor\" && venv/Scripts/python.exe -c \"from pymatgen.core import Element; print\\('ok'\\)\")",
+      "Bash(cd \"C:/Users/wyatt/PycharmProjects/RPToleranceFactor\" && venv/Scripts/python.exe -c \"from pymatgen.core import Element; e = Element\\('O'\\); print\\(dir\\(e\\)\\)\" 2>&1)",
+      "Bash(cd \"C:/Users/wyatt/PycharmProjects/RPToleranceFactor/venv/Lib/site-packages/pymatgen/core\" && python -c \"\nimport gzip, json\nwith gzip.open\\('periodic_table.json.gz', 'rt'\\) as f:\n    data = json.load\\(f\\)\nO = data['O']\nprint\\([k for k in O.keys\\(\\) if 'electro' in k.lower\\(\\) or 'allen' in k.lower\\(\\)]\\)\nprint\\('All keys:', list\\(O.keys\\(\\)\\)[:30]\\)\n\" 2>&1)",
+      "Bash(cd \"C:/Users/wyatt/PycharmProjects/RPToleranceFactor\" && venv/Scripts/python.exe -m py_compile crystal_graph_v2.py && echo \"syntax OK\")",
+      "Read(//mnt/c/Users/wyatt/PycharmProjects/**)",
+      "Bash(source venv/Scripts/activate)",
+      "Bash(python -c \"import sklearn; print\\(''sklearn'', sklearn.__version__\\)\")",
+      "Bash(python -c \"import numpy; print\\(''numpy'', numpy.__version__\\)\")",
+      "Bash(cd \"C:/Users/wyatt/PycharmProjects/RPToleranceFactor\" && python run_dataset_test.py 2>&1)",
+      "Bash(python -c \"\ncontent = open\\('C:/Users/wyatt/PycharmProjects/RPToleranceFactor/crystal_graph_dataset_v2.py', encoding='utf-8'\\).read\\(\\)\ncontent = content.replace\\('\\\\u2265', '>='\\)\nopen\\('C:/Users/wyatt/PycharmProjects/RPToleranceFactor/crystal_graph_dataset_v2.py', 'w', encoding='utf-8'\\).write\\(content\\)\nprint\\('done'\\)\n\")"
+    ]
+  }
+}
