@@ -1,0 +1,1559 @@
+
+======================================================================
+✗ Suite: GED node-matching tests (match_nodes_ged) — cost, unassigned counts
+  File: data/unit_tests/test_ged.json
+  Builder: crystal_graph_v4
+  Results: 113/141 passed, 28 failed, 0 error
+  Symmetry: 141/141 symmetric
+  By category:
+    ✗ core          77/78 passed, 1 failed  [sym 78/78]
+    ✗ formula_unit  4/20 passed, 16 failed  [sym 20/20]
+    ✓ core_consistency  20/20 passed  [sym 20/20]
+    ✗ reach         0/4 passed, 4 failed  [sym 4/4]
+    ✗ defect        9/14 passed, 5 failed  [sym 14/14]
+    ✗ defect_consistency  3/5 passed, 2 failed  [sym 5/5]
+======================================================================
+
+--- Category: core  (77/78 passed) ---
+
+  ✓ [ged] srtio3_vs_srtio3_ged
+      SrTiO3 vs itself: self-comparison must return cost=0 with all nodes assigned
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=1
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Self-comparison must return exactly zero cost
+          cost=0.0000 ≤ 0.0
+        ✓  [unassigned_a_count] No unassigned A-nodes in self-comparison
+          unassigned_a_count=0.0000 ≤ 0.0
+        ✓  [unassigned_b_count] No unassigned B-nodes in self-comparison
+          unassigned_b_count=0.0000 ≤ 0.0
+        ✓  [vacancy_a_count] Perfect-match case: all A-atoms must be mapped (no free vacancies)
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match case: all B-atoms must be mapped (no free vacancies)
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] srtio3_vs_batio3_ged
+      SrTiO3 vs BaTiO3 (both cubic Pm-3m perovskite): identical bond topology, cost should be ~0
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=1
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Isostructural cubic perovskites: bond topology is identical, cost must be near zero
+          cost=0.0000 ≤ 0.05
+        ✓  [unassigned_a_count] Same formula unit size: all A-nodes must be assigned
+          unassigned_a_count=0.0000 ≤ 0.0
+        ✓  [unassigned_b_count] Same formula unit size: all B-nodes must be assigned
+          unassigned_b_count=0.0000 ≤ 0.0
+        ✓  [vacancy_a_count] Perfect-match case: all A-atoms must be mapped (no free vacancies)
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match case: all B-atoms must be mapped (no free vacancies)
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] srtio3_vs_ktao3_ged
+      SrTiO3 vs KTaO3 (both cubic Pm-3m perovskite): different A/B chemistry, identical connectivity
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=1
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Cubic perovskite pair: same corner-sharing topology, cost must be near zero
+          cost=0.0000 ≤ 0.05
+        ✓  [unassigned_a_count] Same formula unit size: no unassigned A-nodes
+          unassigned_a_count=0.0000 ≤ 0.0
+        ✓  [unassigned_b_count] Same formula unit size: no unassigned B-nodes
+          unassigned_b_count=0.0000 ≤ 0.0
+        ✓  [vacancy_a_count] Perfect-match case: all A-atoms must be mapped (no free vacancies)
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match case: all B-atoms must be mapped (no free vacancies)
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] srtio3_vs_lanio3_ged
+      SrTiO3 (cubic Pm-3m) vs LaNiO3 (rhombohedral R-3c): same corner-sharing perovskite topology, cost should be near zero
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=2
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Corner-sharing perovskite topology shared by cubic and rhombohedral variants: cost should be near zero
+          cost=0.0000 ≤ 0.05
+        ✓  [unassigned_a_count] Same formula unit size: no unassigned A-nodes
+          unassigned_a_count=0.0000 ≤ 0.0
+        ✓  [unassigned_b_count] Same formula unit size: no unassigned B-nodes
+          unassigned_b_count=0.0000 ≤ 0.0
+        ✓  [vacancy_a_count] Perfect-match case: all A-atoms must be mapped (no free vacancies)
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match case: all B-atoms must be mapped (no free vacancies)
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] srtio3_vs_laalO3_ged
+      SrTiO3 (cubic) vs LaAlO3 (rhombohedral R-3c): both perovskite family, cost should be near zero
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=2
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Both are ABO3 perovskites — cost should be near zero despite tilt distortion
+          cost=0.0000 ≤ 0.05
+        ✓  [unassigned_a_count] Same formula unit size: no unassigned A-nodes
+          unassigned_a_count=0.0000 ≤ 0.0
+        ✓  [unassigned_b_count] Same formula unit size: no unassigned B-nodes
+          unassigned_b_count=0.0000 ≤ 0.0
+        ✓  [vacancy_a_count] Perfect-match case: all A-atoms must be mapped (no free vacancies)
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match case: all B-atoms must be mapped (no free vacancies)
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] mgo_vs_nacl_ged
+      MgO vs NaCl: both rock-salt (Fm-3m), identical bond topology — cost should be near zero
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=1
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Isostructural rock-salt pair: topology is identical, cost must be near zero
+          cost=0.0000 ≤ 0.05
+        ✓  [unassigned_a_count] Same formula unit size: no unassigned A-nodes
+          unassigned_a_count=0.0000 ≤ 0.0
+        ✓  [unassigned_b_count] Same formula unit size: no unassigned B-nodes
+          unassigned_b_count=0.0000 ≤ 0.0
+        ✓  [vacancy_a_count] Perfect-match case: all A-atoms must be mapped (no free vacancies)
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match case: all B-atoms must be mapped (no free vacancies)
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] tio2_vs_sno2_ged
+      TiO2 vs SnO2: both rutile (P42/mnm), identical bond topology — cost should be near zero
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=2
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Isostructural rutile pair: identical edge-sharing octahedral topology, cost must be near zero
+          cost=0.0000 ≤ 0.05
+        ✓  [unassigned_a_count] Same formula unit size: no unassigned A-nodes
+          unassigned_a_count=0.0000 ≤ 0.0
+        ✓  [unassigned_b_count] Same formula unit size: no unassigned B-nodes
+          unassigned_b_count=0.0000 ≤ 0.0
+        ✓  [vacancy_a_count] Perfect-match case: all A-atoms must be mapped (no free vacancies)
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match case: all B-atoms must be mapped (no free vacancies)
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] mgtio3_vs_tifeo3_ged
+      MgTiO3 vs TiFeO3: both R-3 ilmenite — face-sharing and edge-sharing octahedral topology should match closely
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=1
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Isostructural ilmenite pair: cost should be low
+          cost=0.0000 ≤ 0.5
+        ✓  [unassigned_a_count] Ilmenite pair with same FU: no unassigned A-nodes expected
+          unassigned_a_count=0.0000 ≤ 0.0
+        ✓  [unassigned_b_count] Ilmenite pair with same FU: no unassigned B-nodes expected
+          unassigned_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] tifeo3_vs_ticoo3_ged
+      TiFeO3 vs TiCoO3: both R-3 ilmenite — same Ti-O and M-O framework with different M
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=2
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Both ilmenite: cost should be low
+          cost=0.0000 ≤ 0.5
+        ✓  [unassigned_a_count] Same formula unit size: no unassigned A-nodes
+          unassigned_a_count=0.0000 ≤ 0.0
+        ✓  [unassigned_b_count] Same formula unit size: no unassigned B-nodes
+          unassigned_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] srtio3_vs_tifeo3_ged
+      SrTiO3 (perovskite) vs TiFeO3 (ilmenite): corner-sharing vs face/edge-sharing — structurally unrelated families
+      cost=8.0667  unassigned_a=2  unassigned_b=2  iters=2
+      cost_reverse=8.0667  [symmetric]
+        ✓  [cost] Perovskite vs ilmenite: bond topology mismatch should produce significant cost
+          cost=8.0667 ≥ 1.0
+        ✓  [cost] Cost should remain bounded (not unbounded for unrelated structures) (relaxed to arbitrary high bound)
+          cost=8.0667 ≤ 100.0
+
+  ✓ [ged] mgtio3_vs_srtio3_ged
+      MgTiO3 (ilmenite) vs SrTiO3 (perovskite): different structural families — cost should be high
+      cost=8.0667  unassigned_a=2  unassigned_b=2  iters=2
+      cost_reverse=8.0667  [symmetric]
+        ✓  [cost] Ilmenite vs perovskite: bond topology mismatch should produce significant cost
+          cost=8.0667 ≥ 1.0
+        ✓  [cost] Cost should remain bounded (not unbounded for unrelated structures) (relaxed to arbitrary high bound)
+          cost=8.0667 ≤ 100.0
+
+  ✓ [ged] reo3_vs_batio3_site_mapping
+      ReO3 vs BaTiO3 (cubic Pm-3m): Re must map to Ti (B-site), O must map to O, Ba (A-site) has no ReO3 counterpart
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=2
+      cost_reverse=0.0000  [symmetric]
+        ✓  [map_element] Re (B-site in ReO3) must map to Ti (B-site in BaTiO3)
+          All 2/2 mapped Re nodes → Ti
+        ✓  [map_element] O in ReO3 must map to O in BaTiO3
+          All 6/6 mapped O nodes → O
+        ✓  [vacancy_b_all_element] Ba (A-site) has no counterpart in ReO3 — all Ba nodes must be in vacancy_b
+          All 1 Ba node(s) correctly in vacancy_b
+
+  ✓ [ged] reo3_vs_ktao3_site_mapping
+      ReO3 vs KTaO3 (cubic Pm-3m): Re must map to Ta (B-site), O must map to O, K (A-site) has no ReO3 counterpart
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=2
+      cost_reverse=0.0000  [symmetric]
+        ✓  [map_element] Re (B-site in ReO3) must map to Ta (B-site in KTaO3)
+          All 2/2 mapped Re nodes → Ta
+        ✓  [map_element] O in ReO3 must map to O in KTaO3
+          All 6/6 mapped O nodes → O
+        ✓  [vacancy_b_all_element] K (A-site) has no counterpart in ReO3 — must be in vacancy_b
+          All 1 K node(s) correctly in vacancy_b
+
+  ✓ [ged] reo3_vs_lanio3_site_mapping
+      ReO3 vs LaNiO3 (rhombohedral R-3c): Re must map to Ni (B-site), O must map to O, La (A-site) has no ReO3 counterpart
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=1
+      cost_reverse=0.0000  [symmetric]
+        ✓  [map_element] Re (B-site in ReO3) must map to Ni (B-site in LaNiO3)
+          All 2/2 mapped Re nodes → Ni
+        ✓  [map_element] O in ReO3 must map to O in LaNiO3
+          All 6/6 mapped O nodes → O
+        ✓  [vacancy_b_all_element] La (A-site) has no counterpart in ReO3 — all La nodes must be in vacancy_b
+          All 2 La node(s) correctly in vacancy_b
+
+  ✓ [ged] reo3_vs_laalO3_site_mapping
+      ReO3 vs LaAlO3 (rhombohedral R-3c): Re must map to Al (B-site), O must map to O, La (A-site) has no ReO3 counterpart
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=1
+      cost_reverse=0.0000  [symmetric]
+        ✓  [map_element] Re (B-site in ReO3) must map to Al (B-site in LaAlO3)
+          All 2/2 mapped Re nodes → Al
+        ✓  [map_element] O in ReO3 must map to O in LaAlO3
+          All 6/6 mapped O nodes → O
+        ✓  [vacancy_b_all_element] La (A-site) has no counterpart in ReO3 — all La nodes must be in vacancy_b
+          All 2 La node(s) correctly in vacancy_b
+
+  ✓ [ged] babio3_vs_ba3pbo_ged
+      BaBiO3 (perovskite) vs Ba3PbO (antiperovskite): identical bond topology, inverted cation/anion roles. Role-swap trial should detect the equivalence and return cost ~0. Correct mapping: O×3↔Ba×3, Bi↔O, Ba↔Pb.
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=1
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Perovskite and antiperovskite share identical bond topology — cost must be near zero after role-swap trial
+          cost=0.0000 ≤ 0.05
+        ✓  [unassigned_a_count] All BaBiO3 nodes have a topological counterpart in Ba3PbO
+          unassigned_a_count=0.0000 ≤ 0.0
+        ✓  [unassigned_b_count] All Ba3PbO nodes have a topological counterpart in BaBiO3
+          unassigned_b_count=0.0000 ≤ 0.0
+        ✓  [vacancy_a_count] Perfect-match case: all A-atoms must be mapped (no free vacancies)
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match case: all B-atoms must be mapped (no free vacancies)
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] babio3_vs_batio3_ged
+      BaBiO3 (perovskite, mp-545783) vs BaTiO3 (cubic perovskite, mp-5020): both ABO3 perovskites sharing Ba A-site — cost should be near zero
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=1
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Both perovskites with shared Ba A-site: topology is identical, cost must be near zero
+          cost=0.0000 ≤ 0.05
+        ✓  [unassigned_a_count] Same formula unit size: no unassigned A-nodes
+          unassigned_a_count=0.0000 ≤ 0.0
+        ✓  [unassigned_b_count] Same formula unit size: no unassigned B-nodes
+          unassigned_b_count=0.0000 ≤ 0.0
+        ✓  [vacancy_a_count] Perfect-match case: all A-atoms must be mapped (no free vacancies)
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match case: all B-atoms must be mapped (no free vacancies)
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] ba3pbo_vs_ba3sno_ged
+      Ba3PbO vs Ba3SnO (both antiperovskite, mp-29242 and mp-29243): same bond topology with different B-site (Pb vs Sn) — cost should be near zero
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=1
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Isostructural antiperovskite pair: topology is identical, cost must be near zero
+          cost=0.0000 ≤ 0.05
+        ✓  [unassigned_a_count] Same formula unit size: no unassigned A-nodes
+          unassigned_a_count=0.0000 ≤ 0.0
+        ✓  [unassigned_b_count] Same formula unit size: no unassigned B-nodes
+          unassigned_b_count=0.0000 ≤ 0.0
+        ✓  [vacancy_a_count] Perfect-match case: all A-atoms must be mapped (no free vacancies)
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match case: all B-atoms must be mapped (no free vacancies)
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] kcl_vs_nacl_ged
+      KCl vs NaCl: both rock-salt (Fm-3m), identical bond topology — cost should be near zero
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=1
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Isostructural pair: bond topology is identical, cost must be near zero
+          cost=0.0000 ≤ 0.05
+        ✓  [unassigned_a_count] Same formula unit size: no unassigned A-nodes
+          unassigned_a_count=0.0000 ≤ 0.0
+        ✓  [unassigned_b_count] Same formula unit size: no unassigned B-nodes
+          unassigned_b_count=0.0000 ≤ 0.0
+        ✓  [vacancy_a_count] Perfect-match case: all A-atoms must be mapped (no free vacancies)
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match case: all B-atoms must be mapped (no free vacancies)
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] lif_vs_nacl_ged
+      LiF vs NaCl: both rock-salt, identical bond topology
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=1
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Isostructural pair: bond topology is identical, cost must be near zero
+          cost=0.0000 ≤ 0.05
+        ✓  [unassigned_a_count] Same formula unit size: no unassigned A-nodes
+          unassigned_a_count=0.0000 ≤ 0.0
+        ✓  [unassigned_b_count] Same formula unit size: no unassigned B-nodes
+          unassigned_b_count=0.0000 ≤ 0.0
+        ✓  [vacancy_a_count] Perfect-match case: all A-atoms must be mapped (no free vacancies)
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match case: all B-atoms must be mapped (no free vacancies)
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] cao_vs_mgo_ged
+      CaO vs MgO: both rock-salt, identical bond topology
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=1
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Isostructural pair: bond topology is identical, cost must be near zero
+          cost=0.0000 ≤ 0.05
+        ✓  [unassigned_a_count] Same formula unit size: no unassigned A-nodes
+          unassigned_a_count=0.0000 ≤ 0.0
+        ✓  [unassigned_b_count] Same formula unit size: no unassigned B-nodes
+          unassigned_b_count=0.0000 ≤ 0.0
+        ✓  [vacancy_a_count] Perfect-match case: all A-atoms must be mapped (no free vacancies)
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match case: all B-atoms must be mapped (no free vacancies)
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] nio_vs_mgo_ged
+      NiO vs MgO: both rock-salt — TM oxide vs alkaline-earth oxide, same topology
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=1
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Isostructural pair: bond topology is identical, cost must be near zero
+          cost=0.0000 ≤ 0.05
+        ✓  [unassigned_a_count] Same formula unit size: no unassigned A-nodes
+          unassigned_a_count=0.0000 ≤ 0.0
+        ✓  [unassigned_b_count] Same formula unit size: no unassigned B-nodes
+          unassigned_b_count=0.0000 ≤ 0.0
+        ✓  [vacancy_a_count] Perfect-match case: all A-atoms must be mapped (no free vacancies)
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match case: all B-atoms must be mapped (no free vacancies)
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] zno_vs_gan_ged
+      ZnO vs GaN: both wurtzite (P63mc), identical bond topology
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=1
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Isostructural pair: bond topology is identical, cost must be near zero
+          cost=0.0000 ≤ 0.05
+        ✓  [unassigned_a_count] Same formula unit size: no unassigned A-nodes
+          unassigned_a_count=0.0000 ≤ 0.0
+        ✓  [unassigned_b_count] Same formula unit size: no unassigned B-nodes
+          unassigned_b_count=0.0000 ≤ 0.0
+        ✓  [vacancy_a_count] Perfect-match case: all A-atoms must be mapped (no free vacancies)
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match case: all B-atoms must be mapped (no free vacancies)
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] aln_vs_gan_ged
+      AlN vs GaN: both wurtzite, isostructural III-V nitrides
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=1
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Isostructural pair: bond topology is identical, cost must be near zero
+          cost=0.0000 ≤ 0.05
+        ✓  [unassigned_a_count] Same formula unit size: no unassigned A-nodes
+          unassigned_a_count=0.0000 ≤ 0.0
+        ✓  [unassigned_b_count] Same formula unit size: no unassigned B-nodes
+          unassigned_b_count=0.0000 ≤ 0.0
+        ✓  [vacancy_a_count] Perfect-match case: all A-atoms must be mapped (no free vacancies)
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match case: all B-atoms must be mapped (no free vacancies)
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] beo_vs_zno_ged
+      BeO vs ZnO: both wurtzite (P6_3mc), structurally identical. The crystal_graph_v4 builder reports CN=13 for BeO and CN=14 for ZnO due to the adaptive cutoff giving slightly different second/third-shell counts in the two cells. With polyhedral / angle features the cost would be exactly zero; under the current bond-only representation the residual CN-mismatch produces a small non-zero cost.
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=1
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Both wurtzite — should be cost 0 with polyhedral-aware graphs. Current graph allows residual ≤ 0.5 from CN=13 vs CN=14 cutoff difference.
+          cost=0.0000 ≤ 0.5
+        ✓  [unassigned_a_count] Same FU: all matched
+          unassigned_a_count=0.0000 ≤ 0.0
+        ✓  [unassigned_b_count] Same FU: all matched
+          unassigned_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] gaas_vs_inp_ged
+      GaAs vs InP: both zinc blende (F-43m), isostructural III-V semiconductors
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=1
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Isostructural pair: bond topology is identical, cost must be near zero
+          cost=0.0000 ≤ 0.05
+        ✓  [unassigned_a_count] Same formula unit size: no unassigned A-nodes
+          unassigned_a_count=0.0000 ≤ 0.0
+        ✓  [unassigned_b_count] Same formula unit size: no unassigned B-nodes
+          unassigned_b_count=0.0000 ≤ 0.0
+        ✓  [vacancy_a_count] Perfect-match case: all A-atoms must be mapped (no free vacancies)
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match case: all B-atoms must be mapped (no free vacancies)
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] zns_vs_gaas_ged
+      ZnS vs GaAs: both zinc blende, II-VI vs III-V, same topology
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=1
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Isostructural pair: bond topology is identical, cost must be near zero
+          cost=0.0000 ≤ 0.05
+        ✓  [unassigned_a_count] Same formula unit size: no unassigned A-nodes
+          unassigned_a_count=0.0000 ≤ 0.0
+        ✓  [unassigned_b_count] Same formula unit size: no unassigned B-nodes
+          unassigned_b_count=0.0000 ≤ 0.0
+        ✓  [vacancy_a_count] Perfect-match case: all A-atoms must be mapped (no free vacancies)
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match case: all B-atoms must be mapped (no free vacancies)
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] ruo2_vs_tio2_ged
+      RuO2 vs TiO2: both rutile (P42/mnm), identical edge-sharing octahedral topology
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=2
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Isostructural pair: bond topology is identical, cost must be near zero
+          cost=0.0000 ≤ 0.05
+        ✓  [unassigned_a_count] Same formula unit size: no unassigned A-nodes
+          unassigned_a_count=0.0000 ≤ 0.0
+        ✓  [unassigned_b_count] Same formula unit size: no unassigned B-nodes
+          unassigned_b_count=0.0000 ≤ 0.0
+        ✓  [vacancy_a_count] Perfect-match case: all A-atoms must be mapped (no free vacancies)
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match case: all B-atoms must be mapped (no free vacancies)
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] caf2_vs_zro2_ged
+      CaF2 vs ZrO2: both fluorite (Fm-3m), isostructural
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=1
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Isostructural pair: bond topology is identical, cost must be near zero
+          cost=0.0000 ≤ 0.05
+        ✓  [unassigned_a_count] Same formula unit size: no unassigned A-nodes
+          unassigned_a_count=0.0000 ≤ 0.0
+        ✓  [unassigned_b_count] Same formula unit size: no unassigned B-nodes
+          unassigned_b_count=0.0000 ≤ 0.0
+        ✓  [vacancy_a_count] Perfect-match case: all A-atoms must be mapped (no free vacancies)
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match case: all B-atoms must be mapped (no free vacancies)
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] tho2_vs_caf2_ged
+      ThO2 vs CaF2: both fluorite, identical topology
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=1
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Isostructural pair: bond topology is identical, cost must be near zero
+          cost=0.0000 ≤ 0.05
+        ✓  [unassigned_a_count] Same formula unit size: no unassigned A-nodes
+          unassigned_a_count=0.0000 ≤ 0.0
+        ✓  [unassigned_b_count] Same formula unit size: no unassigned B-nodes
+          unassigned_b_count=0.0000 ≤ 0.0
+        ✓  [vacancy_a_count] Perfect-match case: all A-atoms must be mapped (no free vacancies)
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match case: all B-atoms must be mapped (no free vacancies)
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] catio3_vs_srtio3_ged
+      CaTiO3 vs SrTiO3: both perovskite (the eponymous mineral) — same topology
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=2
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Isostructural pair: bond topology is identical, cost must be near zero
+          cost=0.0000 ≤ 0.05
+        ✓  [unassigned_a_count] Same formula unit size: no unassigned A-nodes
+          unassigned_a_count=0.0000 ≤ 0.0
+        ✓  [unassigned_b_count] Same formula unit size: no unassigned B-nodes
+          unassigned_b_count=0.0000 ≤ 0.0
+        ✓  [vacancy_a_count] Perfect-match case: all A-atoms must be mapped (no free vacancies)
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match case: all B-atoms must be mapped (no free vacancies)
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] knbo3_vs_srtio3_ged
+      KNbO3 vs SrTiO3: both cubic perovskite — different A/B chemistry, same topology
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=1
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Isostructural pair: bond topology is identical, cost must be near zero
+          cost=0.0000 ≤ 0.05
+        ✓  [unassigned_a_count] Same formula unit size: no unassigned A-nodes
+          unassigned_a_count=0.0000 ≤ 0.0
+        ✓  [unassigned_b_count] Same formula unit size: no unassigned B-nodes
+          unassigned_b_count=0.0000 ≤ 0.0
+        ✓  [vacancy_a_count] Perfect-match case: all A-atoms must be mapped (no free vacancies)
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match case: all B-atoms must be mapped (no free vacancies)
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] lacoo3_vs_lanio3_ged
+      LaCoO3 vs LaNiO3: both R-3c perovskite, B-site cation change, same La A-site
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=2
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Isostructural pair: bond topology is identical, cost must be near zero
+          cost=0.0000 ≤ 0.05
+        ✓  [unassigned_a_count] Same formula unit size: no unassigned A-nodes
+          unassigned_a_count=0.0000 ≤ 0.0
+        ✓  [unassigned_b_count] Same formula unit size: no unassigned B-nodes
+          unassigned_b_count=0.0000 ≤ 0.0
+        ✓  [vacancy_a_count] Perfect-match case: all A-atoms must be mapped (no free vacancies)
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match case: all B-atoms must be mapped (no free vacancies)
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] cr2o3_vs_al2o3_ged
+      Cr2O3 vs Al2O3: both corundum (R-3c), eskolaite vs corundum
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=1
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Isostructural pair: bond topology is identical, cost must be near zero
+          cost=0.0000 ≤ 0.05
+        ✓  [unassigned_a_count] Same formula unit size: no unassigned A-nodes
+          unassigned_a_count=0.0000 ≤ 0.0
+        ✓  [unassigned_b_count] Same formula unit size: no unassigned B-nodes
+          unassigned_b_count=0.0000 ≤ 0.0
+        ✓  [vacancy_a_count] Perfect-match case: all A-atoms must be mapped (no free vacancies)
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match case: all B-atoms must be mapped (no free vacancies)
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] fe2o3_vs_al2o3_ged
+      Fe2O3 (hematite) vs Al2O3 (corundum): both R-3c corundum-type
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=1
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Isostructural pair: bond topology is identical, cost must be near zero
+          cost=0.0000 ≤ 0.05
+        ✓  [unassigned_a_count] Same formula unit size: no unassigned A-nodes
+          unassigned_a_count=0.0000 ≤ 0.0
+        ✓  [unassigned_b_count] Same formula unit size: no unassigned B-nodes
+          unassigned_b_count=0.0000 ≤ 0.0
+        ✓  [vacancy_a_count] Perfect-match case: all A-atoms must be mapped (no free vacancies)
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match case: all B-atoms must be mapped (no free vacancies)
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] mgcr2o4_vs_mgal2o4_ged
+      MgCr2O4 vs MgAl2O4: both spinel (Fd-3m), B-site change
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=1
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Isostructural pair: bond topology is identical, cost must be near zero
+          cost=0.0000 ≤ 0.05
+        ✓  [unassigned_a_count] Same formula unit size: no unassigned A-nodes
+          unassigned_a_count=0.0000 ≤ 0.0
+        ✓  [unassigned_b_count] Same formula unit size: no unassigned B-nodes
+          unassigned_b_count=0.0000 ≤ 0.0
+        ✓  [vacancy_a_count] Perfect-match case: all A-atoms must be mapped (no free vacancies)
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match case: all B-atoms must be mapped (no free vacancies)
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] y2ti2o7_vs_nd2zr2o7_ged
+      Y2Ti2O7 vs Nd2Zr2O7: both pyrochlore (Fd-3m), full A2B2O7 structures
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=1
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Isostructural pair: bond topology is identical, cost must be near zero
+          cost=0.0000 ≤ 0.05
+        ✓  [unassigned_a_count] Same formula unit size: no unassigned A-nodes
+          unassigned_a_count=0.0000 ≤ 0.0
+        ✓  [unassigned_b_count] Same formula unit size: no unassigned B-nodes
+          unassigned_b_count=0.0000 ≤ 0.0
+        ✓  [vacancy_a_count] Perfect-match case: all A-atoms must be mapped (no free vacancies)
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match case: all B-atoms must be mapped (no free vacancies)
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] pr2zr2o7_vs_nd2zr2o7_ged
+      Pr2Zr2O7 vs Nd2Zr2O7: both pyrochlore, A-site change
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=2
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Isostructural pair: bond topology is identical, cost must be near zero
+          cost=0.0000 ≤ 0.05
+        ✓  [unassigned_a_count] Same formula unit size: no unassigned A-nodes
+          unassigned_a_count=0.0000 ≤ 0.0
+        ✓  [unassigned_b_count] Same formula unit size: no unassigned B-nodes
+          unassigned_b_count=0.0000 ≤ 0.0
+        ✓  [vacancy_a_count] Perfect-match case: all A-atoms must be mapped (no free vacancies)
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match case: all B-atoms must be mapped (no free vacancies)
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] nacl_vs_cscl_ged
+      NaCl (rock-salt, octahedral CN=6) vs CsCl (CsCl-type, cubic CN=8): both MX with same FU but different coordination topology.  Under the current graph builder + sibling filter, the CN distinction shows up as a moderate residual cost rather than a strong signal.  No strict lower bound enforced; future polyhedral-aware graphs should distinguish these families more cleanly.
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=1
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Cost should remain bounded
+          cost=0.0000 ≤ 6.0
+
+  ✓ [ged] nacl_vs_zno_ged
+      NaCl (rock-salt, octahedral CN=6 nominally) vs ZnO (wurtzite, tetrahedral CN=4 nominally): the textbook structural distinction is sharp, but the crystal_graph_v4 builder uses an adaptive cutoff that includes second/third coordination shells for wurtzite (CN=14) while keeping rock-salt at first-shell-only (CN=6). The graph-level representations therefore differ in bond-count density — but the sibling-bond filter masks much of that gap during matching. Without polyhedral / angular connectivity in the graph, the distinguishing features of these two families are not fully expressible. Cost is left bounded only from above; future polyhedral-aware graphs should recover a meaningful lower bound here.
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=1
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Cost should remain bounded
+          cost=0.0000 ≤ 6.0
+
+  ✓ [ged] zno_vs_zns_ged
+      ZnO (wurtzite, hexagonal) vs ZnS (zinc blende, cubic): both have identical local bond environments at the graph level — same Zn cation, tetrahedrally-derived high-CN bonding profile, single anion class. The wurtzite/zinc-blende distinction is a stacking polytype difference (ABAB vs ABCABC) that lives in dihedral angles and longer-range topology — features the current crystal_graph_v4 builder does not capture (no polyhedral connectivity, no torsion encoding). Under the current graph implementation these are equivalent, so cost must be near zero. Distinguishing polytypes would require adding polyhedral connectivity / angular features to the graph.
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=1
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Wurtzite vs zinc blende are graph-level equivalent under the current bond-only representation — cost must be near zero. Future polyhedral-aware graphs should distinguish them.
+          cost=0.0000 ≤ 0.05
+        ✓  [unassigned_a_count] All A-nodes should be matched
+          unassigned_a_count=0.0000 ≤ 0.0
+        ✓  [unassigned_b_count] All B-nodes should be matched
+          unassigned_b_count=0.0000 ≤ 0.0
+        ✓  [vacancy_a_count] Perfect-match case: all A-atoms must be mapped (no free vacancies)
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match case: all B-atoms must be mapped (no free vacancies)
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] tio2_vs_caf2_ged
+      TiO2 (rutile, edge-sharing octahedra, CN_M=6/CN_X=3) vs CaF2 (fluorite, cube-sharing, CN_M=8/CN_X=4): both MX2 but different topology. Under the current graph builder these score moderately — the structural distinction is partly visible but suppressed by sibling-bond filtering during cohort cost.  No strict lower bound enforced; future polyhedral-aware graphs should recover one.
+      cost=0.3000  unassigned_a=0  unassigned_b=0  iters=2
+      cost_reverse=0.3000  [symmetric]
+        ✓  [cost] Cost should remain bounded
+          cost=0.3000 ≤ 6.0
+
+  ✓ [ged] al2o3_vs_srtio3_ged
+      Al2O3 (corundum, edge/face-sharing octahedra) vs SrTiO3 (perovskite, corner-sharing): both 5 atoms/FU, different topology
+      cost=8.0667  unassigned_a=2  unassigned_b=2  iters=2
+      cost_reverse=8.0667  [symmetric]
+        ✓  [cost] Different family same FU: must reflect topological mismatch
+          cost=8.0667 ≥ 1.0
+        ✓  [cost] Cost should remain bounded (relaxed to arbitrary high bound)
+          cost=8.0667 ≤ 100.0
+
+  ✗ [ged] mg2sio4_vs_mgal2o4_ged
+      Mg2SiO4 (olivine, Pnma) vs MgAl2O4 (spinel, Fd-3m): both 7 atoms/FU with Mg cation + O anion shared.  Olivine has isolated SiO4 tetrahedra; spinel has corner-/edge-sharing AlO6 octahedra and MgO4 tetrahedra.  These are genuinely different topologies but the differences live in polyhedral connectivity, which the current bond-only graph does not capture.  Cost is therefore left as upper-bounded only; future polyhedral-aware graphs should recover a meaningful lower bound.
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=2
+      cost_reverse=0.0000  [symmetric]
+        ✗  [cost] Dissimilar materials, cost should be non-zero
+          cost=0.0000 < 1.0
+
+  ✓ [ged] ba3pbo_vs_babio3_ged
+      Ba3PbO (antiperovskite, mp-29242) vs BaBiO3 (perovskite, mp-545783): identical bond topology with inverted cation/anion roles.  The role-swap trial in match_nodes_ged should detect the perovskite ↔ antiperovskite equivalence and return cost ≈ 0.  Cation/anion mapping after swap: Ba (antiperov anion) ↔ O (perov anion) is the X-site; Pb (antiperov cation X-site) ↔ Ba (perov A-site); O (antiperov B-site) ↔ Bi (perov B-site).
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=1
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Antiperovskite vs perovskite share identical topology; cost must be near zero after role-swap
+          cost=0.0000 ≤ 0.05
+        ✓  [unassigned_a_count] Same FU size: all A-nodes must be matched
+          unassigned_a_count=0.0000 ≤ 0.0
+        ✓  [unassigned_b_count] Same FU size: all B-nodes must be matched
+          unassigned_b_count=0.0000 ≤ 0.0
+        ✓  [vacancy_a_count] Perfect-match case: all A-atoms must be mapped (no free vacancies)
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match case: all B-atoms must be mapped (no free vacancies)
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] alfe3c_vs_ba3pbo_ged
+      AlFe3C (Cu3Au-derived 'inverse perovskite' carbide, mp-22793) vs Ba3PbO (antiperovskite, mp-29242): both have the same FCC ordered topology with corner / face-centre / body-centre occupation.  AlFe3C has Al(corner)/Fe(faces)/C(body), Ba3PbO has Pb(corner)/Ba(faces)/O(body).  Roles align directly without swap because both have the minority element as cation at the corner — cost should be near zero.
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=1
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Cu3Au-derived AlFe3C and antiperovskite Ba3PbO share topology — cost near zero
+          cost=0.0000 ≤ 0.05
+        ✓  [unassigned_a_count] Same FU size: all matched
+          unassigned_a_count=0.0000 ≤ 0.0
+        ✓  [unassigned_b_count] Same FU size: all matched
+          unassigned_b_count=0.0000 ≤ 0.0
+        ✓  [vacancy_a_count] Perfect-match case: all A-atoms must be mapped (no free vacancies)
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match case: all B-atoms must be mapped (no free vacancies)
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] alfe3c_vs_babio3_ged
+      AlFe3C (Cu3Au-derived 'inverse perovskite' carbide) vs BaBiO3 (perovskite): role-swap on BaBiO3 inverts cation/anion to align Fe↔O (X-site) and C↔Bi (B-site).  Wildcard pass (cross-role same-CN) then matches Al(cation,CN=12) to Ba(anion,CN=12 after swap) — both at the corner A-site.  Tests that the cost-function correctly identifies AlFe3C ≅ perovskite topology even when the role labels don't perfectly invert.
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=1
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] AlFe3C and BaBiO3 perovskite share topology after role-swap + wildcard — cost near zero
+          cost=0.0000 ≤ 0.05
+        ✓  [unassigned_a_count] Same FU size: all matched
+          unassigned_a_count=0.0000 ≤ 0.0
+        ✓  [unassigned_b_count] Same FU size: all matched
+          unassigned_b_count=0.0000 ≤ 0.0
+        ✓  [vacancy_a_count] Perfect-match case: all A-atoms must be mapped (no free vacancies)
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match case: all B-atoms must be mapped (no free vacancies)
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] alfe3c_vs_batio3_ged
+      AlFe3C vs BaTiO3 (cubic perovskite, mp-2998 in 10-atom Pm-3m cell): tests AlFe3C ≅ perovskite at a different cell size (cross-FU multiplier).
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=2
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] AlFe3C vs cubic BaTiO3 should be cost zero
+          cost=0.0000 ≤ 0.05
+        ✓  [vacancy_a_count] Perfect-match case: all A-atoms must be mapped (no free vacancies)
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match case: all B-atoms must be mapped (no free vacancies)
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] alfe3c_vs_srtio3_ged
+      AlFe3C vs cubic SrTiO3 perovskite: same Cu3Au ↔ perovskite topology match.  Confirms consistency across different perovskite chemistries.
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=1
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] AlFe3C vs SrTiO3 perovskite — cost near zero
+          cost=0.0000 ≤ 0.05
+        ✓  [unassigned_a_count] Same FU size: all matched
+          unassigned_a_count=0.0000 ≤ 0.0
+        ✓  [unassigned_b_count] Same FU size: all matched
+          unassigned_b_count=0.0000 ≤ 0.0
+        ✓  [vacancy_a_count] Perfect-match case: all A-atoms must be mapped (no free vacancies)
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match case: all B-atoms must be mapped (no free vacancies)
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] alfe3c_vs_lanio3_ged
+      AlFe3C vs LaNiO3 (rhombohedral R-3c perovskite): cross-distortion test of AlFe3C ≅ perovskite topology.
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=2
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] AlFe3C vs LaNiO3 — cost near zero
+          cost=0.0000 ≤ 0.05
+        ✓  [vacancy_a_count] Perfect-match case: all A-atoms must be mapped (no free vacancies)
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match case: all B-atoms must be mapped (no free vacancies)
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] cclf3_vs_srtio3_ged
+      CClF3 (molecular halocarbon CF3Cl crystal) vs SrTiO3 (cubic perovskite): completely different families — molecular crystal of pyramidal CClF3 molecules vs extended corner-sharing perovskite framework.
+      cost=4.7667  unassigned_a=2  unassigned_b=2  iters=2
+      cost_reverse=4.7667  [symmetric]
+        ✓  [cost] Molecular halocarbon vs extended crystal — cost must be substantially above zero
+          cost=4.7667 ≥ 3.0
+        ✓  [cost] Cost should remain bounded (relaxed to arbitrary high bound)
+          cost=4.7667 ≤ 100.0
+
+  ✓ [ged] cif3_vs_srtio3_ged
+      CIF3 (molecular halocarbon CF3I crystal) vs SrTiO3: same as CClF3 case but with iodine in place of chlorine.  Different family.
+      cost=11.3667  unassigned_a=4  unassigned_b=4  iters=2
+      cost_reverse=11.3667  [symmetric]
+        ✓  [cost] Molecular halocarbon vs extended crystal — cost must be substantially above zero
+          cost=11.3667 ≥ 3.0
+        ✓  [cost] Cost should remain bounded (relaxed to arbitrary high bound)
+          cost=11.3667 ≤ 100.0
+
+  ✓ [ged] cif3_vs_alfe3c_ged
+      CIF3 vs AlFe3C (Cu3Au-derived intermetallic): molecular vs metallic extended structure.  Should be very different.
+      cost=3.1000  unassigned_a=0  unassigned_b=0  iters=2
+      cost_reverse=3.1000  [symmetric]
+        ✓  [cost] Molecular halocarbon vs extended crystal — cost must be substantially above zero
+          cost=3.1000 ≥ 3.0
+        ✓  [cost] Cost should remain bounded (relaxed to arbitrary high bound)
+          cost=3.1000 ≤ 100.0
+
+  ✓ [ged] cclf3_vs_cif3_ged
+      CClF3 vs CIF3: both pyramidal-molecule halocarbon crystals (CF3Cl and CF3I).  Same local topology — sp3 carbon bonded to one heavy halogen + three fluorines.  Same family.
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=2
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Same family of pyramidal-molecule halocarbon crystals — cost should be near zero
+          cost=0.0000 ≤ 0.05
+        ✓  [vacancy_a_count] Perfect-match case: all A-atoms must be mapped (no free vacancies)
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match case: all B-atoms must be mapped (no free vacancies)
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] ccl3f_vs_cclf3_ged
+      CCl3F (CFCl3, R-11) vs CClF3 (CF3Cl, R-13): under the bond-graph encoding (element identity not used in edge cost) the two are graph-isomorphic — central sp3 carbon bonded to 4 CN=1 anions, with CCl3F's 8-FU cell as a 4× supercell of CClF3's 2-FU cell.  Cost=0 is correct, and every atom should be mapped (the k-loop must pick k=4 with MULTIPLY, not k=1 with sibling vacancies).
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=2
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Graph-isomorphic under bond-graph encoding — cost should be near zero
+          cost=0.0000 ≤ 0.05
+        ✓  [vacancy_a_count] All A-atoms must be mapped — k-loop should pick k=4 (MULTIPLY) over k=1 (sibling vacancies)
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] All B-atoms must be mapped — same reasoning as A-side
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] kpse3_vs_srtio3_ged
+      KPSe3 (layered phosphoselenide, P2Se6 ethane-like dimers between K layers) vs SrTiO3 (corner-sharing perovskite octahedra). Stoichiometry matches ABX3 superficially, but the P-Se bonding (P-P bond + 3 P-Se per phosphorus) is fundamentally different from the ReO3-style corner-sharing of perovskite. Cost must reflect this real structural mismatch — currently the algorithm scores them at 0, putting KPSe3 in the perovskite mega-cluster (fam 0).
+      cost=31.0000  unassigned_a=0  unassigned_b=0  iters=10
+      cost_reverse=31.0000  [symmetric]
+        ✓  [cost] Layered phosphoselenide vs perovskite — cost must reflect real topological mismatch
+          cost=31.0000 ≥ 0.25
+        ✓  [cost] Cost should remain bounded (relaxed to arbitrary high bound)
+          cost=31.0000 ≤ 100.0
+
+  ✓ [ged] kpse3_vs_batio3_ged
+      KPSe3 vs BaTiO3: layered phosphoselenide vs cubic perovskite. Same reasoning as KPSe3 vs SrTiO3.
+      cost=34.6000  unassigned_a=22  unassigned_b=0  iters=3
+      cost_reverse=34.6000  [symmetric]
+        ✓  [cost] Layered phosphoselenide vs perovskite — cost must reflect real topological mismatch
+          cost=34.6000 ≥ 0.25
+        ✓  [cost] Cost should remain bounded (relaxed to arbitrary high bound)
+          cost=34.6000 ≤ 100.0
+
+  ✓ [ged] kpse3_vs_lanio3_ged
+      KPSe3 vs LaNiO3: layered phosphoselenide vs rhombohedral perovskite (2-FU cell). Same reasoning as KPSe3 vs SrTiO3.
+      cost=34.6000  unassigned_a=22  unassigned_b=0  iters=3
+      cost_reverse=34.6000  [symmetric]
+        ✓  [cost] Layered phosphoselenide vs perovskite — cost must reflect real topological mismatch
+          cost=34.6000 ≥ 0.25
+        ✓  [cost] Cost should remain bounded (relaxed to arbitrary high bound)
+          cost=34.6000 ≤ 100.0
+
+  ✓ [ged] kpse3_vs_knbo3_ged
+      KPSe3 vs KNbO3: same A-site cation but layered phosphoselenide vs perovskite — K is a coincidence, the topologies are unrelated.
+      cost=31.0000  unassigned_a=0  unassigned_b=0  iters=10
+      cost_reverse=31.0000  [symmetric]
+        ✓  [cost] Layered phosphoselenide vs perovskite — cost must reflect real topological mismatch
+          cost=31.0000 ≥ 0.25
+        ✓  [cost] Cost should remain bounded (relaxed to arbitrary high bound)
+          cost=31.0000 ≤ 100.0
+
+  ✓ [ged] la3alc_vs_srtio3_ged
+      La3AlC (intermetallic antiperovskite, Pm-3m, 5 atoms / FU: 3 La A-sites + Al B-site + C body-center) vs SrTiO3 (cubic perovskite). Same 5-atom corner-sharing topology — under role-swap (cation↔anion) the antiperovskite C maps to perovskite Ti and the role correspondence is exact. Cost must be near zero and every atom mapped.
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=1
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Intermetallic antiperovskite vs ionic perovskite — same 5-atom corner-sharing topology, role-swap should give cost ≈ 0
+          cost=0.0000 ≤ 0.05
+        ✓  [vacancy_a_count] Perfect-match case: every A-atom must be mapped (no free vacancies)
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match case: every B-atom must be mapped (no free vacancies)
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] la3alc_vs_batio3_ged
+      La3AlC vs BaTiO3: intermetallic antiperovskite vs cubic perovskite. Same family as the SrTiO3 comparison.
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=2
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Intermetallic antiperovskite vs ionic perovskite — cost ≈ 0
+          cost=0.0000 ≤ 0.05
+        ✓  [vacancy_a_count] Perfect-match: all A mapped
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match: all B mapped
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] la3alc_vs_lanio3_ged
+      La3AlC vs LaNiO3: intermetallic antiperovskite vs rhombohedral perovskite (2-FU cell). Tests that the role-swap correspondence holds against a non-cubic perovskite reference.
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=2
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Antiperovskite vs rhombohedral perovskite — cost ≈ 0
+          cost=0.0000 ≤ 0.05
+        ✓  [vacancy_a_count] Perfect-match: all A mapped
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match: all B mapped
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] la3alc_vs_knbo3_ged
+      La3AlC vs KNbO3 (cubic perovskite). Same family as the SrTiO3 comparison.
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=1
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Antiperovskite vs perovskite — cost ≈ 0
+          cost=0.0000 ≤ 0.05
+        ✓  [vacancy_a_count] Perfect-match: all A mapped
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match: all B mapped
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] la3alc_vs_catio3_ged
+      La3AlC vs CaTiO3 (orthorhombic Pnma perovskite, 20 atoms / 4 FU). Tests against a tilted-octahedron perovskite reference.
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=2
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Antiperovskite vs orthorhombic perovskite — cost ≈ 0
+          cost=0.0000 ≤ 0.05
+        ✓  [vacancy_a_count] Perfect-match: all A mapped
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match: all B mapped
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] alco3c_vs_srtio3_ged
+      AlCo3C (intermetallic Cu3Au+C antiperovskite, Pm-3m, 5 atoms / FU: Al A-site + 3 Co face-centered + C body-center) vs SrTiO3 (cubic perovskite). Co is encoded as 'neutral' (no clear oxidation state in the metallic carbide), but the bond topology IS antiperovskite — role-swap + NN-list rectification should give cost ≈ 0 with every atom mapped.
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=1
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Intermetallic antiperovskite (with neutral B-site Co) vs ionic perovskite — cost ≈ 0
+          cost=0.0000 ≤ 0.05
+        ✓  [vacancy_a_count] Perfect-match: all A mapped
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match: all B mapped
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] alco3c_vs_batio3_ged
+      AlCo3C vs BaTiO3: intermetallic antiperovskite vs cubic perovskite.
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=2
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Cost ≈ 0
+          cost=0.0000 ≤ 0.05
+        ✓  [vacancy_a_count] Perfect-match: all A mapped
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match: all B mapped
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] alco3c_vs_lanio3_ged
+      AlCo3C vs LaNiO3: intermetallic antiperovskite vs rhombohedral perovskite (2-FU cell).
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=2
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Cost ≈ 0
+          cost=0.0000 ≤ 0.05
+        ✓  [vacancy_a_count] Perfect-match: all A mapped
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match: all B mapped
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] alco3c_vs_knbo3_ged
+      AlCo3C vs KNbO3 (cubic perovskite).
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=1
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Cost ≈ 0
+          cost=0.0000 ≤ 0.05
+        ✓  [vacancy_a_count] Perfect-match: all A mapped
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match: all B mapped
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] alco3c_vs_catio3_ged
+      AlCo3C vs CaTiO3 (orthorhombic Pnma perovskite).
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=2
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Cost ≈ 0
+          cost=0.0000 ≤ 0.05
+        ✓  [vacancy_a_count] Perfect-match: all A mapped
+          vacancy_a_count=0.0000 ≤ 0.0
+        ✓  [vacancy_b_count] Perfect-match: all B mapped
+          vacancy_b_count=0.0000 ≤ 0.0
+
+  ✓ [ged] la3alc_vs_tio2_ged
+      La3AlC (intermetallic antiperovskite) vs TiO2 (rutile, edge-sharing octahedra). Antiperovskite is corner-sharing 5-atom-per-FU, rutile is edge-sharing AB2 with 3-atom FU — different topology AND different FU. Negative-direction guard: when the algorithm is fixed to score antiperovskite ↔ ionic perovskite at ≈ 0, this comparison must remain high to prevent intermetallic perovskites from collapsing with all extended ionic structures.
+      cost=19.4000  unassigned_a=11  unassigned_b=8  iters=3
+      cost_reverse=19.4000  [symmetric]
+        ✓  [cost] Antiperovskite vs rutile — different topology, cost must reflect mismatch
+          cost=19.4000 ≥ 1.0
+        ✓  [cost] Cost should remain bounded (relaxed to arbitrary high bound)
+          cost=19.4000 ≤ 100.0
+
+  ✓ [ged] la3alc_vs_mgal2o4_ged
+      La3AlC (intermetallic antiperovskite) vs MgAl2O4 (spinel, A1B2X4, corner-/edge-sharing octahedra+tetrahedra). Different topology and different FU.
+      cost=21.4000  unassigned_a=11  unassigned_b=10  iters=3
+      cost_reverse=21.4000  [symmetric]
+        ✓  [cost] Antiperovskite vs spinel — different topology, cost must reflect mismatch
+          cost=21.4000 ≥ 1.0
+        ✓  [cost] Cost should remain bounded (relaxed to arbitrary high bound)
+          cost=21.4000 ≤ 100.0
+
+  ✓ [ged] la3alc_vs_nacl_ged
+      La3AlC vs NaCl (rock-salt, AB, simple ionic). Fundamentally different topology and FU.
+      cost=1.0000  unassigned_a=1  unassigned_b=0  iters=10
+      cost_reverse=1.0000  [symmetric]
+        ✓  [cost] Antiperovskite vs rock-salt — fundamentally different, cost must reflect mismatch
+          cost=1.0000 ≥ 1.0
+        ✓  [cost] Cost should remain bounded (relaxed to arbitrary high bound)
+          cost=1.0000 ≤ 100.0
+
+  ✓ [ged] la3alc_vs_kpse3_ged
+      La3AlC (intermetallic antiperovskite, 5 atoms / FU corner-sharing) vs KPSe3 (layered phosphoselenide with P2Se6 dimers, 5 atoms / FU same stoichiometry but layered). Same FU, different topology — tests that the algorithm distinguishes 3D corner-sharing antiperovskite from layered halide-style structure.
+      cost=8.9351  unassigned_a=0  unassigned_b=2  iters=10
+      cost_reverse=8.9351  [symmetric]
+        ✓  [cost] Antiperovskite vs layered phosphoselenide — different topology, cost must reflect mismatch
+          cost=8.9351 ≥ 1.0
+        ✓  [cost] Cost should remain bounded (relaxed to arbitrary high bound)
+          cost=8.9351 ≤ 100.0
+
+  ✓ [ged] alco3c_vs_tio2_ged
+      AlCo3C (intermetallic antiperovskite with neutral B-site Co) vs TiO2 (rutile). Different topology and FU; mirrors la3alc_vs_tio2 with the harder neutral-role case.
+      cost=13.5357  unassigned_a=8  unassigned_b=5  iters=2
+      cost_reverse=13.5357  [symmetric]
+        ✓  [cost] Antiperovskite vs rutile — different topology, cost must reflect mismatch
+          cost=13.5357 ≥ 1.0
+        ✓  [cost] Cost should remain bounded (relaxed to arbitrary high bound)
+          cost=13.5357 ≤ 100.0
+
+  ✓ [ged] alco3c_vs_mgal2o4_ged
+      AlCo3C vs MgAl2O4 (spinel). Different topology and FU.
+      cost=13.5940  unassigned_a=6  unassigned_b=5  iters=3
+      cost_reverse=13.5940  [symmetric]
+        ✓  [cost] Antiperovskite vs spinel — different topology, cost must reflect mismatch
+          cost=13.5940 ≥ 1.0
+        ✓  [cost] Cost should remain bounded (relaxed to arbitrary high bound)
+          cost=13.5940 ≤ 100.0
+
+  ✓ [ged] alco3c_vs_nacl_ged
+      AlCo3C vs NaCl (rock-salt). Fundamentally different topology and FU.
+      cost=3.0000  unassigned_a=3  unassigned_b=0  iters=1
+      cost_reverse=3.0000  [symmetric]
+        ✓  [cost] Antiperovskite vs rock-salt — fundamentally different, cost must reflect mismatch
+          cost=3.0000 ≥ 1.0
+        ✓  [cost] Cost should remain bounded (relaxed to arbitrary high bound)
+          cost=3.0000 ≤ 100.0
+
+  ✓ [ged] alco3c_vs_kpse3_ged
+      AlCo3C vs KPSe3 (layered phosphoselenide). Same FU (5 atoms) but very different topology — tests the algorithm distinguishes 3D corner-sharing antiperovskite from layered halide-style structure even with neutral-role B-site.
+      cost=10.7167  unassigned_a=0  unassigned_b=0  iters=2
+      cost_reverse=10.7167  [symmetric]
+        ✓  [cost] Antiperovskite vs layered phosphoselenide — different topology, cost must reflect mismatch
+          cost=10.7167 ≥ 1.0
+        ✓  [cost] Cost should remain bounded (relaxed to arbitrary high bound)
+          cost=10.7167 ≤ 100.0
+
+  ✓ [ged] mnco3_polymorphs_ged
+      MnCO3 mp-18814 (calcite, R-3c, 10 atoms / 2 FU, Mn CN=6, all O CN=3) vs MnCO3 mp-1078473 (different polymorph, 20 atoms / 4 FU, Mn CN=9, mixed O CN=3,4,5).  Different topologies (calcite vs aragonite-like high-coordination polymorph), so cost should be non-zero — but every atom must be mapped: the imbalanced MULTIPLY-mode assignment currently leaves two A-side O atoms as sibling vacancies (ids [5, 9]) while other A-Os get over-mapped to 3 B-slots, which is a bug in MULTIPLY-mode bookkeeping.
+      cost=7.3167  unassigned_a=0  unassigned_b=0  iters=3
+      cost_reverse=7.3167  [symmetric]
+        ✓  [cost] Different MnCO3 polymorphs — cost should be non-zero
+          cost=7.3167 ≥ 0.5
+        ✓  [cost] Cost should remain bounded (relaxed to arbitrary high bound)
+          cost=7.3167 ≤ 100.0
+
+--- Category: formula_unit  (4/20 passed) ---
+
+  ✓ [ged] cclf3_vs_nacl_ged
+      CClF3 vs NaCl (rock-salt): molecular crystal vs extended ionic Fm-3m.  No shared topology.
+      cost=3.6000  unassigned_a=3  unassigned_b=0  iters=2
+      cost_reverse=3.6000  [symmetric]
+        ✓  [cost] Molecular halocarbon vs extended crystal — cost must be substantially above zero
+          cost=3.6000 ≥ 3.0
+        ✓  [cost] Cost should remain bounded (relaxed to arbitrary high bound)
+          cost=3.6000 ≤ 100.0
+
+  ✗ [ged] cclf3_vs_tio2_ged
+      CClF3 vs TiO2 (rutile): molecular crystal vs extended edge-sharing octahedra.
+      cost=2.4000  unassigned_a=0  unassigned_b=2  iters=2
+      cost_reverse=2.4000  [symmetric]
+        ✗  [cost] Molecular halocarbon vs extended crystal — cost must be substantially above zero
+          cost=2.4000 < 3.0
+        ✓  [cost] Cost should remain bounded (relaxed to arbitrary high bound)
+          cost=2.4000 ≤ 100.0
+
+  ✗ [ged] cclf3_vs_mgal2o4_ged
+      CClF3 vs MgAl2O4 (spinel): molecular crystal vs cubic spinel framework.  Currently a false-positive case (the algorithm scores them similarly) — this test asserts the philosophical answer rather than the current algorithm output.
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=2
+      cost_reverse=0.0000  [symmetric]
+        ✗  [cost] Molecular halocarbon vs extended crystal — cost must be substantially above zero
+          cost=0.0000 < 3.0
+        ✓  [cost] Cost should remain bounded (relaxed to arbitrary high bound)
+          cost=0.0000 ≤ 100.0
+
+  ✓ [ged] cclf3_vs_ba2ycu3o7_ged
+      CClF3 vs YBCO (defect perovskite cuprate): molecular crystal vs extended layered defect perovskite — extremely different.
+      cost=10.8000  unassigned_a=1  unassigned_b=4  iters=2
+      cost_reverse=10.8000  [symmetric]
+        ✓  [cost] Molecular halocarbon vs extended crystal — cost must be substantially above zero
+          cost=10.8000 ≥ 3.0
+        ✓  [cost] Cost should remain bounded (relaxed to arbitrary high bound)
+          cost=10.8000 ≤ 100.0
+
+  ✗ [ged] cif3_vs_mgal2o4_ged
+      CIF3 vs MgAl2O4 (spinel): molecular vs spinel — false-positive case paired with the CClF3 version above.
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=2
+      cost_reverse=0.0000  [symmetric]
+        ✗  [cost] Molecular halocarbon vs extended crystal — cost must be substantially above zero
+          cost=0.0000 < 3.0
+        ✓  [cost] Cost should remain bounded (relaxed to arbitrary high bound)
+          cost=0.0000 ≤ 100.0
+
+  ✓ [ged] spinel_vs_perovskite_ged
+      MgAl2O4 (spinel, mp-3536) vs SrTiO3 (perovskite, mp-5229): structurally unrelated families with different coordination environments — cost should be high
+      cost=2.9917  unassigned_a=0  unassigned_b=0  iters=2
+      cost_reverse=2.9917  [symmetric]
+        ✓  [cost] Spinel vs perovskite: fundamentally different bond topologies should produce high cost
+          cost=2.9917 ≥ 1.0
+        ✓  [cost] Cost should remain bounded even for structurally unrelated families (relaxed to arbitrary high bound)
+          cost=2.9917 ≤ 100.0
+
+  ✗ [ged] la3alc_vs_reo3_ged
+      La3AlC (5 atoms/FU, intermetallic carbide) vs ReO3 (4 atoms/FU, oxide): forced partial match with Al as structural vacancy; mismatch cost expected ~1.9
+      cost=12.0571  unassigned_a=3  unassigned_b=6  iters=1
+      cost_reverse=12.0571  [symmetric]
+        ✓  [cost] La-O environment mismatch: cost should be significantly above zero
+          cost=12.0571 ≥ 1.0
+        ✓  [cost] Cost should remain bounded (no runaway infinity paths) (relaxed to arbitrary high bound)
+          cost=12.0571 ≤ 100.0
+        ✗  [vacancy_a_count] Al has no structural counterpart in ReO3 — at least 1 A-node should be a vacancy
+          vacancy_a_count=0.0000 < 1.0
+        ✗  [unassigned_b_count] All ReO3 nodes should be covered (smaller-FU side fully matched)
+          unassigned_b_count=6.0000 > 0.0
+
+  ✗ [ged] srtio3_vs_sr2tio4_ged
+      SrTiO3 (perovskite, 5 atoms/FU) vs Sr2TiO4 (Ruddlesden-Popper 214, 7 atoms/FU): both same-FU count. k-loop should pick k=1, leaving the extra Sr and O from the RP rock-salt layer as soft vacancies.
+      cost=9.1000  unassigned_a=3  unassigned_b=0  iters=2
+      cost_reverse=9.1000  [symmetric]
+        ✓  [cost] RP vs perovskite: moderate cost expected (2 extra B-nodes), well below unrelated structures (relaxed to arbitrary high bound)
+          cost=9.1000 ≤ 100.0
+        ✓  [cost] Cost should be non-trivial (structures differ by one extra AO layer)
+          cost=9.1000 ≥ 1.0
+        ✗  [cross_fu_k] k-loop should select k=1 (perovskite is not a supercell of the 214 RP)
+          cross_fu_k=2.0000 in [1.0, 1.0]: no
+        ✓  [map_element] Sr in perovskite maps to (one of the) Sr in RP
+          All 1/1 mapped Sr nodes → Sr
+        ✓  [map_element] Ti (B-site) maps to Ti in RP
+          All 1/1 mapped Ti nodes → Ti
+
+  ✗ [ged] srtio3_vs_sr3ti2o7_ged
+      SrTiO3 (perovskite RP n=inf) vs Sr3Ti2O7 (RP n=2, 12 atoms/FU): k-loop selects k=2 (2 perovskite FUs per one RP-327 FU). Cost should be intermediate between n=1 (~3.33) and n=3 (~4.64), reflecting the RP ordering.
+      cost=0.0857  unassigned_a=0  unassigned_b=0  iters=2
+      cost_reverse=0.0857  [symmetric]
+        ✗  [cost] SrTiO3 vs RP n=2: cost should fall between RP n=1 and n=3 in the RP ordering
+          cost=0.0857 < 2.0
+        ✓  [cost] Cost should not exceed RP n=3 comparison by a large margin (relaxed to arbitrary high bound)
+          cost=0.0857 ≤ 100.0
+        ✗  [cross_fu_k] k=2: two perovskite FUs (10 atoms) cover most of RP-327 (12 atoms), 2 extras
+          cross_fu_k=3.0000 in [2.0, 2.0]: no
+        ✓  [map_element] Sr in perovskite maps to Sr in RP-327
+          All 1/1 mapped Sr nodes → Sr
+        ✓  [map_element] Ti in perovskite maps to Ti in RP-327
+          All 1/1 mapped Ti nodes → Ti
+
+  ✗ [ged] srtio3_vs_sr4ti3o10_ged
+      SrTiO3 (perovskite RP n=inf) vs Sr4Ti3O10 (RP n=3, 17 atoms/FU): k-loop selects k=3 (3 perovskite FUs per one RP-313 FU), leaving 2 rock-salt-layer nodes (1 Sr CN=9, 1 apical O with 5Sr+1Ti) as soft vacancies. Edge costs averaged over k=3 rounds per A-node (~2.6 total) + 2.0 soft vacancies = ~4.6.
+      cost=0.3267  unassigned_a=0  unassigned_b=0  iters=2
+      cost_reverse=0.3267  [symmetric]
+        ✓  [cost] k=3 normalized: averaged edge costs (~2.6) + 2 soft vacancies. Total ~4.6, well below unrelated structures (~6-8). (relaxed to arbitrary high bound)
+          cost=0.3267 ≤ 100.0
+        ✗  [cost] Cost should reflect real structural differences between perovskite and n=3 RP (not near-zero)
+          cost=0.3267 < 2.0
+        ✗  [cross_fu_k] k=3: three perovskite FUs fit in one RP-313 FU (Sr3×1, Ti3×1, O3×3 = 15 atoms, leaving 2 rock-salt nodes)
+          cross_fu_k=4.0000 in [3.0, 3.0]: no
+        ✗  [unassigned_b_count] 2 rock-salt-layer nodes unmatched: 1 Sr(CN=9) + 1 apical O(5Sr+1Ti)
+          unassigned_b_count=0.0000 in [2.0, 2.0]: no
+        ✓  [map_element] All perovskite Sr maps to Sr in RP-313
+          All 1/1 mapped Sr nodes → Sr
+        ✓  [map_element] All perovskite Ti maps to Ti in RP-313
+          All 1/1 mapped Ti nodes → Ti
+
+  ✗ [ged] sr2tio4_vs_sr4ti3o10_ged
+      Sr2TiO4 (RP n=1, 7 atoms/FU) vs Sr4Ti3O10 (RP n=3, 17 atoms/FU): k=2 (2 RP-214 FUs per RP-313 FU), 3 unmatched B-nodes for the additional TiO2 layer and extra SrO interface atoms. Edge costs averaged over k=2 rounds per A-node.
+      cost=0.1500  unassigned_a=0  unassigned_b=0  iters=2
+      cost_reverse=0.1500  [symmetric]
+        ✓  [cost] k=2 normalized: RP n=1 vs RP n=3 have more similar environments than perovskite vs RP n=3, moderate cost (relaxed to arbitrary high bound)
+          cost=0.1500 ≤ 100.0
+        ✗  [cost] Cost should be non-trivial (different n in RP series, extra TiO2 and SrO layers)
+          cost=0.1500 < 3.0
+        ✗  [cross_fu_k] k=2: two RP-214 FUs (14 atoms) cover most of RP-313 (17 atoms), 3 extras
+          cross_fu_k=3.0000 in [2.0, 2.0]: no
+        ✓  [map_element] Sr in RP-214 maps to Sr in RP-313
+          All 2/2 mapped Sr nodes → Sr
+        ✓  [map_element] Ti in RP-214 maps to Ti in RP-313
+          All 1/1 mapped Ti nodes → Ti
+
+  ✗ [ged] srtio3_vs_sro_ged
+      SrTiO3 (perovskite, 5 atoms/FU) vs SrO (rock-salt, 2 atoms/FU, different FU size): Ti(oct-cation) maps to rock-salt Sr(oct-cation) as best available match; perovskite Sr(high-cation CN=12) has no rock-salt counterpart and becomes a free vacancy.
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=1
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Different structure types: moderate cost expected (relaxed to arbitrary high bound)
+          cost=0.0000 ≤ 100.0
+        ✗  [cost] SrO and SrTiO3 share Sr and O but differ significantly in topology
+          cost=0.0000 < 1.0
+        ✗  [vacancy_a_count] Perovskite Sr(CN=12) has no high-CN counterpart in rock-salt SrO — exactly 1 free vacancy
+          vacancy_a_count=0.0000 < 1.0
+
+  ✗ [ged] la2nio4_vs_lanio3_ged
+      La2NiO4 (RP n=1, 7 atoms/FU) vs LaNiO3 (perovskite, 5 atoms/FU): same nickelate chemistry, related topology
+      cost=15.7500  unassigned_a=4  unassigned_b=0  iters=3
+      cost_reverse=15.7500  [symmetric]
+        ✗  [cost] Different FU same family: moderate cost expected
+          cost=15.7500 > 3.0
+
+  ✗ [ged] sr3ru2o7_vs_srruo3_ged
+      Sr3Ru2O7 (RP n=2) vs SrRuO3 (perovskite): same Ru-O perovskite framework with extra rock-salt layer
+      cost=17.0500  unassigned_a=2  unassigned_b=0  iters=2
+      cost_reverse=17.0500  [symmetric]
+        ✗  [cost] Different FU same family: moderate cost expected
+          cost=17.0500 > 3.0
+
+  ✗ [ged] batio3_vs_sr2tio4_ged
+      BaTiO3 (perovskite) vs Sr2TiO4 (RP n=1): same Ti-O perovskite layers but different A and extra rock-salt layer
+      cost=9.1000  unassigned_a=3  unassigned_b=0  iters=2
+      cost_reverse=9.1000  [symmetric]
+        ✗  [cost] Different FU same family: moderate cost expected
+          cost=9.1000 > 3.0
+
+  ✗ [ged] nacl_vs_tio2_ged
+      NaCl (rock-salt, MX) vs TiO2 (rutile, MX2): different FU and different topology
+      cost=2.2500  unassigned_a=0  unassigned_b=2  iters=2
+      cost_reverse=2.2500  [symmetric]
+        ✗  [cost] Dissimilar structures: cost must reflect topological mismatch
+          cost=2.2500 < 5.0
+
+  ✗ [ged] nacl_vs_srtio3_ged
+      NaCl (rock-salt) vs SrTiO3 (perovskite): unrelated structures, different FU and topology
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=1
+      cost_reverse=0.0000  [symmetric]
+        ✗  [cost] Dissimilar structures: cost must reflect topological mismatch
+          cost=0.0000 < 5.0
+
+  ✗ [ged] tio2_vs_mgal2o4_ged
+      TiO2 (rutile, MX2) vs MgAl2O4 (spinel, AB2X4): different FU and very different topology
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=2
+      cost_reverse=0.0000  [symmetric]
+        ✗  [cost] Dissimilar structures: cost must reflect topological mismatch
+          cost=0.0000 < 5.0
+
+  ✓ [ged] mgal2o4_vs_nd2zr2o7_ged
+      MgAl2O4 (spinel) vs Nd2Zr2O7 (pyrochlore): related but distinct cubic framework structures.  Both have octahedral B-sites with some shared topology.  Refinement with symmetric vacancy columns finds enough matched atoms that the cost is moderate (~4) rather than the more-aggressive ≥5 we previously expected.
+      cost=4.5500  unassigned_a=4  unassigned_b=0  iters=4
+      cost_reverse=4.5500  [symmetric]
+        ✓  [cost] Cost should be non-trivial (different families)
+          cost=4.5500 ≥ 3.0
+        ✓  [cost] Cost should be bounded (relaxed to arbitrary high bound)
+          cost=4.5500 ≤ 100.0
+
+  ✗ [ged] caf2_vs_srtio3_ged
+      CaF2 (fluorite, MX2) vs SrTiO3 (perovskite, ABX3): unrelated
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=2
+      cost_reverse=0.0000  [symmetric]
+        ✗  [cost] Dissimilar structures: cost must reflect topological mismatch
+          cost=0.0000 < 5.0
+
+--- Category: core_consistency  (20/20 passed) ---
+
+  ✓ [ged_consistency] kpse3_polymorphs_vs_srtio3_consistency
+      All KPSe3/RbPSe3 polymorphs (layered phosphoselenides) compared against cubic SrTiO3 perovskite. Every polymorph must score well above 1 — the layered P2Se6-dimer topology is fundamentally different from corner-sharing perovskite octahedra, regardless of cell size or distortion variant.
+      [symmetric] 3/3 candidates symmetric
+        ✓  [cost_min] Every KPSe3/RbPSe3 polymorph must score well above 1 against perovskite SrTiO3 — no polymorph should slip into the perovskite cluster
+          cost_min=2.0000 ≥ 0.25
+        ✓  [cost_max] Cost should remain bounded (relaxed to arbitrary high bound)
+          cost_max=31.0000 ≤ 1000.0
+
+  ✓ [ged_consistency] kpse3_polymorphs_vs_batio3_consistency
+      All KPSe3/RbPSe3 polymorphs compared against cubic BaTiO3 perovskite. Same reasoning as the SrTiO3 version — layered phosphoselenide topology must be distinguishable from perovskite regardless of which perovskite reference is used.
+      [symmetric] 3/3 candidates symmetric
+        ✓  [cost_min] Every KPSe3/RbPSe3 polymorph must score well above 1 against perovskite BaTiO3
+          cost_min=3.2833 ≥ 0.25
+        ✓  [cost_max] Cost should remain bounded (relaxed to arbitrary high bound)
+          cost_max=34.6000 ≤ 1000.0
+
+  ✓ [ged_consistency] kpse3_polymorphs_vs_lanio3_consistency
+      All KPSe3/RbPSe3 polymorphs compared against rhombohedral LaNiO3 (2-FU perovskite cell). Tests robustness against larger / non-cubic perovskite reference cells.
+      [symmetric] 3/3 candidates symmetric
+        ✓  [cost_min] Every KPSe3/RbPSe3 polymorph must score well above 1 against perovskite LaNiO3
+          cost_min=3.2833 ≥ 0.25
+        ✓  [cost_max] Cost should remain bounded (relaxed to arbitrary high bound)
+          cost_max=34.6000 ≤ 1000.0
+
+  ✓ [ged_consistency] knbo3_polymorphs_vs_srtio3
+      KNbO3 polymorphs (cubic Pm-3m, tetragonal P4mm, orthorhombic Amm2, rhombohedral R3m — all 5-atom perovskite ferroelectric distortions) compared against cubic SrTiO3.  All polymorphs share the corner-sharing perovskite topology so cost should be near zero and identical across distortions.
+      [symmetric] 4/4 candidates symmetric
+        ✓  [cost_range] KNbO3 distortion polymorphs must score consistently
+          cost_range=0.0000 ≤ 0.05
+        ✓  [cost_max] Distorted KNbO3 vs cubic SrTiO3 should be a low-cost match
+          cost_max=0.0000 ≤ 0.5
+
+  ✓ [ged_consistency] catio3_polymorphs_vs_srtio3
+      CaTiO3 polymorphs (Pm-3m cubic, I4/mcm tetragonal, Pnma orthorhombic, Cmcm — covering 5, 10, and 20-atom cells) compared against cubic SrTiO3.  All are perovskite distortions / supercells of the same compound.  Tests both distortion AND cell-size invariance.
+      [symmetric] 4/4 candidates symmetric
+        ✓  [cost_range] CaTiO3 polymorphs+supercells must score consistently
+          cost_range=0.0000 ≤ 0.1
+        ✓  [cost_max] Cost should be near zero (same family)
+          cost_max=0.0000 ≤ 0.5
+
+  ✓ [ged_consistency] batio3_polymorphs_vs_srtio3
+      BaTiO3 polymorphs (Pm-3m cubic in 10-atom cell, R3m rhombohedral, Amm2 orthorhombic, P4mm tetragonal) vs cubic SrTiO3.  Tests distortion robustness plus a 10-atom-cell supercell-equivalent case.
+      [symmetric] 4/4 candidates symmetric
+        ✓  [cost_range] BaTiO3 polymorphs must score consistently
+          cost_range=0.0000 ≤ 0.05
+        ✓  [cost_max] BaTiO3 vs SrTiO3: identical perovskite topology, cost ≈ 0
+          cost_max=0.0000 ≤ 0.05
+
+  ✓ [ged_consistency] lacoo3_polymorphs_vs_lanio3
+      LaCoO3 polymorphs (Pm-3m cubic, Pnma orthorhombic, P-1 triclinic) vs rhombohedral LaNiO3 (R-3c).  Tests cross-distortion perovskite consistency with same La A-site cation.
+      [symmetric] 3/3 candidates symmetric
+        ✓  [cost_range] LaCoO3 polymorphs vs LaNiO3 must score consistently
+          cost_range=0.0000 ≤ 0.1
+        ✓  [cost_max] LaCoO3 vs LaNiO3: same La-site, B-site swap
+          cost_max=0.0000 ≤ 0.5
+
+  ✓ [ged_consistency] cubic_perovskite_compounds
+      Six different Pm-3m cubic perovskites compared against SrTiO3.  Tests that element substitution at A/B sites with shared topology gives consistent near-zero cost across compounds.
+      [symmetric] 6/6 candidates symmetric
+        ✓  [cost_range] All cubic perovskites must score identically vs SrTiO3
+          cost_range=0.0000 ≤ 0.05
+        ✓  [cost_max] Same topology → cost near zero
+          cost_max=0.0000 ≤ 0.05
+
+  ✓ [ged_consistency] wurtzite_compounds_vs_zno
+      Wurtzite (P6_3mc) compounds GaN, AlN, BeO, CdS compared against wurtzite ZnO.  Tests element-substitution invariance for the wurtzite framework.  Some residual cost expected from the adaptive-cutoff CN variability across cells (CN=13 vs 14 etc.); future polyhedral-aware graphs should eliminate it.
+      [symmetric] 4/4 candidates symmetric
+        ✓  [cost_range] Wurtzite compounds should score within graph-builder-residual range
+          cost_range=0.0000 ≤ 0.5
+        ✓  [cost_max] Same wurtzite topology vs reference
+          cost_max=0.0000 ≤ 0.5
+
+  ✓ [ged_consistency] zinc_blende_compounds_vs_gaas
+      Zinc-blende (F-43m) compounds ZnS, InP, CdS, ZnO-cubic compared against GaAs.  Tests element-substitution invariance for zinc blende framework.
+      [symmetric] 4/4 candidates symmetric
+        ✓  [cost_range] Zinc blende compounds should score consistently
+          cost_range=0.0000 ≤ 0.5
+        ✓  [cost_max] Same zinc blende topology vs reference
+          cost_max=0.0000 ≤ 0.5
+
+  ✓ [ged_consistency] rocksalt_compounds_vs_nacl
+      Six rock-salt (Fm-3m) compounds compared against NaCl.  Tests element substitution invariance across the rock-salt family — alkali halide vs TM oxide vs alkaline-earth oxide.  All should be identically zero.
+      [symmetric] 6/6 candidates symmetric
+        ✓  [cost_range] All rock-salts must score identically
+          cost_range=0.0000 ≤ 0.05
+        ✓  [cost_max] Same rock-salt topology → cost zero
+          cost_max=0.0000 ≤ 0.05
+
+  ✓ [ged_consistency] corundum_compounds_vs_al2o3
+      Corundum (R-3c) compounds Cr2O3 and Fe2O3 (hematite) compared against Al2O3.  Tests B-site substitution invariance for corundum.
+      [symmetric] 2/2 candidates symmetric
+        ✓  [cost_range] Corundum compounds must score identically
+          cost_range=0.0000 ≤ 0.05
+        ✓  [cost_max] Same corundum topology → cost zero
+          cost_max=0.0000 ≤ 0.05
+
+  ✓ [ged_consistency] pyrochlore_compounds_vs_nd2zr2o7
+      Pyrochlore (Fd-3m) compounds Y2Ti2O7 and Pr2Zr2O7 compared against Nd2Zr2O7.  Tests A/B site substitution invariance for pyrochlore.
+      [symmetric] 2/2 candidates symmetric
+        ✓  [cost_range] Pyrochlore compounds must score identically
+          cost_range=0.0000 ≤ 0.05
+        ✓  [cost_max] Same pyrochlore topology → cost zero
+          cost_max=0.0000 ≤ 0.05
+
+  ✓ [ged_consistency] rutile_compounds_vs_tio2
+      Rutile (P4_2/mnm) compounds SnO2 and RuO2 compared against TiO2.  Tests cation substitution invariance for the rutile framework.
+      [symmetric] 2/2 candidates symmetric
+        ✓  [cost_range] Rutile compounds must score identically
+          cost_range=0.0000 ≤ 0.05
+        ✓  [cost_max] Same rutile topology → cost zero
+          cost_max=0.0000 ≤ 0.05
+
+  ✓ [ged_consistency] fluorite_compounds_vs_caf2
+      Fluorite (Fm-3m) compounds ZrO2 (cubic) and ThO2 compared against CaF2.  Tests cation substitution invariance for fluorite (and oxide vs fluoride).
+      [symmetric] 2/2 candidates symmetric
+        ✓  [cost_range] Fluorite compounds must score identically
+          cost_range=0.0000 ≤ 0.05
+        ✓  [cost_max] Same fluorite topology → cost zero
+          cost_max=0.0000 ≤ 0.05
+
+  ✓ [ged_consistency] spinel_compounds_vs_mgal2o4
+      Spinel (Fd-3m) compound MgCr2O4 compared against MgAl2O4.  Tests B-site substitution invariance for spinel.  Only 1 candidate (limited by available CIFs); range trivially zero.
+      [symmetric] 1/1 candidates symmetric
+        ✓  [cost_max] Same spinel topology → cost zero
+          cost_max=0.0000 ≤ 0.05
+
+  ✓ [ged_consistency] srtio3_supercells_vs_batio3
+      SrTiO3 1×1×1 (5 atoms), 1×1×2 (10), 2×1×1 (10), 2×2×2 (40) supercells compared against BaTiO3.  Tests cell-size invariance directly: all supercells of the same compound must score identically.
+      [symmetric] 4/4 candidates symmetric
+        ✓  [cost_range] Supercells of same compound must score identically
+          cost_range=0.0000 ≤ 0.05
+        ✓  [cost_max] SrTiO3 vs BaTiO3 should be cost zero at all cell sizes
+          cost_max=0.0000 ≤ 0.05
+
+  ✓ [ged_consistency] nacl_supercells_vs_mgo
+      NaCl 1×1×1 (2 atoms), 2×2×2 (16), 3×3×3 (54) supercells vs MgO.  Tests cell-size invariance for the rock-salt family.
+      [symmetric] 3/3 candidates symmetric
+        ✓  [cost_range] NaCl supercells must score identically vs MgO
+          cost_range=0.0000 ≤ 0.05
+        ✓  [cost_max] NaCl vs MgO same topology → cost zero
+          cost_max=0.0000 ≤ 0.05
+
+  ✓ [ged_consistency] tio2_supercells_vs_sno2
+      TiO2 rutile primitive (6 atoms), 1×1×3 (18), 2×2×2 (48) supercells vs SnO2.  Tests cell-size invariance for the rutile family.
+      [symmetric] 3/3 candidates symmetric
+        ✓  [cost_range] TiO2 supercells must score identically vs SnO2
+          cost_range=0.0000 ≤ 0.05
+        ✓  [cost_max] TiO2 vs SnO2 same rutile topology → cost zero
+          cost_max=0.0000 ≤ 0.05
+
+  ✓ [ged_consistency] nanbo3_polymorphs_vs_srtio3
+      NaNbO3 polymorphs (R-3 with 10 atoms, three orthorhombic polymorphs with 20 atoms each — Pnma, Pna2_1, Pmn2_1) vs cubic SrTiO3.  Genuinely tests the algorithm against a mixture of distortion AND supercell variation in a single test.
+      [symmetric] 4/4 candidates symmetric
+        ✓  [cost_range] NaNbO3 distortion+supercell mix must score consistently
+          cost_range=0.0000 ≤ 0.1
+        ✓  [cost_max] NaNbO3 polymorphs vs SrTiO3 should be near-zero cost
+          cost_max=0.0000 ≤ 0.5
+
+--- Category: reach  (0/4 passed) ---
+
+  ✗ [ged] SrTiO3_vs_AlBO3
+      SrTiO3 vs AlBO3: Boron A site, effectively 12 coordinate. Testing if the algorithm can correctly identify that if 9 bonds are added to B, the graphs are topologicall the same 
+      cost=1.2000  unassigned_a=0  unassigned_b=0  iters=2
+      cost_reverse=1.2000  [symmetric]
+        ✗  [cost] Same underlying topology
+          cost=1.2000 > 0.05
+        ✓  [unassigned_a_count] Same formula unit size: all A-nodes must be assigned
+          unassigned_a_count=0.0000 ≤ 0.0
+        ✓  [unassigned_b_count] Same formula unit size: all B-nodes must be assigned
+          unassigned_b_count=0.0000 ≤ 0.0
+
+  ✗ [ged] LaNiO3_vs_AlBO3
+      LaNiO3 vs AlBO3: Boron A site, effectively 12 coordinate. Testing if the algorithm can correctly identify that if 9 bonds are added to B, the graphs are topologically the same 
+      cost=1.8000  unassigned_a=0  unassigned_b=0  iters=1
+      cost_reverse=1.8000  [symmetric]
+        ✗  [cost] Same underlying topology
+          cost=1.8000 > 0.05
+        ✓  [unassigned_a_count] Same formula unit size: all A-nodes must be assigned
+          unassigned_a_count=0.0000 ≤ 0.0
+        ✓  [unassigned_b_count] Same formula unit size: all B-nodes must be assigned
+          unassigned_b_count=0.0000 ≤ 0.0
+
+  ✗ [ged] La3AlC_vs_AlBO3
+      La3AlC vs AlBO3: Comparing strange perovskite AlBO3 with intermetallic carbide La3AlC.
+      cost=14.0571  unassigned_a=3  unassigned_b=8  iters=1
+      cost_reverse=14.0571  [symmetric]
+        ✗  [cost] Same underlying topology
+          cost=14.0571 > 0.05
+        ✗  [unassigned_a_count] Same formula unit size: all A-nodes must be assigned
+          unassigned_a_count=3.0000 > 0.0
+        ✗  [unassigned_b_count] Same formula unit size: all B-nodes must be assigned
+          unassigned_b_count=8.0000 > 0.0
+
+  ✗ [ged] Ba3PbO_vs_AlBO3
+      Ba3PbO vs AlBO3: Comparing strange perovskite AlBO3 with antiperovskite Ba3PbO.
+      cost=1.2000  unassigned_a=0  unassigned_b=0  iters=2
+      cost_reverse=1.2000  [symmetric]
+        ✗  [cost] Same underlying topology
+          cost=1.2000 > 0.05
+        ✓  [unassigned_a_count] Same formula unit size: all A-nodes must be assigned
+          unassigned_a_count=0.0000 ≤ 0.0
+        ✓  [unassigned_b_count] Same formula unit size: all B-nodes must be assigned
+          unassigned_b_count=0.0000 ≤ 0.0
+
+--- Category: defect  (9/14 passed) ---
+
+  ✓ [ged] ybco_vs_srtio3_ged
+      Ba2YCu3O7 (distorted/deficient perovskite, 13 atoms/FU) vs SrTiO3 (cubic Pm-3m, 5 atoms/FU): same perovskite topology, k-loop selects k=3 (3 SrTiO3 FUs per one YBCO FU). Cost reflects averaging over 3 rounds.
+      cost=0.4000  unassigned_a=0  unassigned_b=0  iters=2
+      cost_reverse=0.4000  [symmetric]
+        ✓  [cost] YBCO vs SrTiO3: k=3 normalized cost, bounded below 7.0
+          cost=0.4000 ≤ 7.0
+        ✓  [cross_fu_k] k-loop should select k=3 (3 perovskite FUs per one YBCO FU)
+          cross_fu_k=3.0000 in [3.0, 3.0]: yes
+        ✓  [map_element] All Cu (B-site in YBCO, including square-planar CN=4 via vacancy-inflation) must map to Ti (B-site in SrTiO3)
+          All 3/3 mapped Cu nodes → Ti
+
+  ✓ [ged] ybco_vs_batio3_ged
+      Ba2YCu3O7 vs BaTiO3 (cubic Pm-3m): Ba present in both structures — A-site Ba should match Ba, all Cu should map to Ti. k-loop selects k=3.
+      cost=0.4000  unassigned_a=0  unassigned_b=0  iters=2
+      cost_reverse=0.4000  [symmetric]
+        ✓  [cost] YBCO vs BaTiO3: k=3 normalized cost; shared Ba element helps, bounded below 6.0
+          cost=0.4000 ≤ 6.0
+        ✓  [cross_fu_k] k-loop should select k=3 (3 perovskite FUs per one YBCO FU)
+          cross_fu_k=3.0000 in [3.0, 3.0]: yes
+        ✓  [map_element] All Cu (B-site) must map to Ti (B-site), including square-planar CN=4 Cu via vacancy-inflation
+          All 3/3 mapped Cu nodes → Ti
+        ✓  [map_element] Ba (A-site in YBCO) must map to Ba (A-site in BaTiO3) — same element preserved
+          All 2/2 mapped Ba nodes → Ba
+
+  ✓ [ged] ybco_vs_ktao3_ged
+      Ba2YCu3O7 vs KTaO3 (cubic Pm-3m): B-site Cu must map to Ta, A-site Ba/Y must map to K. k-loop selects k=3.
+      cost=0.4000  unassigned_a=0  unassigned_b=0  iters=2
+      cost_reverse=0.4000  [symmetric]
+        ✓  [cost] YBCO vs KTaO3: k=3 normalized cost, bounded below 7.0
+          cost=0.4000 ≤ 7.0
+        ✓  [cross_fu_k] k-loop should select k=3 (3 perovskite FUs per one YBCO FU)
+          cross_fu_k=3.0000 in [3.0, 3.0]: yes
+        ✓  [map_element] All Cu (B-site in YBCO) must map to Ta (B-site in KTaO3)
+          All 3/3 mapped Cu nodes → Ta
+
+  ✓ [ged] srtio3_vs_reo3_ged
+      SrTiO3 vs ReO3: ReO3 is an empty perovskite — Sr is assigned a free vacancy, Ti maps to Re (both CN=6 B-site), O maps to O (CN=6 vs CN=2 cross-CN fallback). With the Sr vacancy correctly zeroing out O's Sr-bonds, the O and Ti environments match exactly and cost should be near zero.
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=2
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Sr vacancy is free (no B-counterpart bucket), Ti→Re and O→O match correctly after vacancy adjustment; cost should be near zero
+          cost=0.0000 ≤ 0.05
+        ✓  [vacancy_a_count] Sr has no counterpart in ReO3 — exactly 1 A-node should be a free vacancy
+          vacancy_a_count=2.0000 ≥ 1.0
+        ✓  [unassigned_b_count] All ReO3 nodes are covered by the smaller-FU rule
+          unassigned_b_count=0.0000 ≤ 0.0
+
+  ✗ [ged] srtio3_vs_cu3au_ged
+      SrTiO3 vs Cu3Au: Cu3Au is an empty perovskite — Ti is assigned a free vacancy, Sr maps to Au, O maps to Cu.
+      cost=6.0000  unassigned_a=4  unassigned_b=1  iters=1
+      cost_reverse=6.0000  [symmetric]
+        ✗  [cost] Ti vacancy is free (no B-counterpart bucket), Ti→Re and O→O match correctly after vacancy adjustment; cost should be near zero
+          cost=6.0000 > 0.05
+        ✗  [vacancy_a_count] Ti has no counterpart in AuO3 — exactly 1 A-node should be a free vacancy
+          vacancy_a_count=0.0000 < 1.0
+        ✗  [unassigned_b_count] All ReO3 nodes are covered by the smaller-FU rule
+          unassigned_b_count=1.0000 > 0.0
+
+  ✓ [ged] SrTiO3_vs_Ca2Al2O5_ged
+      SrTiO3 vs Ca2Al2O5: Ca2Al2O5 is Brownmillerite, a defect perovskite missing and oxygen. Should map Sr to Ca, Ti to Al, O to O, with one oxygen vacancy. The score should be zero
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=2
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Sr vacancy is free (no B-counterpart bucket), Ti→Re and O→O match correctly after vacancy adjustment; cost should be near zero
+          cost=0.0000 ≤ 0.05
+        ✓  [vacancy_a_count] Sr has no counterpart in ReO3 — exactly 1 A-node should be a free vacancy
+          vacancy_a_count=2.0000 ≥ 1.0
+        ✓  [unassigned_b_count] All ReO3 nodes are covered by the smaller-FU rule
+          unassigned_b_count=0.0000 ≤ 0.0
+
+  ✗ [ged] LaNiO3_vs_Ca2Al2O5_ged
+      LaNiO3 vs Ca2Al2O5: Ca2Al2O5 is Brownmillerite, a defect perovskite missing and oxygen. Should map La to Ca, Ni to Al, O to O, with one oxygen vacancy. The score should be zero
+      cost=8.0000  unassigned_a=2  unassigned_b=0  iters=2
+      cost_reverse=8.0000  [symmetric]
+        ✗  [cost] Ni vacancy is free (no B-counterpart bucket), Ti→Re and O→O match correctly after vacancy adjustment; cost should be near zero
+          cost=8.0000 > 0.05
+        ✗  [vacancy_c_count] Ni has no counterpart in ReO3 — exactly 1 A-node should be a free vacancy
+          Unknown GED assertion type: 'vacancy_c_count'
+        ✓  [unassigned_b_count] All ReO3 nodes are covered by the smaller-FU rule
+          unassigned_b_count=0.0000 ≤ 0.0
+
+  ✗ [ged] agsbo3_vs_nd2zr2o7_ged
+      AgSbO3 (defect pyrochlore) vs Nd2Zr2O7 (normal pyrochlore): cost should be near-zero (both pyrochlores). The O' site in Nd2Zr2O7 absent in AgSbO3 should be a free vacancy via B-side pre-pass demotion. Element disambiguation (Ag→Nd vs Ag→Zr) is a known limitation — both have cost 0 since both are CN=6 oct cations in identical environments.
+      cost=8.0000  unassigned_a=0  unassigned_b=0  iters=3
+      cost_reverse=8.0000  [symmetric]
+        ✗  [cost] Defect vs normal pyrochlore: topology matches, cost should be near-zero
+          cost=8.0000 > 0.5
+
+  ✗ [ged] nd2zr2o7_vs_agsbo3_ged
+      Nd2Zr2O7 (normal pyrochlore) vs AgSbO3 (defect pyrochlore): reverse direction. The O' site in Nd2Zr2O7 is handled by the A-side pre-pass, giving symmetric near-zero cost.
+      cost=8.0000  unassigned_a=0  unassigned_b=0  iters=3
+      cost_reverse=8.0000  [symmetric]
+        ✗  [cost] Normal vs defect pyrochlore (reverse): symmetric cost, should be near-zero
+          cost=8.0000 > 0.5
+        ✓  [map_element] Nd (A-site, demoted to oct by A-side pre-pass) must map to Ag (A-site, CN=6)
+          All 4/4 mapped Nd nodes → Ag
+        ✓  [map_element] Zr (B-site, CN=6) must map to Sb (B-site, CN=6)
+          All 4/4 mapped Zr nodes → Sb
+
+  ✗ [ged] ca2al2o5_vs_laalo3_ged
+      Ca2Al2O5 (Brownmillerite, defect perovskite missing oxygen) vs LaAlO3 (perovskite): same Al-O framework, defect O sublattice
+      cost=8.0000  unassigned_a=0  unassigned_b=2  iters=2
+      cost_reverse=8.0000  [symmetric]
+        ✗  [cost] Defect or role-inverted derivative: low cost reflecting shared framework
+          cost=8.0000 > 1.0
+
+  ✓ [ged] ba3sno_vs_lanio3_ged
+      Ba3SnO (antiperovskite, inverted cation/anion) vs LaNiO3 (perovskite): same topology after role-swap
+      cost=0.0000  unassigned_a=0  unassigned_b=0  iters=2
+      cost_reverse=0.0000  [symmetric]
+        ✓  [cost] Defect or role-inverted derivative: low cost reflecting shared framework
+          cost=0.0000 ≤ 1.0
+
+  ✓ [ged] reo3_vs_tio2_ged
+      ReO3 (empty perovskite, corner-sharing octahedra) vs TiO2 (rutile, edge-sharing octahedra): same octahedral motif but different connectivity
+      cost=8.0000  unassigned_a=4  unassigned_b=0  iters=2
+      cost_reverse=8.0000  [symmetric]
+        ✓  [cost] Defect-vs-unrelated must reflect real structural mismatch
+          cost=8.0000 ≥ 5.0
+
+  ✓ [ged] ca2al2o5_vs_tio2_ged
+      Ca2Al2O5 (Brownmillerite) vs TiO2 (rutile): unrelated frameworks. Refinement with symmetric vacancy columns finds enough matched octahedral atoms that the cost is moderate rather than the more-aggressive ≥5 we previously expected.
+      cost=12.3000  unassigned_a=6  unassigned_b=0  iters=3
+      cost_reverse=12.3000  [symmetric]
+        ✓  [cost] Cost should reflect mismatch
+          cost=12.3000 ≥ 3.0
+        ✓  [cost] Cost should be bounded (relaxed to arbitrary high bound)
+          cost=12.3000 ≤ 100.0
+
+  ✓ [ged] ybco_vs_tio2_ged
+      Ba2YCu3O7 (defect perovskite) vs TiO2 (rutile): different topologies
+      cost=15.7222  unassigned_a=4  unassigned_b=0  iters=2
+      cost_reverse=15.7222  [symmetric]
+        ✓  [cost] Defect-vs-unrelated must reflect real structural mismatch
+          cost=15.7222 ≥ 5.0
+
+--- Category: defect_consistency  (3/5 passed) ---
+
+  ✓ [ged_consistency] reo3_polymorphs_vs_srtio3_consistency
+      All 5 ReO3 allotropes compared against cubic SrTiO3 (empty-perovskite vs filled-perovskite: Sr→vacancy, Ti→Re, O→O cross-CN). Since every ReO3 polymorph shares the same bond topology, every GED score should be identical. Any spread exposes supercell/encoding artefacts in the matcher.
+      [symmetric] 5/5 candidates symmetric
+        ✓  [cost_range] All 5 ReO3 polymorphs share identical bond topology and must score within a tight range against any single reference
+          cost_range=0.0000 ≤ 0.05
+        ✓  [cost_max] Worst-case polymorph cost should still be near-zero since topology is identical and Sr vacancy is free
+          cost_max=0.0000 ≤ 0.05
+
+  ✓ [ged_consistency] reo3_polymorphs_vs_lanio3_consistency
+      All 5 ReO3 allotropes compared against rhombohedral LaNiO3 (empty-perovskite vs filled-perovskite with 2-FU cell). Topology is identical across all ReO3 polymorphs, so scores must match.
+      [symmetric] 5/5 candidates symmetric
+        ✓  [cost_range] ReO3 polymorph cost spread vs LaNiO3 must be within numerical tolerance — same topology must score the same
+          cost_range=0.0000 ≤ 0.05
+        ✓  [cost_max] Every ReO3 polymorph should score near-zero vs LaNiO3 since both are corner-sharing perovskite networks (La/A-site vacancy is free)
+          cost_max=0.0000 ≤ 0.05
+
+  ✗ [ged_consistency] reo3_polymorphs_vs_tifeo3_consistency
+      All 5 ReO3 allotropes compared against R-3 FeTiO3 ilmenite. FeTiO3 has edge-/face-sharing octahedra (distinct from ReO3's corner-sharing), so cost will be non-trivial, but it must be the same across all 5 ReO3 polymorphs because they share bond topology.
+      [symmetric] 5/5 candidates symmetric
+        ✗  [cost_min] FeTiO3 ilmenite has edge-sharing octahedra, structurally incompatible with ReO3's corner-sharing — every polymorph's cost should reflect this mismatch (>= 5)
+          cost_min=0.0000 < 5.0
+        ✓  [cost_max] Cost should remain bounded — structural mismatch is real but not absurdly large (<= 9) (relaxed to arbitrary high bound)
+          cost_max=0.0000 ≤ 100.0
+
+  ✗ [ged_consistency] reo3_polymorphs_vs_la3alc_consistency
+      All 5 ReO3 allotropes compared against La3AlC (intermetallic / non-ionic carbide). Different element set, different role distribution, cost will be non-trivial; but it must be the same across all 5 ReO3 polymorphs because they share bond topology. Validates that A-equivalence-class aggregation keeps distinct elements separate while still collapsing symmetry-equivalent siblings.
+      [symmetric] 5/5 candidates symmetric
+        ✗  [cost_range] ReO3 polymorph cost spread vs La3AlC intermetallic must be within tolerance — topology-identical A-side must score identically regardless of cell size
+          cost_range=12.6429 > 0.05
+
+  ✓ [ged_consistency] reo3_polymorphs_vs_ba3pbo_consistency
+      All 5 ReO3 allotropes compared against Ba3PbO antiperovskite. Role-swap trial should fire (perovskite ↔ antiperovskite equivalence) producing a near-zero cost. All 5 ReO3 allotropes share the same corner-sharing topology so must score identically, and the cost must be near zero after role-swap.
+      [symmetric] 5/5 candidates symmetric
+        ✓  [cost_range] ReO3 polymorph cost spread vs Ba3PbO antiperovskite must be within tolerance — topology-identical A-side must score identically regardless of cell size
+          cost_range=0.0000 ≤ 0.05
+        ✓  [cost_max] Every ReO3 polymorph vs Ba3PbO should score near-zero after role-swap (antiperovskite ↔ empty-perovskite equivalence)
+          cost_max=0.0000 ≤ 0.05
+
+======================================================================
+✗ Suite: 
+  File: -
+  Builder: ?
+  Results: 0/1 passed, 0 failed, 1 error
+======================================================================
+  ERROR loading suite: Failed to load suite JSON: [Errno 2] No such file or directory: '-'
+
+======================================================================
+Per category:
+  ✗ core          77/78 passed, 1 failed  [sym 78/78]
+  ✗ formula_unit  4/20 passed, 16 failed  [sym 20/20]
+  ✓ core_consistency  20/20 passed  [sym 20/20]
+  ✗ reach         0/4 passed, 4 failed  [sym 4/4]
+  ✗ defect        9/14 passed, 5 failed  [sym 14/14]
+  ✗ defect_consistency  3/5 passed, 2 failed  [sym 5/5]
+Overall: 113/142 passed, 28 failed, 1 error
+Symmetry: 141/142 symmetric (141/142 GED tests applicable)
+======================================================================
