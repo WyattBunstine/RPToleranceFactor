@@ -14,7 +14,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from detect_perovskite_family import _safe_guess_oxi, _select_anions, _extract_b_octahedra
+from old_scripts.detect_perovskite_family import _safe_guess_oxi, _select_anions, _extract_b_octahedra
 
 
 def _build_parser() -> argparse.ArgumentParser:

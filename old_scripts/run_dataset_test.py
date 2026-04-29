@@ -13,9 +13,9 @@ from pathlib import Path
 from build_graphs_batch import build_graphs_batch
 from crystal_graph_dataset_v2 import build_dataset, PROTOTYPE_SPECS
 
-CIF_DIR    = Path("data/cifs")
-GRAPH_DIR  = Path("data/crystal_graph_data")
-OUTPUT_DIR = Path("data/crystal_graph_data")
+CIF_DIR    = Path("../data/cifs")
+GRAPH_DIR  = Path("../data/crystal_graph_data")
+OUTPUT_DIR = Path("../data/crystal_graph_data")
 N_TEST     = 100
 
 # ABO3 pattern: two-element formula + O3, e.g. BaTiO3, CaMnO3, AgSbO3

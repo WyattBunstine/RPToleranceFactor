@@ -6,10 +6,12 @@ import json
 import warnings
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+import math
 
 import numpy as np
 from pymatgen.core import Element, Species, Structure
 from pymatgen.io.cif import CifParser
+from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
 COMMON_FALLBACK_ANIONS = {"O", "F", "S", "Se", "Cl", "Br"}
 ROMAN_CN = {
@@ -179,10 +181,20 @@ def _oxidation_for_species(oxidation_state: float) -> int | float:
     return oxi_value
 
 
-def _shannon_crystal_average_radius_angstrom(
-    symbol: str, oxidation_state: float
+def _shannon_crystal_extrapolated_radius_angstrom(
+    symbol: str, oxidation_state: float, target_cn: int = 12
 ) -> Tuple[Optional[float], str]:
-    """Average Shannon crystal radius over all available CN and spin states."""
+    """
+    Estimates the Shannon crystal radius at target_cn by extrapolating from
+    available data using the steepest pairwise slope.
+
+    For each CN with data, radii are averaged over spin states.  If the
+    highest available CN already meets or exceeds target_cn its radius is
+    returned directly.  Otherwise the steepest consecutive (CN, radius) slope
+    found in the available data is used to extrapolate upward — deliberately
+    biasing high, since an over-estimated connectivity cutoff is preferable to
+    one that clips genuine long bonds (e.g. A-site in distorted perovskites).
+    """
     if abs(float(oxidation_state)) <= 1e-8:
         return None, "oxidation_state_zero"
     try:
@@ -190,19 +202,48 @@ def _shannon_crystal_average_radius_angstrom(
     except Exception:
         return None, "invalid_species_for_shannon"
 
-    values: List[float] = []
-    for cn_label in ROMAN_CN.values():
+    # Collect mean radius per CN (averaged over spin states)
+    cn_to_radius: Dict[int, float] = {}
+    for cn_int, cn_label in ROMAN_CN.items():
+        spin_vals: List[float] = []
         for spin in SPIN_STATES:
             try:
                 with warnings.catch_warnings():
                     warnings.filterwarnings("ignore", message="Specified spin=.*not consistent.*")
                     val = specie.get_shannon_radius(cn=cn_label, spin=spin, radius_type="crystal")
-                values.append(float(val))
+                spin_vals.append(float(val))
             except Exception:
                 continue
-    if values:
-        return float(np.mean(values)), "species_shannon_crystal_average"
-    return None, "missing_shannon_crystal_data"
+        if spin_vals:
+            cn_to_radius[cn_int] = float(np.mean(spin_vals))
+
+    if not cn_to_radius:
+        return None, "missing_shannon_crystal_data"
+
+    sorted_cns = sorted(cn_to_radius.keys())
+    max_known_cn = sorted_cns[-1]
+    max_known_r  = cn_to_radius[max_known_cn]
+
+    # Table already covers target_cn — return directly
+    if max_known_cn >= target_cn:
+        return max_known_r, f"shannon_crystal_cn_{ROMAN_CN[max_known_cn]}"
+
+    # Only one data point — no slope to work with
+    if len(sorted_cns) == 1:
+        return max_known_r, f"shannon_crystal_single_point_cn_{ROMAN_CN[max_known_cn]}"
+
+    # Steepest consecutive pairwise slope in the available data
+    max_slope = max(
+        (cn_to_radius[sorted_cns[i + 1]] - cn_to_radius[sorted_cns[i]])
+        / (sorted_cns[i + 1] - sorted_cns[i])
+        for i in range(len(sorted_cns) - 1)
+    )
+    if max_slope <= 0.0:
+        # Degenerate case: no positive slope found; return highest known radius
+        return max_known_r, f"shannon_crystal_cn_{ROMAN_CN[max_known_cn]}_no_positive_slope"
+
+    extrapolated_r = max_known_r + max_slope * (target_cn - max_known_cn)
+    return extrapolated_r, f"shannon_crystal_extrap_cn{target_cn}_steepest_slope"
 
 
 def _connectivity_radius_angstrom(
@@ -213,7 +254,7 @@ def _connectivity_radius_angstrom(
     oxidation states are available; falls back to atomic radius otherwise.
     """
     if oxidation_state_source != "unavailable_default_0":
-        crystal_r, crystal_src = _shannon_crystal_average_radius_angstrom(symbol, oxidation_state)
+        crystal_r, crystal_src = _shannon_crystal_extrapolated_radius_angstrom(symbol, oxidation_state)
         if crystal_r is not None:
             return crystal_r, crystal_src
         atomic_r, atomic_src = _atomic_radius_angstrom(symbol)
@@ -374,6 +415,122 @@ def _determine_ion_roles(
 
 
 # ---------------------------------------------------------------------------
+# Gap detection filter
+# ---------------------------------------------------------------------------
+
+def _gap_filter(
+    selected_keys: set,
+    by_center: Dict[int, List[Tuple[Any, float]]],
+    n_nodes: int,
+    gap_threshold: float,
+    ion_roles: List[str],
+) -> set:
+    """
+    Remove edges that fall beyond the first large multiplicative distance gap
+    per node.
+
+    Only applied to cation (and neutral) centers — never to anion centers.
+    Anions frequently bridge between cations of very different sizes (e.g.
+    As⁵⁺ at ~1.7 Å and Ag⁺ at ~2.5 Å), creating an apparent gap that is
+    physically meaningful coordination, not a second shell.  Firing the gap
+    filter on the anion side would globally remove the long-bond edges, leaving
+    the large cation with CN=0.
+
+    Returns the set of keys to remove from selected_keys.
+    """
+    rejected: set = set()
+    for center in range(n_nodes):
+        if ion_roles[center] == "anion":
+            continue
+        incident = sorted(
+            [(key, dist) for key, dist in by_center[center] if key in selected_keys],
+            key=lambda x: x[1],
+        )
+        if len(incident) < 2:
+            continue
+        cut_distance: Optional[float] = None
+        for i in range(len(incident) - 1):
+            if incident[i][1] < 1e-12:
+                continue
+            if incident[i + 1][1] / incident[i][1] > gap_threshold:
+                cut_distance = incident[i + 1][1]
+                break
+        if cut_distance is not None:
+            for key, dist in incident:
+                if dist >= cut_distance - 1e-8:
+                    rejected.add(key)
+    return rejected
+
+
+# ---------------------------------------------------------------------------
+# Cone exclusion filter
+# ---------------------------------------------------------------------------
+
+def _cone_exclusion_filter(
+    selected_keys: set,
+    by_center: Dict[int, List[Tuple[Any, float]]],
+    bvecs: Dict[Tuple[int, Any], np.ndarray],
+    n_nodes: int,
+    min_angle_deg: float,
+    ion_roles: List[str],
+) -> set:
+    """
+    Remove edges that are nearly co-linear with a shorter accepted edge from
+    the same center node (shadowing / cone exclusion).
+
+    Only applied to cation (and neutral) centers for the same reason as
+    _gap_filter: anions bridge between cations of very different bond lengths
+    and should not have any of those bonds removed by directional filtering.
+
+    For each cation center, candidate edges are processed in ascending distance
+    order.  A candidate is rejected if the angle between its bond vector and
+    ANY already-accepted bond vector from this center is less than
+    min_angle_deg.
+
+    Physical motivation: if atom B is at 3 Å and atom C is at 5 Å from
+    center A, and angle B-A-C < min_angle_deg, then C lies in the shadow cone
+    of B — it is a second-shell or periodic-image neighbour in the same
+    direction, not a true coordination partner.
+
+    Safe default is ~35°: the minimum inter-bond angle in a regular
+    cuboctahedron (CN=12) is 60°, so 35° leaves plenty of margin for
+    distortion without misclassifying second-shell atoms.
+    """
+    min_cos = math.cos(math.radians(min_angle_deg))
+    rejected: set = set()
+
+    for center in range(n_nodes):
+        if ion_roles[center] == "anion":
+            continue
+        incident = sorted(
+            [(key, dist) for key, dist in by_center[center]
+             if key in selected_keys and key not in rejected],
+            key=lambda x: x[1],
+        )
+        accepted_unit_vecs: List[np.ndarray] = []
+        for key, _dist in incident:
+            raw = bvecs.get((center, key))
+            if raw is None:
+                accepted_unit_vecs.append(None)
+                continue
+            norm = float(np.linalg.norm(raw))
+            if norm < 1e-8:
+                accepted_unit_vecs.append(None)
+                continue
+            uv = raw / norm
+            shadowed = any(
+                av is not None and float(np.dot(uv, av)) > min_cos
+                for av in accepted_unit_vecs
+            )
+            if shadowed:
+                rejected.add(key)
+            else:
+                accepted_unit_vecs.append(uv)
+
+    return rejected
+
+
+# ---------------------------------------------------------------------------
 # Misc helpers
 # ---------------------------------------------------------------------------
 
@@ -399,10 +556,12 @@ def _canonical_edge(
 
 def build_crystal_graph_from_cif(
     cif_path: str,
-    cutoff_scale: float = 1.5,
+    cutoff_scale: float = 1.25,
     edge_method: str = "shannon_crystal_radii",
     neighbor_growth_factor: float = 1.2,
     hard_cutoff_factor: float = 1.5,
+    gap_threshold: float = 1.2,
+    cone_exclusion_angle: float = 35.0,
 ) -> Dict[str, Any]:
     """
     Build a JSON-serializable crystal graph from a CIF file.
@@ -430,6 +589,9 @@ def build_crystal_graph_from_cif(
 
     Connectivity modes:
       - shannon_crystal_radii: distance(i,j) <= cutoff_scale * (r_i + r_j)
+            cutoff_scale=1.25 keeps bonds within 125% of ionic radii sum,
+            excluding second-shell neighbors in distorted perovskites.
+            gap_threshold=1.2 further prunes bonds beyond a 20% distance jump.
       - adaptive_nn: greedy per-node neighbor growth with hard distance cap
       - ionic_radii: legacy alias for shannon_crystal_radii
     """
@@ -535,6 +697,8 @@ def build_crystal_graph_from_cif(
         i: [] for i in range(len(nodes))
     }
     seen_center_key: set = set()
+    # Bond vectors from each center's perspective: (center_idx, key) -> Cartesian vec
+    bvecs: Dict[Tuple[int, Any], np.ndarray] = {}
 
     for center_idx, point_idx, offset_vec, dist in zip(
         center_indices, point_indices, offset_vectors, distances
@@ -568,7 +732,10 @@ def build_crystal_graph_from_cif(
             }
         center_key = (i, key)
         if center_key not in seen_center_key:
+            cart_offset = lattice.get_cartesian_coords(np.array(offset_vec, dtype=float))
+            bvec = np.array(structure[j].coords) + cart_offset - np.array(structure[i].coords)
             by_center[i].append((key, distance))
+            bvecs[(i, key)] = bvec
             seen_center_key.add(center_key)
 
     selected_keys: set = set()
@@ -606,6 +773,21 @@ def build_crystal_graph_from_cif(
                     prev_added = float(distance)
                 else:
                     break
+
+    # Gap detection: remove edges beyond the first large distance jump per node.
+    gap_rejected: set = set()
+    if gap_threshold > 0.0:
+        gap_rejected = _gap_filter(selected_keys, by_center, len(nodes), gap_threshold, ion_roles)
+        selected_keys -= gap_rejected
+
+    # Cone exclusion: remove edges that are shadowed by a shorter neighbour
+    # in nearly the same direction.
+    cone_rejected: set = set()
+    if cone_exclusion_angle > 0.0:
+        cone_rejected = _cone_exclusion_filter(
+            selected_keys, by_center, bvecs, len(nodes), cone_exclusion_angle, ion_roles
+        )
+        selected_keys -= cone_rejected
 
     edges: List[Dict[str, Any]] = []
     adjacency: Dict[int, List[Tuple[int, int, np.ndarray]]] = {
@@ -706,10 +888,20 @@ def build_crystal_graph_from_cif(
         node["shannon_radius_angstrom"] = shannon_r
         node["shannon_radius_source"] = shannon_src
 
+    try:
+        sga = SpacegroupAnalyzer(structure)
+        _sg_symbol = sga.get_space_group_symbol()
+        _sg_number = sga.get_space_group_number()
+    except Exception:
+        _sg_symbol = ""
+        _sg_number = ""
+
     graph: Dict[str, Any] = {
         "metadata": {
             "cif_path": str(cif_path),
             "formula": structure.composition.reduced_formula,
+            "spacegroup_symbol": _sg_symbol,
+            "spacegroup_number": _sg_number,
             "num_sites": len(nodes),
             "cutoff_scale": float(cutoff_scale),
             "edge_method": edge_method,
@@ -720,6 +912,10 @@ def build_crystal_graph_from_cif(
             "enforce_cation_anion_only_edges": enforce_opposite_charge_edges,
             "neighbor_growth_factor": float(neighbor_growth_factor),
             "hard_cutoff_factor": float(hard_cutoff_factor),
+            "gap_threshold": float(gap_threshold),
+            "gap_rejected_count": len(gap_rejected),
+            "cone_exclusion_angle": float(cone_exclusion_angle),
+            "cone_rejected_count": len(cone_rejected),
             "lattice_matrix": [[float(x) for x in row] for row in lattice.matrix],
             "non_shannon_crystal_radius_nodes": non_shannon_crystal_radius_nodes,
             "num_triplets": len(triplets),

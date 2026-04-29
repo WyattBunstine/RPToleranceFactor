@@ -36,7 +36,7 @@ import numpy as np
 from sklearn.cluster import DBSCAN
 from pymatgen.core import Structure
 
-from crystal_graph_analysis_v2 import compare_crystal_graphs, _build_node_descriptors, _load_graph
+from crystal_graph_comparison import compare_graph_files as compare_crystal_graphs, _build_node_descriptors, _load_graph
 
 # ---------------------------------------------------------------------------
 # Thresholds and parameters
@@ -207,8 +207,8 @@ def _classify_material(
         try:
             result = compare_crystal_graphs(str(graph_path), str(proto_path))
             scores[label] = (
-                float(result.get("topology_score") or 0.0),
-                float(result.get("distortion_score") or 0.0),
+                float(result.get("polyhedral_mode_score") or 0.0),
+                float(result.get("geometric_distortion_score") or 0.0),
             )
         except Exception:
             scores[label] = (0.0, 0.0)
@@ -257,7 +257,7 @@ def _compute_pairwise_distances(
                 result = compare_crystal_graphs(
                     str(flagged_paths[i]), str(flagged_paths[j])
                 )
-                topo = float(result.get("topology_score") or 0.0)
+                topo = float(result.get("polyhedral_mode_score") or 0.0)
             except Exception:
                 topo = 0.0
             d = 1.0 - topo

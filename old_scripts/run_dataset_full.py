@@ -13,9 +13,9 @@ from pathlib import Path
 from build_graphs_batch import build_graphs_batch
 from crystal_graph_dataset_v2 import build_dataset, PROTOTYPE_SPECS
 
-CIF_DIR    = Path("data/cifs")
-GRAPH_DIR  = Path("data/crystal_graph_data")
-OUTPUT_DIR = Path("data/crystal_graph_data")
+CIF_DIR    = Path("../data/cifs")
+GRAPH_DIR  = Path("../data/crystal_graph_data")
+OUTPUT_DIR = Path("../data/crystal_graph_data")
 
 # ABO3 pattern: two-element formula + O3, e.g. BaTiO3, CaMnO3, AgSbO3
 ABO3_RE = re.compile(r"^[A-Z][a-z]?[A-Z][a-z]?O3_mp-\d+\.cif$")
@@ -61,7 +61,7 @@ if __name__ == "__main__":
     build_graphs_batch(
         cif_paths=all_cifs,
         output_dir=GRAPH_DIR,
-        skip_existing=True,
+        skip_existing=False,
     )
 
     print("\n" + "=" * 65)
