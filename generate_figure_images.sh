@@ -1,0 +1,14 @@
+python scripts/plot_crystal_graph.py data/crystal_graphs_v4/GdFeO3_mp-600576.json  --no-edge-labels --dpi 50 --node-fontsize 20 --no-legend --edge-scale 2 --bonds none --output data/Figure_images/GdFeO3_poly --collapse-equivalent
+python scripts/plot_crystal_graph.py data/unit_tests/graphs/SrTiO3_mp-5229.json    --no-edge-labels --dpi 50 --node-fontsize 20 --no-legend --edge-scale 2 --bonds none --output data/Figure_images/SrTiO3_poly --collapse-equivalent
+python scripts/plot_crystal_graph.py data/crystal_graphs_v4/TiFeO3_mp-19417.json   --no-edge-labels --dpi 50 --node-fontsize 20 --no-legend --edge-scale 2 --bonds none --output data/Figure_images/TiFeO3_poly --collapse-equivalent
+python scripts/plot_crystal_graph.py data/crystal_graphs_v4/BaTiO3_mp-2998.json    --no-edge-labels --dpi 50 --node-fontsize 20 --no-legend --edge-scale 2 --bonds none --output data/Figure_images/BaTiO3_poly --collapse-equivalent
+
+python scripts/plot_crystal_graph.py data/crystal_graphs_v4/GdFeO3_mp-600576.json  --no-edge-labels --dpi 50 --node-fontsize 20 --no-legend --edge-scale 2 --poly none --output data/Figure_images/GdFeO3_bonds --collapse-equivalent
+python scripts/plot_crystal_graph.py data/unit_tests/graphs/SrTiO3_mp-5229.json    --no-edge-labels --dpi 50 --node-fontsize 20 --no-legend --edge-scale 2 --poly none --output data/Figure_images/SrTiO3_bonds --collapse-equivalent
+python scripts/plot_crystal_graph.py data/crystal_graphs_v4/TiFeO3_mp-19417.json   --no-edge-labels --dpi 50 --node-fontsize 20 --no-legend --edge-scale 2 --poly none --output data/Figure_images/TiFeO3_bonds --collapse-equivalent
+python scripts/plot_crystal_graph.py data/crystal_graphs_v4/BaTiO3_mp-2998.json    --no-edge-labels --dpi 50 --node-fontsize 20 --no-legend --edge-scale 2 --poly none --output data/Figure_images/BaTiO3_bonds --collapse-equivalent
+
+python scripts/plot_crystal_graph.py data/crystal_graphs_v4/GdFeO3_mp-600576.json  --no-edge-labels --dpi 50 --node-fontsize 20 --no-legend --edge-scale 2 --bonds none --poly none --output data/Figure_images/GdFeO3_nodes --collapse-equivalent
+python scripts/plot_crystal_graph.py data/unit_tests/graphs/SrTiO3_mp-5229.json    --no-edge-labels --dpi 50 --node-fontsize 20 --no-legend --edge-scale 2 --bonds none --poly none --output data/Figure_images/SrTiO3_nodes --collapse-equivalent
+python scripts/plot_crystal_graph.py data/crystal_graphs_v4/TiFeO3_mp-19417.json   --no-edge-labels --dpi 50 --node-fontsize 20 --no-legend --edge-scale 2 --bonds none --poly none --output data/Figure_images/TiFeO3_nodes --collapse-equivalent
+python scripts/plot_crystal_graph.py data/crystal_graphs_v4/BaTiO3_mp-2998.json    --no-edge-labels --dpi 50 --node-fontsize 20 --no-legend --edge-scale 2 --bonds none --poly none --output data/Figure_images/BaTiO3_nodes --collapse-equivalent

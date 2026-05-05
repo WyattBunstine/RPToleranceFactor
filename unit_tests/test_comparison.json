@@ -1,0 +1,321 @@
+{
+  "$schema": "unit_test_suite_v1",
+  "version": "3",
+  "graph_builder": "crystal_graph_v4",
+  "description": "Graph comparison tests using the hierarchical pipeline (node_match_score, edge_existence_score, polyhedral_mode_score, geometric_distortion_score)",
+  "cif_root": "data/cifs",
+  "graph_cache_dir": "data/unit_tests/graphs",
+  "tests": [
+    {
+      "id": "srtio3_vs_batio3",
+      "type": "comparison",
+      "description": "SrTiO3 vs BaTiO3 (both cubic Pm-3m perovskite): should be nearly identical",
+      "graph_a": "SrTiO3_mp-5229",
+      "graph_b": "BaTiO3_mp-2998",
+      "cif_a": "SrTiO3_mp-5229.cif",
+      "cif_b": "BaTiO3_mp-2998.cif",
+      "assertions": [
+        {
+          "assert": "polyhedral_mode_score",
+          "description": "Cubic perovskites with identical connectivity should score >= 0.90",
+          "op": "ge",
+          "value": 0.90
+        },
+        {
+          "assert": "node_match_score",
+          "description": "Fingerprint distance should be low (<= 0.15) for isostructural pair",
+          "op": "le",
+          "value": 0.15
+        }
+      ]
+    },
+    {
+      "id": "srtio3_vs_lanio3",
+      "type": "comparison",
+      "description": "SrTiO3 vs LaNiO3 R-3c (rhombohedral perovskite): same corner-sharing topology, distortion is geometric not topological",
+      "graph_a": "SrTiO3_mp-5229",
+      "graph_b": "LaNiO3_mp-19339",
+      "cif_a": "SrTiO3_mp-5229.cif",
+      "cif_b": "LaNiO3_mp-19339.cif",
+      "assertions": [
+        {
+          "assert": "polyhedral_mode_score",
+          "description": "Cubic and rhombohedral perovskites share the same polyhedral topology — should score 1.0",
+          "op": "ge",
+          "value": 0.95
+        },
+        {
+          "assert": "geometric_distortion_score",
+          "description": "Octahedral tilt distortion should lower angle similarity vs cubic (<= 0.90)",
+          "op": "le",
+          "value": 0.90
+        },
+        {
+          "assert": "node_match_score",
+          "description": "Fingerprint distance should be higher than isostructural pairs (>= 0.15)",
+          "op": "ge",
+          "value": 0.15
+        }
+      ]
+    },
+    {
+      "id": "srtio3_vs_tifeo3",
+      "type": "comparison",
+      "description": "SrTiO3 (perovskite) vs TiFeO3 (ilmenite): different structural families",
+      "graph_a": "SrTiO3_mp-5229",
+      "graph_b": "TiFeO3_mp-19270",
+      "cif_a": "SrTiO3_mp-5229.cif",
+      "cif_b": "TiFeO3_mp-19270.cif",
+      "assertions": [
+        {
+          "assert": "edge_existence_score",
+          "description": "Corner-sharing perovskite vs face/edge-sharing ilmenite: few connections map at all",
+          "op": "le",
+          "value": 0.60
+        },
+        {
+          "assert": "polyhedral_mode_score",
+          "description": "Polyhedral modes should not match between different families",
+          "op": "le",
+          "value": 0.20
+        }
+      ]
+    },
+    {
+      "id": "bazro3_vs_srtio3",
+      "type": "comparison",
+      "description": "BaZrO3 vs SrTiO3: both cubic Pm-3m perovskite, different A and B site chemistry",
+      "graph_a": "BaZrO3_mp-3834",
+      "graph_b": "SrTiO3_mp-5229",
+      "cif_a": "BaZrO3_mp-3834.cif",
+      "cif_b": "SrTiO3_mp-5229.cif",
+      "assertions": [
+        {
+          "assert": "polyhedral_mode_score",
+          "description": "Two cubic perovskites should score >= 0.95",
+          "op": "ge",
+          "value": 0.95
+        },
+        {
+          "assert": "node_match_score",
+          "description": "Fingerprint distance <= 0.10 for identical-topology pair",
+          "op": "le",
+          "value": 0.10
+        }
+      ]
+    },
+    {
+      "id": "tio2_vs_sno2",
+      "type": "comparison",
+      "description": "TiO2 vs SnO2: both rutile (P42/mnm) — different metal, identical topology",
+      "graph_a": "TiO2_mp-1439",
+      "graph_b": "SnO2_mp-856",
+      "cif_a": "TiO2_mp-1439.cif",
+      "cif_b": "SnO2_mp-856.cif",
+      "assertions": [
+        {
+          "assert": "polyhedral_mode_score",
+          "description": "Isostructural rutile pair should score >= 0.95",
+          "op": "ge",
+          "value": 0.95
+        },
+        {
+          "assert": "node_match_score",
+          "description": "Fingerprint distance <= 0.15 for isostructural pair",
+          "op": "le",
+          "value": 0.15
+        }
+      ]
+    },
+    {
+      "id": "mgo_vs_nacl",
+      "type": "comparison",
+      "description": "MgO vs NaCl: both rocksalt (Fm-3m) — binary prototype structures",
+      "graph_a": "MgO_mp-1265",
+      "graph_b": "NaCl_mp-22862",
+      "cif_a": "MgO_mp-1265.cif",
+      "cif_b": "NaCl_mp-22862.cif",
+      "assertions": [
+        {
+          "assert": "polyhedral_mode_score",
+          "description": "Isostructural rocksalt pair should score >= 0.95",
+          "op": "ge",
+          "value": 0.95
+        },
+        {
+          "assert": "node_match_score",
+          "description": "Fingerprint distance <= 0.10 for nearly-ideal rocksalt pair",
+          "op": "le",
+          "value": 0.10
+        }
+      ]
+    },
+    {
+      "id": "al2o3_vs_cr2o3",
+      "type": "comparison",
+      "description": "Al2O3 vs Cr2O3: both R-3c corundum — chemical variant, identical connectivity",
+      "graph_a": "Al2O3_mp-1143",
+      "graph_b": "Cr2O3_mp-19399",
+      "cif_a": "Al2O3_mp-1143.cif",
+      "cif_b": "Cr2O3_mp-19399.cif",
+      "assertions": [
+        {
+          "assert": "polyhedral_mode_score",
+          "description": "Isostructural corundum pair should score >= 0.90",
+          "op": "ge",
+          "value": 0.90
+        },
+        {
+          "assert": "node_match_score",
+          "description": "Fingerprint distance <= 0.15 for corundum pair",
+          "op": "le",
+          "value": 0.15
+        }
+      ]
+    },
+    {
+      "id": "lafeo3_vs_gdfeo3",
+      "type": "comparison",
+      "description": "LaFeO3 vs GdFeO3: both Pbnm GdFeO3-type distorted perovskite",
+      "graph_a": "LaFeO3_mp-22590",
+      "graph_b": "GdFeO3_mp-600576",
+      "cif_a": "LaFeO3_mp-22590.cif",
+      "cif_b": "GdFeO3_mp-600576.cif",
+      "assertions": [
+        {
+          "assert": "polyhedral_mode_score",
+          "description": "GdFeO3-type pair with strong Gd distortion — should score >= 0.75",
+          "op": "ge",
+          "value": 0.75
+        },
+        {
+          "assert": "node_match_score",
+          "description": "Fingerprint distance should be moderate (<= 0.35) for same-type distorted pair",
+          "op": "le",
+          "value": 0.35
+        }
+      ]
+    },
+    {
+      "id": "al2o3_vs_tifeo3",
+      "type": "comparison",
+      "description": "Al2O3 corundum vs TiFeO3 ilmenite: same underlying face+edge-sharing topology, single-element vs ordered-cation variant",
+      "graph_a": "Al2O3_mp-1143",
+      "graph_b": "TiFeO3_mp-19270",
+      "cif_a": "Al2O3_mp-1143.cif",
+      "cif_b": "TiFeO3_mp-19270.cif",
+      "assertions": [
+        {
+          "assert": "edge_existence_score",
+          "description": "Corundum/ilmenite share face+edge topology — connections should exist >= 0.75",
+          "op": "ge",
+          "value": 0.75
+        },
+        {
+          "assert": "polyhedral_mode_score",
+          "description": "Same corundum/ilmenite wiring topology — mode score should be >= 0.75",
+          "op": "ge",
+          "value": 0.75
+        }
+      ]
+    },
+    {
+      "id": "lafeo3_vs_srtio3",
+      "type": "comparison",
+      "description": "LaFeO3 GdFeO3-type vs SrTiO3 cubic perovskite: same corner-sharing connectivity but significant angular distortion from octahedral tilting",
+      "graph_a": "LaFeO3_mp-22590",
+      "graph_b": "SrTiO3_mp-5229",
+      "cif_a": "LaFeO3_mp-22590.cif",
+      "cif_b": "SrTiO3_mp-5229.cif",
+      "assertions": [
+        {
+          "assert": "polyhedral_mode_score",
+          "description": "Related perovskites lower bound — still recognizably connected",
+          "op": "ge",
+          "value": 0.65
+        },
+        {
+          "assert": "polyhedral_mode_score",
+          "description": "Tilt distortion should prevent near-perfect match",
+          "op": "le",
+          "value": 0.90
+        },
+        {
+          "assert": "node_match_score",
+          "description": "Fingerprint distance should reflect structural difference (>= 0.10)",
+          "op": "ge",
+          "value": 0.10
+        }
+      ]
+    },
+    {
+      "id": "nacl_vs_tio2",
+      "type": "comparison",
+      "description": "NaCl rocksalt vs TiO2 rutile: different families — CN=3 O in rutile vs CN=6 in rocksalt",
+      "graph_a": "NaCl_mp-22862",
+      "graph_b": "TiO2_mp-1439",
+      "cif_a": "NaCl_mp-22862.cif",
+      "cif_b": "TiO2_mp-1439.cif",
+      "assertions": [
+        {
+          "assert": "edge_existence_score",
+          "description": "Different structural families: rocksalt vs rutile should score <= 0.55",
+          "op": "le",
+          "value": 0.55
+        },
+        {
+          "assert": "polyhedral_mode_score",
+          "description": "Polyhedral modes should not match between different families",
+          "op": "le",
+          "value": 0.10
+        }
+      ]
+    },
+    {
+      "id": "mgal2o4_vs_srtio3",
+      "type": "comparison",
+      "description": "MgAl2O4 spinel vs SrTiO3 perovskite: very different — spinel has mixed CN=4/6, perovskite CN=12/6",
+      "graph_a": "MgAl2O4_mp-3536",
+      "graph_b": "SrTiO3_mp-5229",
+      "cif_a": "MgAl2O4_mp-3536.cif",
+      "cif_b": "SrTiO3_mp-5229.cif",
+      "assertions": [
+        {
+          "assert": "edge_existence_score",
+          "description": "Spinel vs perovskite: completely different coordination environments should score <= 0.45",
+          "op": "le",
+          "value": 0.45
+        },
+        {
+          "assert": "polyhedral_mode_score",
+          "description": "Polyhedral modes should not match between spinel and perovskite",
+          "op": "le",
+          "value": 0.10
+        }
+      ]
+    },
+    {
+      "id": "reo3_vs_tifeo3",
+      "type": "comparison",
+      "description": "ReO3 (corner-sharing cubic) vs TiFeO3 (face/edge-sharing ilmenite): structurally unrelated",
+      "graph_a": "ReO3_mp-190",
+      "graph_b": "TiFeO3_mp-19270",
+      "cif_a": "ReO3_mp-190.cif",
+      "cif_b": "TiFeO3_mp-19270.cif",
+      "assertions": [
+        {
+          "assert": "edge_existence_score",
+          "description": "Corner-connected vs face/edge-sharing network: few connections should map",
+          "op": "le",
+          "value": 0.50
+        },
+        {
+          "assert": "polyhedral_mode_score",
+          "description": "Polyhedral modes should not match between corner-only and face/edge-sharing",
+          "op": "le",
+          "value": 0.40
+        }
+      ]
+    }
+  ]
+}

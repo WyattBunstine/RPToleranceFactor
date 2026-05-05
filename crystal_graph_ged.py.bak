@@ -1,0 +1,2820 @@
+"""
+crystal_graph_ged.py
+────────────────────
+GED-based primary-bond node matching for crystal graphs.
+
+Algorithm
+─────────
+1.  Group nodes by CN bucket  (tet ≤4 | oct 5–8 | high ≥9).
+
+    k:1 supercell support — if graph A has exactly k times as many nodes as
+    graph B in a given bucket (n_a divisible by n_b), ids_b is expanded k-fold
+    so that k A-nodes can all map to the same B-node.  The assignment dict then
+    maps multiple a_ids to the same b_id; node_map in the result reflects this.
+
+2.  Initial assignment — fingerprint-based Hungarian from
+    crystal_graph_matching, used as a warm start.
+
+3.  Iterative edge-cost refinement.
+
+    For each candidate mapping  i (graph A) → j (graph B):
+
+      a. Remap A's neighbours into B-space using the current assignment.
+      b. Compare the remapped neighbour multiset to j's actual neighbours.
+
+      For every mismatch between node i (A) and node j (B):
+
+        DELETION  — bond (i → k) exists in A but (j → mapped(k)) missing in B.
+                    Allowed if mapped(k) is in j's 14-NN list;  cost += 1 / CN_i.
+                    Forbidden (cost = ∞) if mapped(k) ∉ j's NN list.
+
+        ADDITION  — bond (j → k') exists in B but (i → mapped⁻¹(k')) missing in A.
+                    Allowed if mapped⁻¹(k') is in i's 14-NN list;  cost += 1 / CN_i.
+                    Forbidden (cost = ∞) if mapped⁻¹(k') ∉ i's NN list.
+
+      The check is purely positional — only whether the mapped counterpart
+      node is the right endpoint, regardless of element.
+
+    Costs are re-evaluated with Hungarian assignment after each iteration.
+
+4.  If the current assignment contains any ∞-cost pair, brute-force all
+    permutations within the affected CN group.
+
+5.  Unassigned nodes (no finite-cost partner after convergence) are returned
+    as separate lists and do NOT contribute to the total cost.
+
+Returns
+───────
+{
+    "node_map"     : {a_id: [b_id, ...]},  # matched pairs; list length = 1 for
+                                            # 1:1 and k:1, length = k for 1:k
+    "vacancy_a"    : [a_id, ...],           # A nodes absent from B but geometrically
+                                            # motivated (completion_fraction > 0); free
+    "vacancy_b"    : [b_id, ...],           # B nodes absent from A, same criterion
+    "unassigned_a" : [a_id, ...],           # A nodes with no structural slot in B
+                                            # (completion_fraction == 0); cost 1 each
+    "unassigned_b" : [b_id, ...],           # B nodes with no structural slot in A;
+                                            # cost 1 each
+    "cost"         : float,                 # edge cost + 1.0 per unassigned node
+    "n_iter"       : int,                   # iterations until convergence
+}
+"""
+from __future__ import annotations
+
+import math
+from collections import Counter, defaultdict
+from itertools import permutations
+from typing import Dict, List, Optional, Set, Tuple
+
+import numpy as np
+from scipy.optimize import linear_sum_assignment
+
+from crystal_graph_matching import (
+    _cn_bucket,
+    _build_cost_matrix as _fp_cost_matrix,
+    _fingerprint_distance,
+    compute_fingerprints,
+)
+
+_INF   = float("inf")
+_LARGE = 1e9  # stand-in for ∞ in numpy arrays (scipy dislikes actual inf)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Graph structure helpers
+# ──────────────────────────────────────────────────────────────────────────────
+
+def _build_edge_adjacency(graph: dict) -> Dict[int, Counter]:
+    """
+    Primary bond neighbour multiset per node.
+
+    adj[i][k] = number of primary bonds between node i and node k
+    (core + extended, all periodic images counted separately).
+    """
+    adj: Dict[int, Counter] = defaultdict(Counter)
+    for edge in graph["edges"]:
+        src = int(edge["source"])
+        tgt = int(edge["target"])
+        adj[src][tgt] += 1
+        adj[tgt][src] += 1
+    return dict(adj)
+
+
+def _build_nn_sets(graph: dict) -> Dict[int, Set[int]]:
+    """
+    Set of node indices in each node's 14-nearest-neighbour list.
+    Used as the feasibility gate for edge additions and deletions.
+    """
+    nn: Dict[int, Set[int]] = {}
+    for node in graph["nodes"]:
+        nid = int(node["id"])
+        nn[nid] = {int(nb["node_id"]) for nb in node.get("nearest_neighbors", [])}
+    return nn
+
+
+def _vacancy_completion_fraction(
+    v: int,
+    assignment: Dict[int, Optional[int]],
+    edges_a: Dict[int, Counter],
+    cn_a: Dict[int, int],
+    cn_b: Dict[int, int],
+) -> float:
+    """
+    Geometric reasonableness score for leaving A-node ``v`` unassigned (vacant).
+
+    For each A-neighbour ``k`` of ``v``, the B-counterpart ``b_k = assignment[k]``
+    may have a CN deficit — fewer bonds in B than its A-counterpart ``k`` has in
+    A.  If that deficit is positive, a vacancy at ``v``'s position would
+    partially *complete* ``b_k``'s coordination shell, making the vacancy
+    structurally plausible.
+
+    Returns a value in [0, 1]:
+      1.0 — all of v's bonds would fill CN deficits (highly reasonable vacancy,
+             e.g. an O completing a Cu pyramid to an octahedron).
+      0.0 — all B-neighbours are already saturated; adding v would force
+             over-coordination (no structural slot, e.g. Ti in SrO rocksalt).
+
+    Parameters
+    ----------
+    v          : A-node id being considered as a vacancy.
+    assignment : current {a_id: b_id | None} mapping.
+    edges_a    : pre-computed edge-adjacency for graph A.
+    cn_a       : effective coordination numbers for graph A.  Pass eff_cn_a
+                 (not raw cn_a) so that deficit computations reflect CN
+                 reductions from other vacancies already selected.
+    cn_b       : raw coordination numbers for graph B.
+    """
+    total = max(cn_a.get(v, 1), 1)
+    welcomed = 0
+    for k, cnt in edges_a.get(v, Counter()).items():
+        b_k = assignment.get(k)
+        if b_k is None:
+            continue
+        # Deficit: how many more bonds could b_k host before reaching k's CN?
+        deficit = max(0, cn_a.get(k, 0) - cn_b.get(b_k, 0))
+        welcomed += min(cnt, deficit)
+    return welcomed / total
+
+
+def _invert(assignment: Dict[int, Optional[int]]) -> Dict[int, int]:
+    """Return the B→A inverse of the current A→B assignment (mapped pairs only)."""
+    return {b: a for a, b in assignment.items() if b is not None}
+
+
+def _invert_full(
+    assignment: Dict[int, Optional[int]],
+    extras_map: Dict[int, List[int]],
+) -> Dict[int, int]:
+    """B→A inverse that includes both canonical assignment and extras_map.
+
+    In 1:k matching, an A-node maps to one canonical B-id plus additional
+    "extra" B-ids stored in extras_map.  `_invert` sees only canonicals, so
+    extras appear unmatched to downstream consumers — `_edge_cost`'s
+    addition branch then silently skips them.  Use this helper in any
+    context where the full forward map is the ground truth.
+    """
+    inv = {b: a for a, b in assignment.items() if b is not None}
+    for a, bs in extras_map.items():
+        for b in bs:
+            inv.setdefault(b, a)
+    return inv
+
+
+def _atoms_per_fu(graph: dict) -> int:
+    """
+    Estimate atoms per formula unit from the unit-cell node list.
+
+    Uses GCD(element_occurrence_counts).  For a cell with Z formula units,
+    GCD == Z, so n_sites / Z == atoms per formula unit.
+
+    Examples
+    --------
+    SrTiO3  (5 atoms, 1 FU)  → gcd(1,1,3)=1  → 5
+    LaNiO3  (10 atoms, 2 FU) → gcd(2,2,6)=2  → 5
+    La3AlC  (5 atoms, 1 FU)  → gcd(3,1,1)=1  → 5
+    ReO3    (8 atoms, 2 FU)  → gcd(2,6)=2    → 4
+    """
+    counts = list(Counter(n["element"] for n in graph["nodes"]).values())
+    if not counts:
+        return 1
+    z = counts[0]
+    for c in counts[1:]:
+        z = math.gcd(z, c)
+    return max(len(graph["nodes"]) // z, 1)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Equivalence classes (for aggregation)
+# ──────────────────────────────────────────────────────────────────────────────
+
+def _compute_class_map(
+    nodes: List[int],
+    cn: Dict[int, int],
+    role: Dict[int, str],
+    elem: Dict[int, str],
+    fps: Dict[int, dict],
+    fp_threshold: float = 0.05,
+) -> Dict[int, object]:
+    """Assign each node an equivalence-class key.
+
+    Two nodes share a class iff they agree on (element, ion_role, CN_bucket)
+    AND their fingerprints are within ``fp_threshold`` via single-linkage
+    clustering.  The resulting class key is hashable and stable within the
+    graph; it has no cross-graph meaning.
+
+    The aggregation step in _edge_cost uses these class keys on both sides
+    (A's neighbours directly, B's neighbours via ``inv``) so that
+    symmetry-equivalent sites (e.g. Re0/Re1 in 2x ReO3) collapse into one
+    class and their supercell-encoding asymmetries cancel.
+
+    Legitimately-distinct sites (different Wyckoff, different coordination
+    environment) have different fingerprints and therefore different
+    classes — apical vs basal O, distinct Cu sites in cuprates, etc.
+    """
+    buckets: Dict[Tuple[str, str, str], List[int]] = defaultdict(list)
+    for nid in nodes:
+        buckets[(elem[nid], role[nid], _cn_bucket(cn[nid]))].append(nid)
+
+    class_map: Dict[int, object] = {}
+    for bucket_key, node_list in buckets.items():
+        # Single-linkage cluster via union-find on fp distance.
+        parent = {n: n for n in node_list}
+
+        def _find(x: int) -> int:
+            while parent[x] != x:
+                parent[x] = parent[parent[x]]
+                x = parent[x]
+            return x
+
+        def _union(x: int, y: int) -> None:
+            rx, ry = _find(x), _find(y)
+            if rx != ry:
+                parent[rx] = ry
+
+        for i, a in enumerate(node_list):
+            fp_a = fps.get(a)
+            if fp_a is None:
+                continue
+            for b in node_list[i + 1:]:
+                fp_b = fps.get(b)
+                if fp_b is None:
+                    continue
+                if _fingerprint_distance(fp_a, fp_b) < fp_threshold:
+                    _union(a, b)
+
+        for n in node_list:
+            class_map[n] = (bucket_key, _find(n))
+    return class_map
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Edge cost
+# ──────────────────────────────────────────────────────────────────────────────
+
+def _edge_cost(
+    i: int,
+    j: int,
+    assignment: Dict[int, Optional[int]],
+    inv_assignment: Dict[int, int],
+    edges_a: Dict[int, Counter],
+    edges_b: Dict[int, Counter],
+    nn_a: Dict[int, Set[int]],
+    nn_b: Dict[int, Set[int]],
+    cn_a: Dict[int, int],
+    cn_b: Dict[int, int],
+    a_count_scale: float = 1.0,
+    charge_unassigned: bool = False,
+    vacancy_a_set: Optional[Set[int]] = None,
+    vacancy_b_set: Optional[Set[int]] = None,
+    aggregate_by_inv: bool = False,
+    extras_map: Optional[Dict[int, List[int]]] = None,
+    a_class_map: Optional[Dict[int, object]] = None,
+) -> float:
+    """
+    Structural edge cost of mapping node i (graph A) to node j (graph B).
+
+    Two comparison modes:
+
+    aggregate_by_inv=False (default, used by refinement):
+        Compare bond counts per raw B-node id.  mapped_i[bk] is A's bond count
+        to the A-neighbour that maps to bk; nbrs_j[bk] is B's bond count to bk.
+        Used during Hungarian iteration so candidate (a, b) costs are
+        well-defined per-cell.
+
+    aggregate_by_inv=True (used by final evaluation):
+        Treat all B-nodes in i's cohort (canonical + extras) as one "macro-B"
+        with an averaged bond profile, and all A-nodes owning j (via canonical
+        or extras) as one "macro-A" with an averaged bond profile.  Both sides
+        are then aggregated by A-equivalence class (``inv`` on B side,
+        ``inv[assignment[k]]`` on A side) so supercell encoding artefacts
+        cancel in both directions:
+
+          * SrTiO3(A) vs ReO3(B), Ti→Re0: b_twins={Re0, Re1} averages over
+            both Re's so Re0's "internal O" count gets balanced by Re1's.
+          * ReO3(A) vs SrTiO3(B), Re0→Ti: a_twins={Re0, Re1} averages over
+            the A-side so the asymmetry cancels from the opposite direction.
+
+        In the trivial 1:1 case the twin sets collapse to {i} and {j} and the
+        behaviour reduces to plain inv-aggregation.
+
+    By default (charge_unassigned=False) unresolved neighbours on either side
+    are skipped — appropriate during iterative refinement while the mapping
+    is still tightening.  The final-evaluation pass should set
+    charge_unassigned=True so residual mismatches are charged.
+    """
+    nbrs_i = edges_a.get(i, Counter())   # A-space: {k:  count}
+    nbrs_j = edges_b.get(j, Counter())   # B-space: {k': count}
+
+    if aggregate_by_inv:
+        # ── Twin-aware aggregation ──────────────────────────────────────
+        # Build macro-A (all A-nodes owning j) and macro-B (all B-nodes
+        # owned by i) via the current assignment and extras_map.
+        _em = extras_map if extras_map is not None else {}
+
+        # B-twins: i's full cohort of owned B-nodes.
+        b_twins: List[int] = []
+        canon_i = assignment.get(i)
+        if canon_i is not None:
+            b_twins.append(canon_i)
+        b_twins.extend(_em.get(i, []))
+        if not b_twins:
+            b_twins = [j]
+
+        # A-twins: all A-nodes that own j (canonical or via extras).
+        a_twins: List[int] = []
+        for _ak, _atgt in assignment.items():
+            if _atgt == j or j in _em.get(_ak, []):
+                a_twins.append(_ak)
+        if not a_twins:
+            a_twins = [i]
+
+        _ka = len(a_twins)
+        _kb = len(b_twins)
+
+        # A-side aggregation key for a neighbour k.  If a_class_map is
+        # provided, use its class ID (collapses symmetry-equivalent siblings
+        # like Re0/Re1 in 2x ReO3).  Otherwise fall back to the inv-based
+        # canonical (which only catches matching-driven equivalences).
+        def _a_key(k: int) -> object:
+            if a_class_map is not None:
+                ck = a_class_map.get(k)
+                if ck is not None:
+                    return ck
+            t = assignment.get(k)
+            if t is None:
+                return None
+            return inv_assignment.get(t, k)
+
+        # B-side aggregation: inv[bk] gives the A-preimage; if a_class_map
+        # is provided, map to its class too so B-side keys align with A-side.
+        def _b_key(bk: int) -> object:
+            ak = inv_assignment.get(bk)
+            if ak is None:
+                return ("orphan_b", bk)
+            if a_class_map is not None:
+                ck = a_class_map.get(ak)
+                if ck is not None:
+                    return ck
+            return ak
+
+        agg_a: Dict[object, float] = defaultdict(float)
+        agg_b: Dict[object, float] = defaultdict(float)
+        unassigned_a_bonds_f = 0.0
+
+        # A-side: averaged union over a_twins, keyed by A-class.
+        for _am in a_twins:
+            for k, cnt in edges_a.get(_am, Counter()).items():
+                if vacancy_a_set is not None and k in vacancy_a_set:
+                    continue
+                ck = _a_key(k)
+                if ck is None:
+                    unassigned_a_bonds_f += cnt / _ka
+                    continue
+                agg_a[ck] += cnt / _ka
+
+        # B-side: averaged union over b_twins, keyed by A-class via inv.
+        for _bm in b_twins:
+            for bk, cnt in edges_b.get(_bm, Counter()).items():
+                if vacancy_b_set is not None and bk in vacancy_b_set:
+                    continue
+                agg_b[_b_key(bk)] += cnt / _kb
+
+        cn_i = max(cn_a.get(i, 1) * a_count_scale, cn_b.get(j, 1), 1)
+        cost = 0.0
+        for key in set(agg_a) | set(agg_b):
+            a_cnt = agg_a.get(key, 0.0)
+            b_cnt = agg_b.get(key, 0.0)
+            if abs(a_cnt - b_cnt) < 1e-9:
+                continue
+            if a_cnt > b_cnt:
+                cost += (a_cnt - b_cnt) * a_count_scale / cn_i
+            else:
+                if isinstance(key, tuple) and key[0] == "orphan_b":
+                    if charge_unassigned:
+                        cost += (b_cnt - a_cnt) / cn_i
+                    continue
+                cost += (b_cnt - a_cnt) / cn_i
+
+        if charge_unassigned and unassigned_a_bonds_f > 0:
+            cost += unassigned_a_bonds_f * a_count_scale / cn_i
+
+        return cost
+
+    # ── Non-aggregated path (refinement) ────────────────────────────────
+    mapped_i: Dict[int, float] = defaultdict(float)
+    unassigned_a_bonds = 0
+    for k, cnt in nbrs_i.items():
+        if vacancy_a_set is not None and k in vacancy_a_set:
+            continue
+        mk = assignment.get(k)
+        if mk is None:
+            unassigned_a_bonds += cnt
+            continue
+        mapped_i[mk] += cnt
+
+    cn_i = max(cn_a.get(i, 1) * a_count_scale, cn_b.get(j, 1), 1)
+    cost = 0.0
+    for bk in set(mapped_i) | set(nbrs_j):
+        if vacancy_b_set is not None and bk in vacancy_b_set:
+            continue
+        a_cnt = mapped_i.get(bk, 0.0)
+        b_cnt = nbrs_j.get(bk, 0)
+        if abs(a_cnt - b_cnt) < 1e-9:
+            continue
+        if a_cnt > b_cnt:
+            cost += (a_cnt - b_cnt) * a_count_scale / cn_i
+        else:
+            if inv_assignment.get(bk) is None:
+                if charge_unassigned:
+                    cost += (b_cnt - a_cnt) / cn_i
+                continue
+            cost += (b_cnt - a_cnt) / cn_i
+
+    if charge_unassigned and unassigned_a_bonds:
+        cost += unassigned_a_bonds * a_count_scale / cn_i
+
+    return cost
+
+
+def _edge_cost_local(
+    i: int,
+    j: int,
+    edges_a: Dict[int, Counter],
+    edges_b: Dict[int, Counter],
+    fps_a: Dict[int, dict],
+    fps_b: Dict[int, dict],
+    cn_a: Dict[int, int],
+    cn_b: Dict[int, int],
+    elem_a: Dict[int, str],
+    elem_b: Dict[int, str],
+) -> float:
+    """
+    Edge cost for an extra-round (k > 1) pair (i, j) using a locally-optimal
+    neighbor re-mapping instead of the global assignment.
+
+    In k-round mode the global assignment was built for the canonical (round-1)
+    B-node.  Extra-round B-nodes have completely different neighbor-node indices,
+    so remapping A's neighbors through the global assignment produces spurious
+    mismatches.  This function instead finds the best local bijection between
+    A's neighbor nodes and j's neighbor nodes, grouped by element type and
+    ranked by fingerprint similarity, then computes bond-count mismatch under
+    that local mapping.
+
+    Bond-count mismatches for matched pairs contribute cost / norm.
+    Unmatched neighbors on either side contribute their full bond count / norm.
+    No global assignment dict is required.
+    """
+    nbrs_i = edges_a.get(i, Counter())   # {A-neighbor-id: bond_count}
+    nbrs_j = edges_b.get(j, Counter())   # {B-neighbor-id: bond_count}
+
+    norm = max(cn_a.get(i, 1), cn_b.get(j, 1), 1)
+    cost = 0.0
+
+    # Group each side's neighbors by element type.
+    a_by_elem: Dict[str, List[int]] = defaultdict(list)
+    for k in nbrs_i:
+        a_by_elem[elem_a.get(k, "")].append(k)
+
+    b_by_elem: Dict[str, List[int]] = defaultdict(list)
+    for bk in nbrs_j:
+        b_by_elem[elem_b.get(bk, "")].append(bk)
+
+    for e in set(a_by_elem) | set(b_by_elem):
+        a_nodes = a_by_elem.get(e, [])
+        b_nodes = b_by_elem.get(e, [])
+
+        if not a_nodes:
+            # B has neighbors of this element type; A has none → all additions.
+            for bk in b_nodes:
+                cost += nbrs_j[bk] / norm
+            continue
+
+        if not b_nodes:
+            # A has neighbors of this element type; B has none → all deletions.
+            for k in a_nodes:
+                cost += nbrs_i[k] / norm
+            continue
+
+        # Both sides have this element type.  Find the best 1:1 pairing via
+        # fingerprint similarity; scipy handles non-square matrices natively.
+        fp_mat = _fp_cost_matrix(a_nodes, b_nodes, fps_a, fps_b)
+        row_ind, col_ind = linear_sum_assignment(fp_mat)
+
+        matched_a: Set[int] = set()
+        matched_b: Set[int] = set()
+        for ii, jj in zip(row_ind, col_ind):
+            a_nbr = a_nodes[ii]
+            b_nbr = b_nodes[jj]
+            matched_a.add(a_nbr)
+            matched_b.add(b_nbr)
+            diff = abs(nbrs_i[a_nbr] - nbrs_j[b_nbr])
+            if diff > 1e-9:
+                cost += diff / norm
+
+        # Charge unmatched neighbors on each side.
+        for k in a_nodes:
+            if k not in matched_a:
+                cost += nbrs_i[k] / norm
+        for bk in b_nodes:
+            if bk not in matched_b:
+                cost += nbrs_j[bk] / norm
+
+    return cost
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Cost matrix
+# ──────────────────────────────────────────────────────────────────────────────
+
+def _build_ged_cost_matrix(
+    ids_a: List[int],
+    ids_b: List[int],
+    assignment: Dict[int, Optional[int]],
+    inv_assignment: Dict[int, int],
+    edges_a: Dict[int, Counter],
+    edges_b: Dict[int, Counter],
+    nn_a: Dict[int, Set[int]],
+    nn_b: Dict[int, Set[int]],
+    cn_a: Dict[int, int],
+    cn_b: Dict[int, int],
+    a_count_scale: float = 1.0,
+) -> np.ndarray:
+    """N_a × N_b cost matrix; ∞ entries replaced with _LARGE for scipy."""
+    n_a, n_b = len(ids_a), len(ids_b)
+    mat = np.zeros((n_a, n_b), dtype=float)
+    for ii, i in enumerate(ids_a):
+        for jj, j in enumerate(ids_b):
+            c = _edge_cost(i, j, assignment, inv_assignment,
+                           edges_a, edges_b, nn_a, nn_b, cn_a, cn_b,
+                           a_count_scale=a_count_scale)
+            mat[ii, jj] = _LARGE if math.isinf(c) else c
+    return mat
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Brute-force permutation search
+# ──────────────────────────────────────────────────────────────────────────────
+
+def _brute_force_assign(
+    ids_a: List[int],
+    ids_b: List[int],
+    assignment: Dict[int, Optional[int]],
+    inv_assignment: Dict[int, int],
+    edges_a: Dict[int, Counter],
+    edges_b: Dict[int, Counter],
+    nn_a: Dict[int, Set[int]],
+    nn_b: Dict[int, Set[int]],
+    cn_a: Dict[int, int],
+    cn_b: Dict[int, int],
+) -> Tuple[Dict[int, Optional[int]], float]:
+    """
+    Try every permutation of ids_b assigned to ids_a (within this CN group).
+
+    For each trial permutation the full assignment is temporarily updated so
+    that _edge_cost has a consistent mapping when evaluating nodes in the
+    same group that share neighbours.
+
+    Returns (group_map, best_cost) where group_map maps each a_id → b_id
+    (or None when |ids_a| > |ids_b|).
+    """
+    n_a, n_b = len(ids_a), len(ids_b)
+    take = min(n_a, n_b)
+
+    best_cost: float = _INF
+    best_map: Dict[int, Optional[int]] = {a: None for a in ids_a}
+
+    for perm in permutations(ids_b, take):
+        # Build trial assignment with this group's permutation applied.
+        trial     = dict(assignment)
+        trial_inv = dict(inv_assignment)
+
+        # Remove old entries for this group.
+        for a_id in ids_a:
+            old_b = trial.get(a_id)
+            if old_b is not None:
+                trial_inv.pop(old_b, None)
+            trial[a_id] = None
+
+        # Apply permutation.
+        for a_id, b_id in zip(ids_a, perm):
+            trial[a_id]     = b_id
+            trial_inv[b_id] = a_id
+
+        # Evaluate total cost for this group under the trial assignment.
+        total: float = 0.0
+        for a_id, b_id in zip(ids_a, perm):
+            c = _edge_cost(a_id, b_id, trial, trial_inv,
+                           edges_a, edges_b, nn_a, nn_b, cn_a, cn_b)
+            if math.isinf(c):
+                total = _INF
+                break
+            total += c
+
+        if total < best_cost:
+            best_cost = total
+            best_map = dict(zip(ids_a, perm))
+            # Extra A nodes (when n_a > n_b) remain None.
+            for a_id in ids_a[take:]:
+                best_map[a_id] = None
+
+    return best_map, best_cost
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Public API
+# ──────────────────────────────────────────────────────────────────────────────
+
+_BUCKET_ORDER = ("high", "oct", "tet")   # process high-CN first
+
+
+def _bucket_ratio(
+    n_a: int,
+    n_b: int,
+    n_fu_a: int = 1,
+    n_fu_b: int = 1,
+) -> Tuple[int, str]:
+    """
+    Return (ratio, direction) for a CN bucket with n_a A-nodes and n_b B-nodes.
+
+    direction='a_larger' → k:1 — k A-nodes per B-node  (expand B)
+    direction='b_larger' → 1:k — k B-nodes per A-node  (multi-round)
+    direction='equal'    → 1:1 standard assignment
+    direction='mismatch' → no clean integer relationship; assign min(n_a, n_b)
+
+    Two cases trigger a_larger / b_larger:
+
+    1. Supercell: one cell is a genuine integer-multiple supercell of the other.
+       The per-bucket ratio must equal the overall cell ratio n_fu_b / n_fu_a
+       (or its reciprocal).  The caller applies a_count_scale = 1/k to
+       normalise A's bond multiplicities down to the larger cell's per-site
+       counts.
+
+    2. Cross-FU: both cells have the same number of formula units (n_fu_a ==
+       n_fu_b) but different compositions, and the per-bucket count is a clean
+       integer multiple.  No count-scale normalisation is applied — each site
+       has its own independent bond environment.
+       Example: SrTiO3 (1 FU, Sr×1 high-cation) vs YBCO (1 FU, Ba×2 high-
+       cation) → b_larger=2 so both Ba sites are matched to Sr.
+    """
+    if n_a == n_b:
+        return 1, "equal"
+
+    # Supercell case — per-bucket ratio must match overall FU ratio.
+    if n_a > n_b and n_a % n_b == 0:
+        actual = n_a // n_b
+        if n_fu_a > n_fu_b and n_fu_a % n_fu_b == 0 and actual == n_fu_a // n_fu_b:
+            return actual, "a_larger"
+    if n_b > n_a and n_b % n_a == 0:
+        actual = n_b // n_a
+        if n_fu_b > n_fu_a and n_fu_b % n_fu_a == 0 and actual == n_fu_b // n_fu_a:
+            return actual, "b_larger"
+
+    # Cross-FU case — same number of FUs, different composition.
+    # Use ceil so that non-integer ratios still get a sensible round count.
+    # The global-k loop in match_nodes_ged overrides these per-bucket ratios
+    # with a single consistent k; _bucket_ratio's ceil value is the per-bucket
+    # fallback used only when n_fu_a != n_fu_b.
+    if n_fu_a == n_fu_b:
+        if n_a > n_b:
+            return math.ceil(n_a / n_b), "a_larger"
+        if n_b > n_a:
+            return math.ceil(n_b / n_a), "b_larger"
+
+    return 1, "mismatch"
+
+
+def _swap_ged_result(r: dict) -> dict:
+    """Invert A↔B roles in a match_nodes_ged result dict.
+
+    Used when match_nodes_ged internally swaps to smaller→larger direction for
+    consistent k-normalization.  The returned dict restores the original A/B
+    labelling so callers always see node_map keyed by the original A-node IDs.
+    """
+    new_node_map: Dict[int, List[int]] = {}
+    for a_id, b_ids in r["node_map"].items():
+        for b_id in b_ids:
+            new_node_map.setdefault(b_id, []).append(a_id)
+    return {
+        "node_map":              new_node_map,
+        "vacancy_a":             r.get("vacancy_b", []),
+        "vacancy_b":             r.get("vacancy_a", []),
+        "unassigned_a":          r.get("unassigned_b", []),
+        "unassigned_b":          r.get("unassigned_a", []),
+        "unforced_vacancy_a":    r.get("unforced_vacancy_b", []),
+        "unforced_vacancy_b":    r.get("unforced_vacancy_a", []),
+        "unforced_unassigned_a": r.get("unforced_unassigned_b", []),
+        "unforced_unassigned_b": r.get("unforced_unassigned_a", []),
+        # In swap, virtual B-entries tied to internal A-nodes become
+        # virtual A-entries tied to external B-nodes (labels flip).
+        "virtual_vacancy_a_by_b":       r.get("virtual_vacancy_b_by_a", {}),
+        "virtual_unassigned_a_by_b":    r.get("virtual_unassigned_b_by_a", {}),
+        "cost":               r["cost"],
+        "n_iter":             r["n_iter"],
+        "converged":          r.get("converged", False),
+        "role_swapped":       r.get("role_swapped", False),
+        "cross_fu_k":         r["cross_fu_k"],
+    }
+
+
+def _swap_roles_graph(graph: dict) -> dict:
+    """Return a shallow copy of graph with cation/anion ion_role fields swapped.
+
+    Used to detect antiperovskite ↔ perovskite equivalence: the two structure
+    types have identical bond topology but inverted cation/anion assignments.
+    Edge adjacency, fingerprints, and node IDs are unchanged — only ion_role
+    is flipped on each node, which changes bucket assignments.
+    """
+    import copy as _copy
+    g = _copy.copy(graph)
+    g["nodes"] = []
+    swap = {"cation": "anion", "anion": "cation"}
+    for n in graph["nodes"]:
+        n2 = dict(n)
+        r = n.get("ion_role", "")
+        if r in swap:
+            n2["ion_role"] = swap[r]
+        g["nodes"].append(n2)
+    return g
+
+
+def match_nodes_ged(
+    graph_a: dict,
+    graph_b: dict,
+    max_iter: int = 10,
+    brute_force_limit: int = 7,
+    fps_a: Optional[Dict] = None,
+    fps_b: Optional[Dict] = None,
+    edges_a: Optional[Dict] = None,
+    edges_b: Optional[Dict] = None,
+    nn_a: Optional[Dict] = None,
+    nn_b: Optional[Dict] = None,
+    vacancy_cost: float = 0.25,
+    absent_cost: float = 1.0,
+    unforced_cost: float = 2.0,
+    _force_rounds: Optional[int] = None,
+    _force_k: Optional[int] = None,
+    _no_role_swap: bool = False,
+) -> dict:
+    """
+    GED-based primary-bond node matching.
+
+    Parameters
+    ----------
+    graph_a, graph_b    : crystal graph dicts (crystal_graph_v4 format).
+                          Each node must carry a ``nearest_neighbors`` list.
+    max_iter            : maximum refinement iterations (default 10).
+    brute_force_limit   : max bucket size for brute-force permutation search.
+    fps_a, fps_b        : pre-computed fingerprints from compute_fingerprints().
+                          Computed internally if not provided.
+    edges_a, edges_b    : pre-computed edge-adjacency dicts from
+                          _build_edge_adjacency().  Computed internally if not
+                          provided.
+    nn_a, nn_b          : pre-computed NN sets from _build_nn_sets().
+                          Computed internally if not provided.
+    vacancy_cost        : cost assigned to an A-node that is left unassigned
+                          AND whose vacancy is geometrically reasonable
+                          (completion_fraction == 1.0).  Interpolated linearly
+                          with absent_cost for partial completion fractions.
+                          Default 0.25.
+    absent_cost         : cost assigned to an A-node that has no structural
+                          slot in B (completion_fraction == 0.0).  Default 1.0.
+    _force_rounds       : (internal) override the number of multi-round
+                          assignments in the force_a block.  When None
+                          (default), the code tries both floor and ceil round
+                          counts for non-integer ratios and returns the
+                          lower-cost result.  Set by recursive calls only.
+
+    Returns
+    -------
+    dict with keys:
+        node_map     : {a_id: [b_id, ...]}  matched pairs.
+                       For 1:1 and k:1 each list has one element.
+                       For 1:k (B has more formula units) lists have k elements.
+        unassigned_a : [a_id, ...]    A nodes with no B partner
+        unassigned_b : [b_id, ...]    B nodes with no A partner
+        vacancy_a    : [a_id, ...]    A nodes absent from B with comp_fraction > 0 (free)
+        vacancy_b    : [b_id, ...]    B nodes absent from A with comp_fraction > 0 (free)
+        unassigned_a : [a_id, ...]    A nodes with no structural slot in B (cost 1 each)
+        unassigned_b : [b_id, ...]    B nodes with no structural slot in A (cost 1 each)
+        cost         : float          edge cost + 1.0 per unassigned (non-vacancy) node
+        n_iter       : int            iterations until convergence
+    """
+    # ── Build lookups (use pre-computed values when provided) ─────────────────
+    if edges_a is None:
+        edges_a = _build_edge_adjacency(graph_a)
+    if edges_b is None:
+        edges_b = _build_edge_adjacency(graph_b)
+    if nn_a is None:
+        nn_a = _build_nn_sets(graph_a)
+    if nn_b is None:
+        nn_b = _build_nn_sets(graph_b)
+
+    # ── Role-swap trial: detect antiperovskite ↔ perovskite equivalence ───────
+    # Perovskite and antiperovskite have identical bond topology but inverted
+    # cation/anion assignments.  When the role-aware bucketing produces a poor
+    # match, swapping all ion_roles in graph_b may yield a much better one.
+    # We try both orientations and return the lower-cost result.
+    #
+    # Only at the outermost call (_no_role_swap=False, no forced k or rounds),
+    # and only when both structures have the same formula-unit count (same FU
+    # comparisons are where antiperovskite analogy is meaningful).
+    # Edge adjacency, NN sets, and FPs do NOT depend on ion_role so they are
+    # reused unchanged; only the bucketing changes.
+    if not _no_role_swap and _force_k is None and _force_rounds is None:
+        from crystal_graph_matching import compute_fingerprints as _cfp
+        _fps_a = fps_a if fps_a is not None else _cfp(graph_a)
+        _fps_b = fps_b if fps_b is not None else _cfp(graph_b)
+        _kw_inner = dict(
+            fps_a=_fps_a, fps_b=_fps_b,
+            edges_a=edges_a, edges_b=edges_b,
+            nn_a=nn_a, nn_b=nn_b,
+            max_iter=max_iter, brute_force_limit=brute_force_limit,
+            vacancy_cost=vacancy_cost, absent_cost=absent_cost,
+            unforced_cost=unforced_cost,
+            _no_role_swap=True,
+        )
+        _r_normal = match_nodes_ged(graph_a, graph_b, **_kw_inner)
+        _g_b_sw   = _swap_roles_graph(graph_b)
+        _r_swapped = match_nodes_ged(graph_a, _g_b_sw, **_kw_inner)
+        # Only accept the role-swapped result if:
+        #   (i)  it beats the normal result by a meaningful cost margin, AND
+        #   (ii) it covers almost all A-nodes as real matches.
+        # The coverage check prevents degenerate swap mappings that
+        # abandon most nodes as vacancies and score 0 by default — e.g.
+        # pyrochlore B→A where swap matches Nd→O, Zr→O while leaving 12
+        # A-O's as vacancies gives cost 0 but is obviously nonsense.
+        _swap_margin = 0.5    # swap cost must be < 50% of normal cost
+        _coverage_min = 0.75  # swap must match ≥ 75% of A-nodes
+                              # (antiperov Ba3PbO has 4/5=0.8 matched when Pb
+                              # becomes a legitimate vacancy; pyrochlore
+                              # B→A swap bug gave 10/22≈0.45 — this rejects it)
+        _n_a_nodes = len(graph_a["nodes"])
+        _matched_a_swap = sum(1 for a in _r_swapped.get("node_map", {})
+                              if _r_swapped["node_map"][a])
+        _coverage = _matched_a_swap / max(_n_a_nodes, 1)
+        if (_r_swapped["cost"] < _r_normal["cost"] * (1.0 - _swap_margin)
+                and _coverage >= _coverage_min):
+            _r_swapped["role_swapped"] = True
+            return _r_swapped
+        _r_normal["role_swapped"] = False
+        return _r_normal
+
+    cn_a = {int(n["id"]): int(n["coordination_number"]) for n in graph_a["nodes"]}
+    cn_b = {int(n["id"]): int(n["coordination_number"]) for n in graph_b["nodes"]}
+
+    elem_a = {int(n["id"]): n.get("element", "") for n in graph_a["nodes"]}
+    elem_b = {int(n["id"]): n.get("element", "") for n in graph_b["nodes"]}
+
+    nodes_a = [int(n["id"]) for n in graph_a["nodes"]]
+    nodes_b = [int(n["id"]) for n in graph_b["nodes"]]
+
+    # Atoms per formula unit — drives the force-assignment direction below.
+    fu_a = _atoms_per_fu(graph_a)
+    fu_b = _atoms_per_fu(graph_b)
+
+    # Number of formula units in each cell.
+    # Used to gate a_larger / b_larger: multi-round assignment only applies
+    # when one cell is a genuine integer-multiple supercell of the other.
+    n_fu_a = max(len(nodes_a) // fu_a, 1)
+    n_fu_b = max(len(nodes_b) // fu_b, 1)
+
+    # ── Global k for cross-FU rationalization ────────────────────────────────
+    # When both graphs have the same number of formula units but different
+    # total atom counts (n_fu_a == n_fu_b, fu_a != fu_b), compute a single
+    # integer k from the total node-count ratio and apply it uniformly to
+    # every bucket.  This ensures consistency: if Ti is matched to k B-nodes,
+    # Sr also gets k slots (some may be implicit vacancies if B is exhausted),
+    # and each O also gets k slots.
+    #
+    # Examples:
+    #   SrTiO3 (5 nodes, 1 FU) vs YBCO (13 nodes, 1 FU)
+    #     → _cross_fu_k = ceil(13/5) = 3
+    #     → each A-element gets 3 rounds of matching; unmatched rounds = free vacancy
+    #   SrTiO3 (5 nodes, 1 FU) vs BaTiO3 (5 nodes, 1 FU)
+    #     → _cross_fu_k = 1, no change from equal-size 1:1 logic
+    #
+    # For supercell cases (n_fu_b != n_fu_a) the per-bucket _bucket_ratio
+    # logic is used instead, so _cross_fu_k stays 1.
+    _cross_fu_k: int = 1
+    if n_fu_a == n_fu_b and len(nodes_a) != len(nodes_b):
+        if _force_k is None:
+            # ── Canonicalize direction: always run smaller→larger ─────────────
+            # k-normalization (dividing edge costs by the number of rounds) only
+            # applies when A is the smaller graph.  If A is larger, most of its
+            # nodes become soft vacancies and the averaging never triggers,
+            # making the score direction-dependent.  Swapping ensures the same
+            # structural pair always produces the same cost regardless of which
+            # graph is passed as A vs B.
+            if len(nodes_a) > len(nodes_b):
+                from crystal_graph_matching import compute_fingerprints as _cfp
+                _fps_a_sw = fps_a if fps_a is not None else _cfp(graph_a)
+                _fps_b_sw = fps_b if fps_b is not None else _cfp(graph_b)
+                _ea_sw    = edges_a if edges_a is not None else _build_edge_adjacency(graph_a)
+                _eb_sw    = edges_b if edges_b is not None else _build_edge_adjacency(graph_b)
+                _nna_sw   = nn_a if nn_a is not None else _build_nn_sets(graph_a)
+                _nnb_sw   = nn_b if nn_b is not None else _build_nn_sets(graph_b)
+                _kw_swap = dict(
+                    max_iter=max_iter, brute_force_limit=brute_force_limit,
+                    fps_a=_fps_b_sw, fps_b=_fps_a_sw,
+                    edges_a=_eb_sw, edges_b=_ea_sw,
+                    nn_a=_nnb_sw, nn_b=_nna_sw,
+                    vacancy_cost=vacancy_cost, absent_cost=absent_cost,
+            unforced_cost=unforced_cost,
+                    _no_role_swap=True,
+                )
+                return _swap_ged_result(match_nodes_ged(graph_b, graph_a, **_kw_swap))
+
+            # ── k-loop: try k = 1 … k_max, return the lowest-cost result ─────
+            # k is the "each A-node gets k B-slots" target.  The ratio rule
+            # is preserved AT THE ELEMENT LEVEL: slot_total(E) = k × |A(E)|,
+            # so ratios across elements match A's FU composition regardless
+            # of k.
+            #
+            # When a specific bucket has fewer B-nodes than k × |A_bucket|,
+            # the within-bucket uniformity guard skips late rounds, leaving
+            # every A-node in that bucket with the same (smaller) count of
+            # REAL slots.  The difference between k and actual-real-slots
+            # is then charged as vacancy-slot cost in the final evaluation
+            # — the missing slot is a vacancy for that specific A-node.
+            #
+            # k_max = ceil(|B|/|A|) covers the "B is roughly n× larger than
+            # A" cases; trying k beyond that would only add vacancy slots
+            # with no real-B counterparts, strictly worse than the k below.
+            _n_smaller = min(len(nodes_a), len(nodes_b))
+            _n_larger  = max(len(nodes_a), len(nodes_b))
+            _k_max = max(1, math.ceil(_n_larger / _n_smaller))
+
+            _kw_outer: dict = dict(
+                max_iter=max_iter, brute_force_limit=brute_force_limit,
+                fps_a=fps_a, fps_b=fps_b, edges_a=edges_a, edges_b=edges_b,
+                nn_a=nn_a, nn_b=nn_b, vacancy_cost=vacancy_cost,
+                absent_cost=absent_cost, unforced_cost=unforced_cost,
+                _no_role_swap=True,
+            )
+            _best_k_result: Optional[dict] = None
+            for _k in range(1, _k_max + 1):
+                _r = match_nodes_ged(graph_a, graph_b, _force_k=_k, **_kw_outer)
+                if _best_k_result is None or _r["cost"] < _best_k_result["cost"]:
+                    _best_k_result = _r
+            return _best_k_result  # type: ignore[return-value]
+        else:
+            _cross_fu_k = _force_k
+
+    # ── Group by (CN bucket, ion_role) ────────────────────────────────────────
+    # Separating by role prevents cations and anions with the same CN from
+    # competing for the same target (e.g. Ti and O both at CN=6 in SrTiO3).
+    BucketKey = Tuple[str, str]   # (cn_bucket, ion_role)
+
+    def _node_bucket(nid: int, cn_map: Dict[int, int], role_map: Dict[int, str]) -> BucketKey:
+        return (_cn_bucket(cn_map[nid]), role_map[nid])
+
+    role_a = {int(n["id"]): n.get("ion_role", "unknown") for n in graph_a["nodes"]}
+    role_b = {int(n["id"]): n.get("ion_role", "unknown") for n in graph_b["nodes"]}
+
+    groups_a: Dict[BucketKey, List[int]] = defaultdict(list)
+    groups_b: Dict[BucketKey, List[int]] = defaultdict(list)
+    for nid in nodes_a:
+        groups_a[_node_bucket(nid, cn_a, role_a)].append(nid)
+    for nid in nodes_b:
+        groups_b[_node_bucket(nid, cn_b, role_b)].append(nid)
+
+    # Snapshots of which (CN bucket, role) pairs are occupied in each graph,
+    # captured before groups_a/groups_b are modified by the fallback / wildcard
+    # passes.  Used at the end to classify unmatched nodes symmetrically:
+    #   _a_buckets: classify unmatched B-nodes (soft_vacancy_b vs vacancy_b)
+    #   _b_buckets: classify implicit-vacancy A-slots (true vacancy vs unassigned)
+    _a_buckets: Set[BucketKey] = {_node_bucket(nid, cn_a, role_a) for nid in nodes_a}
+    _b_buckets: Set[BucketKey] = {_node_bucket(nid, cn_b, role_b) for nid in nodes_b}
+
+    # All bucket keys present in either graph, in a deterministic order.
+    # "neutral" is included so that intermetallic / non-ionic compounds are
+    # matched against each other in the main pass.  Cross-role matching for
+    # neutral nodes (e.g. La3AlC ↔ ReO3) is handled by the wildcard pass below.
+    _ROLE_ORDER = ("cation", "anion", "neutral", "unknown")
+    all_bucket_keys: List[BucketKey] = [
+        (cb, r) for cb in _BUCKET_ORDER for r in _ROLE_ORDER
+        if (cb, r) in groups_a or (cb, r) in groups_b
+    ]
+
+    # ── Initial assignment: fingerprint-based Hungarian ───────────────────────
+    if fps_a is None:
+        fps_a = compute_fingerprints(graph_a)
+    if fps_b is None:
+        fps_b = compute_fingerprints(graph_b)
+
+    # Canonical 1:1 assignment used for edge-cost evaluation during refinement.
+    # Multiple A-nodes may share the same B-id (k:1), or one A-node may hold
+    # only the "first" B-id (1:k — extras tracked in extras_map below).
+    assignment: Dict[int, Optional[int]] = {nid: None for nid in nodes_a}
+
+    # Extra B-ids assigned to each A-node in the 1:k case (rounds 2..k).
+    extras_map: Dict[int, List[int]] = defaultdict(list)
+
+    # Per-node count scale: 1/ratio for 1:k nodes, 1.0 otherwise.
+    # Used in edge_cost to normalise A's bond counts down to B's cell size.
+    a_count_scale_map: Dict[int, float] = {nid: 1.0 for nid in nodes_a}
+
+    # Implicit-vacancy tracking is deprecated: under uniform-k guards, rounds
+    # never run with a deficit, so these dicts always remain empty.  They're
+    # kept here (as defaultdicts that swallow writes) only so the legacy
+    # populator sites don't need to be rewritten — the dicts are not returned
+    # or used for cost anywhere.
+    _implicit_vacancy_slots:   Dict[int, int] = defaultdict(int)
+    _implicit_vacancy_b_slots: Dict[int, int] = defaultdict(int)
+
+    # ── Role-balance guard ──────────────────────────────────────────────────
+    # If the total A and B node counts balance at the role level (e.g. 8 A
+    # cations vs 8 B cations) but a specific bucket within that role is
+    # lopsided (8 A vs 4 B in oct-cation), the lopsided bucket should NOT
+    # expand via a_larger — the surplus 4 A-cations belong to the high-cation
+    # B sublattice (4 Nd) and should fall through to the cross-CN fallback
+    # pass instead.  Without this guard, Hungarian-with-a_larger pairs each
+    # B-Zr with 2 A-cations and leaves the Nd's as (spurious) vacancies.
+    _role_total_a: Dict[str, int] = defaultdict(int)
+    _role_total_b: Dict[str, int] = defaultdict(int)
+    for nid in nodes_a:
+        _role_total_a[role_a[nid]] += 1
+    for nid in nodes_b:
+        _role_total_b[role_b[nid]] += 1
+
+    # Fingerprint-compatibility threshold for the role-balance guard.
+    # The guard redirects surplus A-nodes to sibling B-buckets only when
+    # those siblings are chemically plausible partners.  Empirically:
+    #   * AgSbO3 (Ag/Sb) vs Nd2Zr2O7 (Nd): mean fp-dist ≈ 0.42 — plausible
+    #     (chemically similar large cations, different effective CN).
+    #   * ReO3 (Re) vs BaTiO3 (Ba): mean fp-dist ≈ 0.74 — implausible
+    #     (transition-metal B-site vs alkaline-earth A-site).
+    _ROLE_BALANCE_FP_THRESHOLD = 0.55
+
+    def _sibling_fp_ok(
+        bucket_key: BucketKey,
+        ids_self: List[int],
+        nodes_other: List[int],
+        cn_other: Dict[int, int],
+        role_other: Dict[int, str],
+        fps_self: Dict[int, dict],
+        fps_other: Dict[int, dict],
+    ) -> bool:
+        """True iff this bucket's surplus can be redirected to sibling
+        same-role buckets on the other side with acceptable fp distance.
+
+        Uses ``nodes_other`` + ``cn_other`` + ``role_other`` (static per-graph
+        data) rather than the mutable ``groups_other`` dict — ``groups_*``
+        gets pruned by force-assignment, so a rebuild-time lookup would see
+        zero siblings even when the graph has them.
+        """
+        bucket_cb, bucket_role = bucket_key
+        sibling_other: List[int] = [
+            n for n in nodes_other
+            if role_other[n] == bucket_role
+            and _cn_bucket(cn_other[n]) != bucket_cb
+        ]
+        if not sibling_other or not ids_self:
+            return False
+        dists = []
+        for a in ids_self:
+            for b in sibling_other:
+                dists.append(_fingerprint_distance(fps_self[a], fps_other[b]))
+        return (sum(dists) / len(dists)) <= _ROLE_BALANCE_FP_THRESHOLD
+
+    def _bucket_ratio_guarded(
+        bucket_key: BucketKey,
+        ids_a: List[int],
+        ids_b: List[int],
+    ) -> Tuple[int, str]:
+        """Wrap _bucket_ratio with a role-balance guard.
+
+        Suppresses a_larger when:
+          (i) role total A ≤ role total B (surplus A belongs elsewhere), AND
+          (ii) A-surplus nodes have acceptable fp distance to sibling B
+               nodes of the same role in other CN buckets.
+        Symmetric rule for b_larger.  Condition (ii) prevents spurious
+        cross-matches like Re (CN=6 oct) → Ba (CN=12 high).
+        """
+        role = bucket_key[1]
+        n_a, n_b = len(ids_a), len(ids_b)
+        ratio, direction = _bucket_ratio(n_a, n_b, n_fu_a, n_fu_b)
+        if direction == "a_larger" and _role_total_a[role] <= _role_total_b[role]:
+            if _sibling_fp_ok(bucket_key, ids_a, nodes_b, cn_b, role_b, fps_a, fps_b):
+                return 1, "equal" if n_a == n_b else "mismatch"
+        if direction == "b_larger" and _role_total_b[role] <= _role_total_a[role]:
+            if _sibling_fp_ok(bucket_key, ids_b, nodes_a, cn_a, role_a, fps_b, fps_a):
+                return 1, "equal" if n_a == n_b else "mismatch"
+        return ratio, direction
+
+    for bucket in all_bucket_keys:
+        ids_a = groups_a.get(bucket, [])
+        ids_b = groups_b.get(bucket, [])
+        if not ids_a or not ids_b:
+            continue
+
+        if _force_k is not None and n_fu_a == n_fu_b:
+            # ── k-round mode: run exactly _force_k rounds per bucket ──────────
+            # In forced-k mode every bucket uses the same number of rounds
+            # regardless of its per-bucket n_a / n_b ratio.  This ensures
+            # per-element consistency (Ti gets the same slot count as Sr) and
+            # lets the final cost evaluation distinguish structural extras (unmatched
+            # B-nodes, cost 0) from genuine vacancies (unfilled A-slots, cost 1).
+            remaining_b = list(ids_b)
+            first_round = True
+            for _ in range(_force_k):
+                # Uniformity guard: only run a round if every A-node in the
+                # bucket can be assigned this round — otherwise some A's get
+                # an extra slot while others don't.
+                if len(remaining_b) < len(ids_a):
+                    break
+                fp_mat = _fp_cost_matrix(ids_a, remaining_b, fps_a, fps_b)
+                row_ind, col_ind = linear_sum_assignment(fp_mat)
+                _assigned_fk: Set[int] = set()
+                for ii, jj in zip(row_ind, col_ind):
+                    a_id = ids_a[ii]
+                    b_id = remaining_b[jj]
+                    if first_round:
+                        assignment[a_id] = b_id
+                    else:
+                        extras_map[a_id].append(b_id)
+                    _assigned_fk.add(b_id)
+                remaining_b = [b for b in remaining_b if b not in _assigned_fk]
+                first_round = False
+            # Track implicit vacancy slots for matched A-nodes only.
+            # Unmatched A-nodes (round 1 didn't assign them) follow the normal
+            # vacancy classification path via unassigned_a.
+            for a_id in ids_a:
+                if assignment.get(a_id) is None:
+                    continue
+                got = 1 + len(extras_map.get(a_id, []))
+                deficit = _force_k - got
+                if deficit > 0:
+                    _implicit_vacancy_slots[a_id] += deficit
+            continue
+
+        ratio, direction = _bucket_ratio_guarded(bucket, ids_a, ids_b)
+
+        if direction == "a_larger":
+            # Expand ids_b so A-nodes can be matched.
+            # Same-FU structures: use _cross_fu_k (1 for direct comparison, k for
+            # k-round mode).  With _cross_fu_k=1 this gives expand=1 → each B-node
+            # appears only once, so at most one A-node claims it; excess A-nodes in
+            # the bucket remain unmatched and are handled by force-assignment.
+            # Different-FU (supercell): use ratio — B physically contains ratio
+            # copies of A's cell, so each B-node really does serve ratio A-nodes.
+            expand    = _cross_fu_k if n_fu_a == n_fu_b else ratio
+            ids_b_eff = ids_b * expand
+            fp_mat    = _fp_cost_matrix(ids_a, ids_b_eff, fps_a, fps_b)
+            row_ind, col_ind = linear_sum_assignment(fp_mat)
+            for ii, jj in zip(row_ind, col_ind):
+                assignment[ids_a[ii]] = ids_b_eff[jj]
+            # Track implicit B-vacancies: virtual B-copies that no A-node claimed.
+            if n_fu_a == n_fu_b and _cross_fu_k > 1:
+                b_assigned = Counter(ids_b_eff[jj] for jj in col_ind)
+                for b_id in ids_b:
+                    deficit = expand - b_assigned.get(b_id, 0)
+                    if deficit > 0:
+                        _implicit_vacancy_b_slots[b_id] += deficit
+
+        elif direction == "b_larger":
+            # 1:k — run rounds of matching; each round assigns the cheapest
+            # remaining B-nodes to the A-nodes and removes them from the pool.
+            # Cross-FU case (n_fu_a == n_fu_b): use _cross_fu_k rounds (global k)
+            # so that every element type gets the same number of slots — unmatched
+            # rounds become implicit free vacancies when B is exhausted.
+            # Supercell case: A's bond counts are scaled by 1/ratio at final-cost
+            # time only (not during matching) so that comparing A to its own N×
+            # supercell gives the same score as A vs A.
+            scale = 1.0 / ratio if n_fu_b > n_fu_a else 1.0
+            rounds = _cross_fu_k if n_fu_a == n_fu_b else ratio
+            for a_id in ids_a:
+                a_count_scale_map[a_id] = scale
+            remaining_b = list(ids_b)
+            first_round  = True
+            for _ in range(rounds):
+                # Uniformity guard: every A-node in the bucket must get the
+                # same number of rounds' worth of slots.  If remaining_b has
+                # fewer nodes than ids_a, the round can only assign some A's.
+                if len(remaining_b) < len(ids_a):
+                    break
+                fp_mat = _fp_cost_matrix(ids_a, remaining_b, fps_a, fps_b)
+                row_ind, col_ind = linear_sum_assignment(fp_mat)
+                assigned_this_round = set()
+                for ii, jj in zip(row_ind, col_ind):
+                    a_id = ids_a[ii]
+                    b_id = remaining_b[jj]
+                    if first_round:
+                        assignment[a_id] = b_id
+                    else:
+                        extras_map[a_id].append(b_id)
+                    assigned_this_round.add(b_id)
+                remaining_b = [b for b in remaining_b if b not in assigned_this_round]
+                first_round = False
+
+            # Track implicit vacancies: A-nodes that got fewer than rounds
+            # assignments because B was exhausted before all rounds completed.
+            if n_fu_a == n_fu_b and _cross_fu_k > 1:
+                for a_id in ids_a:
+                    got = (1 if assignment.get(a_id) is not None else 0) + len(extras_map.get(a_id, []))
+                    deficit = rounds - got
+                    if deficit > 0:
+                        _implicit_vacancy_slots[a_id] += deficit
+
+        else:
+            # equal or mismatch — assign up to min(|A|, |B|) A-nodes.
+            # Use the full ids_b so Hungarian can pick the globally best
+            # B-nodes rather than being forced to use only the first n_take.
+            n_take = min(len(ids_a), len(ids_b))
+            fp_mat = _fp_cost_matrix(ids_a[:n_take], ids_b, fps_a, fps_b)
+            row_ind, col_ind = linear_sum_assignment(fp_mat)
+            for ii, jj in zip(row_ind, col_ind):
+                assignment[ids_a[ii]] = ids_b[jj]
+
+    # ── Fallback pass: cross-CN role-only matching ────────────────────────────
+    # A-nodes with no partner in their (cn_bucket, role) group may still match
+    # B-nodes in a different CN bucket but the same role.
+    # Example: SrTiO3 O (CN=6, oct-anion) ↔ ReO3 O (CN=2, tet-anion).
+    #
+    # Strategy:
+    #   1. Collect unmatched A-nodes and unclaimed B-nodes, grouped by role.
+    #   2. Assign them with the same ratio/direction logic as the main pass.
+    #   3. Move the fallback A-nodes out of their empty primary bucket in
+    #      groups_a so the iterative refinement doesn't clear their assignment.
+    #   4. Recompute all_bucket_keys to include the fallback buckets.
+
+    unmatched_a_by_role: Dict[str, List[int]] = defaultdict(list)
+    for nid in nodes_a:
+        if assignment[nid] is None:
+            unmatched_a_by_role[role_a[nid]].append(nid)
+
+    matched_b_set: Set[int] = {v for v in assignment.values() if v is not None}
+    matched_b_set.update(b for extras in extras_map.values() for b in extras)
+    unmatched_b_by_role: Dict[str, List[int]] = defaultdict(list)
+    for nid in nodes_b:
+        if nid not in matched_b_set:
+            unmatched_b_by_role[role_b[nid]].append(nid)
+
+    # ── Vacancy pre-reservation ──────────────────────────────────────────────
+    # When fu differs, the larger-FU side has n_vacancy = |fu_a - fu_b| ×
+    # n_cells structural vacancies that have no counterpart on the smaller-FU
+    # side.  Remove those candidates from the fallback pools up front, so the
+    # fallback's role-only match doesn't spuriously pair a vacancy A-cation
+    # with an unrelated B-cation of a different CN bucket (e.g. Sr[CN=12]
+    # matched to extra Re[CN=6] in SrTiO3 vs ReO3).  The reservation heuristic
+    # mirrors force_b / force_a: lowest-element-frequency nodes in the
+    # unmatched pool are the most likely vacancies.  CN-bucket disagreement
+    # with the other side's available nodes is used as a tiebreaker — a
+    # Sr[high] with no high-bucket counterpart in B is a stronger vacancy
+    # candidate than an O whose CN is common to both.
+    def _reserve_vacancies_global(
+        pools_by_role: Dict[str, List[int]],
+        cn_self: Dict[int, int],
+        elem_self: Dict[int, str],
+        other_pools_by_role: Dict[str, List[int]],
+        cn_other: Dict[int, int],
+        n_reserve: int,
+    ) -> Dict[str, Set[int]]:
+        """Reserve n_reserve vacancy candidates pooled *across all roles*.
+
+        Previously the reservation iterated roles in dict order and stopped at
+        n_reserve per-role, which meant a "cation" role consuming the whole
+        budget before "anion" was ever considered.  That mis-fires when the
+        real vacancy belongs to the under-processed role — e.g. in Ba3PbO vs
+        swapped-ReO3, Pb (anion, CN=12, no high-anion counterpart in B) is a
+        much better vacancy candidate than any Ba (cation, CN=6), but the
+        old code always reserved a Ba first and left Pb to get mis-matched
+        in the fallback pass.
+
+        Sort key per candidate:
+            (bucket-present-in-other-side-same-role,  # absent first
+             element_frequency_in_own_pool,            # rare element first
+             -cn_self)                                 # high-CN first
+        """
+        if n_reserve <= 0:
+            return {}
+        # Element frequency is computed within each role's own pool to keep
+        # "rare element" meaningful at a structural level (e.g. Al in
+        # La3AlC is rare within its cation pool).
+        all_candidates: List[Tuple[Tuple[bool, int, int], str, int]] = []
+        for _role, _pool in pools_by_role.items():
+            if not _pool:
+                continue
+            _freq = Counter(elem_self[nid] for nid in _pool)
+            _other_buckets = {
+                _cn_bucket(cn_other[b]) for b in other_pools_by_role.get(_role, [])
+            }
+            for nid in _pool:
+                key = (
+                    _cn_bucket(cn_self[nid]) in _other_buckets,
+                    _freq[elem_self[nid]],
+                    -cn_self[nid],
+                )
+                all_candidates.append((key, _role, nid))
+
+        all_candidates.sort(key=lambda t: t[0])
+        reserved_by_role: Dict[str, Set[int]] = defaultdict(set)
+        for _, _role, nid in all_candidates[:n_reserve]:
+            reserved_by_role[_role].add(nid)
+        return reserved_by_role
+
+    _n_cells_a = max(len(nodes_a) // fu_a, 1)
+    _n_cells_b = max(len(nodes_b) // fu_b, 1)
+
+    # Only pre-reserve from ROLES THAT ARE GLOBALLY IMBALANCED.  If a role
+    # is balanced at the cell level (e.g. pyrochlore: 8 cations on each side),
+    # the surplus on one CN-bucket should cross-match to another CN-bucket's
+    # nodes via the fallback pass — pre-reserving would prematurely classify
+    # the eventual cross-match targets as vacancies.  Imbalanced roles (e.g.
+    # SrTiO3 vs ReO3: 2 A-cations vs 2 B-cations but SrTiO3's Sr has no
+    # B-equivalent at all) still benefit from pre-reservation.
+    def _imbalanced_roles_a() -> Dict[str, List[int]]:
+        """unmatched_a_by_role filtered to roles where _role_total_a > _role_total_b."""
+        return {
+            _role: _ids for _role, _ids in unmatched_a_by_role.items()
+            if _role_total_a[_role] > _role_total_b[_role]
+        }
+
+    def _imbalanced_roles_b() -> Dict[str, List[int]]:
+        return {
+            _role: _ids for _role, _ids in unmatched_b_by_role.items()
+            if _role_total_b[_role] > _role_total_a[_role]
+        }
+
+    if fu_a > fu_b:
+        _n_res_a = (fu_a - fu_b) * _n_cells_a
+        _reserved_a = _reserve_vacancies_global(
+            _imbalanced_roles_a(), cn_a, elem_a,
+            dict(unmatched_b_by_role), cn_b, _n_res_a)
+        for _role, _resv in _reserved_a.items():
+            if _resv:
+                unmatched_a_by_role[_role] = [
+                    n for n in unmatched_a_by_role[_role] if n not in _resv
+                ]
+    elif fu_b > fu_a:
+        _n_res_b = (fu_b - fu_a) * _n_cells_b
+        _reserved_b = _reserve_vacancies_global(
+            _imbalanced_roles_b(), cn_b, elem_b,
+            dict(unmatched_a_by_role), cn_a, _n_res_b)
+        for _role, _resv in _reserved_b.items():
+            if _resv:
+                unmatched_b_by_role[_role] = [
+                    n for n in unmatched_b_by_role[_role] if n not in _resv
+                ]
+
+    for role in _ROLE_ORDER:
+        ids_a_fb = unmatched_a_by_role.get(role, [])
+        ids_b_fb = unmatched_b_by_role.get(role, [])
+        if not ids_a_fb or not ids_b_fb:
+            continue
+
+        fb_key: BucketKey = ("fallback", role)
+
+        # Remove these A-nodes from their primary (cn_bucket, role) bucket so
+        # the iterative refinement won't clear their fallback assignments.
+        for a_id in ids_a_fb:
+            pk = _node_bucket(a_id, cn_a, role_a)
+            if pk in groups_a and a_id in groups_a[pk]:
+                groups_a[pk].remove(a_id)
+
+        groups_a[fb_key] = list(ids_a_fb)
+        groups_b[fb_key] = list(ids_b_fb)
+
+        if _force_k is not None and n_fu_a == n_fu_b:
+            # k-round mode — same as main bucket loop.
+            remaining_b_fb = list(ids_b_fb)
+            first_round_fb = True
+            for _ in range(_force_k):
+                # Uniformity guard — every A-node in ids_a_fb must receive
+                # the same number of slots.
+                if len(remaining_b_fb) < len(ids_a_fb):
+                    break
+                fp_mat = _fp_cost_matrix(ids_a_fb, remaining_b_fb, fps_a, fps_b)
+                row_ind, col_ind = linear_sum_assignment(fp_mat)
+                _assigned_fb: Set[int] = set()
+                for ii, jj in zip(row_ind, col_ind):
+                    a_id = ids_a_fb[ii]
+                    b_id = remaining_b_fb[jj]
+                    if first_round_fb:
+                        assignment[a_id] = b_id
+                    else:
+                        extras_map[a_id].append(b_id)
+                    _assigned_fb.add(b_id)
+                remaining_b_fb = [b for b in remaining_b_fb if b not in _assigned_fb]
+                first_round_fb = False
+            for a_id in ids_a_fb:
+                if assignment.get(a_id) is None:
+                    continue
+                got = 1 + len(extras_map.get(a_id, []))
+                deficit = _force_k - got
+                if deficit > 0:
+                    _implicit_vacancy_slots[a_id] += deficit
+            continue
+
+        # Apply same ratio/direction logic as the main pass.
+        ratio, direction = _bucket_ratio(len(ids_a_fb), len(ids_b_fb), n_fu_a, n_fu_b)
+
+        if direction == "a_larger":
+            expand    = _cross_fu_k if n_fu_a == n_fu_b else ratio
+            ids_b_eff = ids_b_fb * expand
+            fp_mat = _fp_cost_matrix(ids_a_fb, ids_b_eff, fps_a, fps_b)
+            row_ind, col_ind = linear_sum_assignment(fp_mat)
+            for ii, jj in zip(row_ind, col_ind):
+                assignment[ids_a_fb[ii]] = ids_b_eff[jj]
+            if n_fu_a == n_fu_b and _cross_fu_k > 1:
+                b_assigned = Counter(ids_b_eff[jj] for jj in col_ind)
+                for b_id in ids_b_fb:
+                    deficit = expand - b_assigned.get(b_id, 0)
+                    if deficit > 0:
+                        _implicit_vacancy_b_slots[b_id] += deficit
+
+        elif direction == "b_larger":
+            scale = 1.0 / ratio if n_fu_b > n_fu_a else 1.0
+            rounds = _cross_fu_k if n_fu_a == n_fu_b else ratio
+            for a_id in ids_a_fb:
+                a_count_scale_map[a_id] = scale
+            remaining_b = list(ids_b_fb)
+            first_round = True
+            for _ in range(rounds):
+                # Uniformity guard — see main bucket loop.
+                if len(remaining_b) < len(ids_a_fb):
+                    break
+                fp_mat = _fp_cost_matrix(ids_a_fb, remaining_b, fps_a, fps_b)
+                row_ind, col_ind = linear_sum_assignment(fp_mat)
+                assigned_this_round = set()
+                for ii, jj in zip(row_ind, col_ind):
+                    a_id = ids_a_fb[ii]
+                    b_id = remaining_b[jj]
+                    if first_round:
+                        assignment[a_id] = b_id
+                    else:
+                        extras_map[a_id].append(b_id)
+                    assigned_this_round.add(b_id)
+                remaining_b = [b for b in remaining_b if b not in assigned_this_round]
+                first_round = False
+
+            if n_fu_a == n_fu_b and _cross_fu_k > 1:
+                for a_id in ids_a_fb:
+                    got = (1 if assignment.get(a_id) is not None else 0) + len(extras_map.get(a_id, []))
+                    deficit = rounds - got
+                    if deficit > 0:
+                        _implicit_vacancy_slots[a_id] += deficit
+
+        else:
+            n_take = min(len(ids_a_fb), len(ids_b_fb))
+            fp_mat = _fp_cost_matrix(ids_a_fb[:n_take], ids_b_fb, fps_a, fps_b)
+            row_ind, col_ind = linear_sum_assignment(fp_mat)
+            for ii, jj in zip(row_ind, col_ind):
+                assignment[ids_a_fb[ii]] = ids_b_fb[jj]
+
+    # Recompute bucket key list: primary buckets (now possibly pruned) first,
+    # fallback buckets last.  Exclude primary keys that became empty after
+    # nodes were moved to fallback.
+    all_bucket_keys = [
+        (cb, r) for cb in _BUCKET_ORDER for r in _ROLE_ORDER
+        if groups_a.get((cb, r)) or groups_b.get((cb, r))
+    ] + [
+        ("fallback", r) for r in _ROLE_ORDER
+        if groups_a.get(("fallback", r)) or groups_b.get(("fallback", r))
+    ]
+
+    # ── Wildcard pass: neutral/unknown nodes match across roles ───────────────
+    # Nodes with role "neutral" or "unknown" are wildcards: they can match
+    # B-nodes of any role (and non-neutral A-nodes can match neutral B-nodes).
+    # This handles intermetallics (all-neutral) compared against ionic compounds.
+    #
+    # Two sub-passes:
+    #   1. Same-CN wildcard — group remaining unmatched nodes by CN bucket.
+    #   2. Cross-CN wildcard sweep — pair any still-unmatched nodes.
+    #
+    # Activation: only runs when at least one side has neutral/unknown nodes.
+
+    _NEUTRAL_ROLES = frozenset({"neutral", "unknown"})
+
+    wc_unmatched_a = [nid for nid in nodes_a if assignment[nid] is None]
+    _wc_matched_b: Set[int] = {v for v in assignment.values() if v is not None}
+    _wc_matched_b.update(b for extras in extras_map.values() for b in extras)
+    wc_unmatched_b = [nid for nid in nodes_b if nid not in _wc_matched_b]
+
+    _wc_has_neutral = (
+        any(role_a[n] in _NEUTRAL_ROLES for n in wc_unmatched_a) or
+        any(role_b[n] in _NEUTRAL_ROLES for n in wc_unmatched_b)
+    )
+
+    if wc_unmatched_a and wc_unmatched_b and _wc_has_neutral:
+        wc_new_keys: List[BucketKey] = []
+
+        # Sub-pass 1: same-CN wildcard matching.
+        wc_by_cn_a: Dict[str, List[int]] = defaultdict(list)
+        wc_by_cn_b: Dict[str, List[int]] = defaultdict(list)
+        for nid in wc_unmatched_a:
+            wc_by_cn_a[_cn_bucket(cn_a[nid])].append(nid)
+        for nid in wc_unmatched_b:
+            wc_by_cn_b[_cn_bucket(cn_b[nid])].append(nid)
+
+        for cb in _BUCKET_ORDER:
+            ids_a_wc = wc_by_cn_a.get(cb, [])
+            ids_b_wc = wc_by_cn_b.get(cb, [])
+            if not ids_a_wc or not ids_b_wc:
+                continue
+
+            wc_key: BucketKey = (f"wc_{cb}", "any")
+            # Move A-nodes from their primary bucket into the wildcard bucket.
+            for a_id in ids_a_wc:
+                pk = _node_bucket(a_id, cn_a, role_a)
+                if pk in groups_a and a_id in groups_a[pk]:
+                    groups_a[pk].remove(a_id)
+            groups_a[wc_key] = list(ids_a_wc)
+            groups_b[wc_key] = list(ids_b_wc)
+            wc_new_keys.append(wc_key)
+
+            if _force_k is not None and n_fu_a == n_fu_b:
+                # k-round mode — same as main bucket loop.
+                remaining_b_wc = list(ids_b_wc)
+                first_round_wc = True
+                for _ in range(_force_k):
+                    # Uniformity guard — every A in ids_a_wc must receive the
+                    # same number of slots.
+                    if len(remaining_b_wc) < len(ids_a_wc):
+                        break
+                    fp_mat = _fp_cost_matrix(ids_a_wc, remaining_b_wc, fps_a, fps_b)
+                    row_ind, col_ind = linear_sum_assignment(fp_mat)
+                    _assigned_wc: Set[int] = set()
+                    for ii, jj in zip(row_ind, col_ind):
+                        a_id = ids_a_wc[ii]
+                        b_id = remaining_b_wc[jj]
+                        if first_round_wc:
+                            assignment[a_id] = b_id
+                        else:
+                            extras_map[a_id].append(b_id)
+                        _assigned_wc.add(b_id)
+                    remaining_b_wc = [b for b in remaining_b_wc if b not in _assigned_wc]
+                    first_round_wc = False
+                for a_id in ids_a_wc:
+                    if assignment.get(a_id) is None:
+                        continue
+                    got = 1 + len(extras_map.get(a_id, []))
+                    deficit = _force_k - got
+                    if deficit > 0:
+                        _implicit_vacancy_slots[a_id] += deficit
+                continue
+
+            ratio, direction = _bucket_ratio(len(ids_a_wc), len(ids_b_wc), n_fu_a, n_fu_b)
+
+            if direction == "a_larger":
+                expand    = _cross_fu_k if n_fu_a == n_fu_b else ratio
+                ids_b_eff = ids_b_wc * expand
+                fp_mat = _fp_cost_matrix(ids_a_wc, ids_b_eff, fps_a, fps_b)
+                row_ind, col_ind = linear_sum_assignment(fp_mat)
+                for ii, jj in zip(row_ind, col_ind):
+                    assignment[ids_a_wc[ii]] = ids_b_eff[jj]
+                if n_fu_a == n_fu_b and _cross_fu_k > 1:
+                    b_assigned = Counter(ids_b_eff[jj] for jj in col_ind)
+                    for b_id in ids_b_wc:
+                        deficit = expand - b_assigned.get(b_id, 0)
+                        if deficit > 0:
+                            _implicit_vacancy_b_slots[b_id] += deficit
+
+            elif direction == "b_larger":
+                scale = 1.0 / ratio if n_fu_b > n_fu_a else 1.0
+                rounds = _cross_fu_k if n_fu_a == n_fu_b else ratio
+                for a_id in ids_a_wc:
+                    a_count_scale_map[a_id] = scale
+                remaining_b = list(ids_b_wc)
+                first_round = True
+                for _ in range(rounds):
+                    # Uniformity guard — see main bucket loop.
+                    if len(remaining_b) < len(ids_a_wc):
+                        break
+                    fp_mat = _fp_cost_matrix(ids_a_wc, remaining_b, fps_a, fps_b)
+                    row_ind, col_ind = linear_sum_assignment(fp_mat)
+                    assigned_this_round: Set[int] = set()
+                    for ii, jj in zip(row_ind, col_ind):
+                        a_id = ids_a_wc[ii]
+                        b_id = remaining_b[jj]
+                        if first_round:
+                            assignment[a_id] = b_id
+                        else:
+                            extras_map[a_id].append(b_id)
+                        assigned_this_round.add(b_id)
+                    remaining_b = [b for b in remaining_b if b not in assigned_this_round]
+                    first_round = False
+
+                if n_fu_a == n_fu_b and _cross_fu_k > 1:
+                    for a_id in ids_a_wc:
+                        got = (1 if assignment.get(a_id) is not None else 0) + len(extras_map.get(a_id, []))
+                        deficit = rounds - got
+                        if deficit > 0:
+                            _implicit_vacancy_slots[a_id] += deficit
+
+            else:  # equal or mismatch
+                n_take = min(len(ids_a_wc), len(ids_b_wc))
+                fp_mat = _fp_cost_matrix(ids_a_wc[:n_take], ids_b_wc, fps_a, fps_b)
+                row_ind, col_ind = linear_sum_assignment(fp_mat)
+                for ii, jj in zip(row_ind, col_ind):
+                    assignment[ids_a_wc[ii]] = ids_b_wc[jj]
+
+        # Register wildcard buckets for iterative edge-cost refinement.
+        all_bucket_keys.extend(wc_new_keys)
+
+    # ── Force-assignment: formula-unit-based coverage guarantee ──────────────
+    # The graph with FEWER atoms per formula unit must be fully covered
+    # (all its nodes appear as targets in the final assignment).  The graph
+    # with MORE atoms per FU is the "larger" structure and may have nodes
+    # that have no counterpart in the smaller graph.
+    # Graphs with the same atoms/FU must both be fully matched.
+    #
+    # Direction rules (fu_a vs fu_b):
+    #   fu_a < fu_b → force_a: all A-nodes must be assigned to some B-node.
+    #   fu_a > fu_b → force_b: all B-nodes must be covered by some A-node.
+    #   fu_a == fu_b → force_a (smaller residual side gets fully assigned).
+    #
+    # Example — La3AlC (5 atoms/FU) vs ReO3 (4 atoms/FU):
+    #   fu_a=5 > fu_b=4 → force_b.
+    #   After wildcard pass: _fa=[La×3, Al], _fb=[O×6].
+    #   n_vacancy = (5-4)×1 = 1; n_fa_active = 4-1 = 3.
+    #   La×3 have lowest avg fingerprint cost to O → selected as active.
+    #   Symmetric multi-round on La×3 vs O×6: 2 rounds × 3 = 6 assignments.
+    #   Each La covers exactly 2 O; Al is left unassigned (structural vacancy).
+    #
+    # Symmetry constraint:
+    #   Each active A-node covers floor(n_fb/n_fa_active) or
+    #   ceil(n_fb/n_fa_active) B-nodes — at most one node differs by 1.
+    #   Implemented via repeated Hungarian rounds, each consuming one B-node
+    #   per A-node until all B-nodes are exhausted.
+
+    _fa = [nid for nid in nodes_a if assignment[nid] is None]
+    _fa_seen: Set[int] = {v for v in assignment.values() if v is not None}
+    _fa_seen.update(b for extras in extras_map.values() for b in extras)
+    _fb = [nid for nid in nodes_b if nid not in _fa_seen]
+
+    if _fa and _fb:
+        _force_dir = "b" if fu_a > fu_b else "a"
+
+        if _force_dir == "a":
+            # ── Force all remaining A-nodes assigned (symmetric multi-round) ──
+            # Each A-node receives floor(n_fb/n_fa) or ceil(n_fb/n_fa) B-nodes.
+            # Rounds are run sequentially; each round assigns at most n_fa B-nodes
+            # (one per A-node), then removes those B-nodes from the pool.
+            #
+            # Uniform-k rule: every A-node in _fa must receive the SAME number
+            # of B-slots.  Only floor(|_fb|/|_fa|) satisfies this — the ceil
+            # path assigns an extra slot to some A-nodes but not others,
+            # violating the per-A-node uniformity constraint.  The 2 extra
+            # B-nodes that would have been picked up by the ceil round stay
+            # unmatched and fall through to the final vacancy classification.
+            _n_fa = len(_fa)
+            _n_fb = len(_fb)
+            _k_floor = _n_fb // _n_fa if _n_fa > 0 else 0
+            _actual_rounds = _force_rounds if _force_rounds is not None else _k_floor
+
+            _remaining_fb_a = list(_fb)
+            for _round_idx in range(_actual_rounds):
+                # Uniformity guard: a round only runs if it can assign every
+                # A-node in _fa.  If _remaining_fb_a shrinks below |_fa| we
+                # stop — running would give some A-nodes an extra slot while
+                # others get none.
+                if len(_remaining_fb_a) < _n_fa:
+                    break
+                _fp_mat = _fp_cost_matrix(_fa, _remaining_fb_a, fps_a, fps_b)
+                _ri, _ci = linear_sum_assignment(_fp_mat)
+                _assigned_this_a: Set[int] = set()
+                for _ii, _jj in zip(_ri, _ci):
+                    _a_id = _fa[_ii]
+                    _b_id = _remaining_fb_a[_jj]
+                    if assignment[_a_id] is None:
+                        assignment[_a_id] = _b_id
+                    else:
+                        extras_map[_a_id].append(_b_id)
+                    _assigned_this_a.add(_b_id)
+                _remaining_fb_a = [b for b in _remaining_fb_a if b not in _assigned_this_a]
+
+            # Remove from primary groups (refinement must not override).
+            # Do NOT register as a refinement bucket (extras_map would be lost).
+            for _a_id in _fa:
+                _pk = _node_bucket(_a_id, cn_a, role_a)
+                if _pk in groups_a and _a_id in groups_a[_pk]:
+                    groups_a[_pk].remove(_a_id)
+
+        else:
+            # ── Force all remaining B-nodes covered (vacancy-aware, symmetric) ─
+            # fu_a > fu_b means graph A has structural vacancies relative to B.
+            # n_vacancy = (fu_a - fu_b) × n_cells_a of the _fa nodes are expected
+            # to be genuine absences (not mappable to any B-node).
+            # Strategy:
+            #   1. Compute average fingerprint cost from each _fa node to all _fb.
+            #   2. Select the n_fa_active _fa nodes with the LOWEST avg cost as the
+            #      "active" set; the rest are structural vacancies (left unassigned).
+            #   3. Run symmetric multi-round Hungarian on active _fa vs _fb,
+            #      ensuring each active A-node covers the same number of B-nodes
+            #      (floor or ceil for non-integer ratios).
+            _n_vacancy_per_fu = fu_a - fu_b
+            _n_cells_a = max(len(nodes_a) // fu_a, 1)
+            _n_vacancy_force = min(_n_vacancy_per_fu * _n_cells_a, len(_fa))
+            _n_fa_active = max(len(_fa) - _n_vacancy_force, 0)
+
+            if _n_fa_active > 0 and _fb:
+                # Select active A-nodes using a two-level priority:
+                #   Primary  : element frequency in _fa (descending).
+                #              The element that appears most times is most
+                #              likely to have counterparts in _fb; the rare
+                #              singleton is the structural vacancy.
+                #              Example: _fa=[La,La,La,Al], n_fa_active=3 →
+                #              La (count=3) outranks Al (count=1) → Al is vacant.
+                #   Secondary: average fingerprint cost to _fb (ascending).
+                #              Breaks ties when two elements share the same count.
+                _fa_elem_count = Counter(elem_a[nid] for nid in _fa)
+                _fp_all = _fp_cost_matrix(_fa, _fb, fps_a, fps_b)
+                _avg_costs = np.array(_fp_all, dtype=float).mean(axis=1)
+                _sorted_idx = sorted(
+                    range(len(_fa)),
+                    key=lambda i: (-_fa_elem_count[elem_a[_fa[i]]], _avg_costs[i]),
+                )
+                _active_fa = [_fa[i] for i in _sorted_idx[:_n_fa_active]]
+
+                # Uniform-k rule: every active A-node must receive the same
+                # number of B-slots.  Use floor only — ceil would assign an
+                # extra slot to some active-A and not others.
+                _k_floor_b = len(_fb) // _n_fa_active
+                _rounds_b = _force_rounds if _force_rounds is not None else _k_floor_b
+                _remaining_fb_b = list(_fb)
+                for _round_idx in range(_rounds_b):
+                    # Uniformity guard — only run if every active-A can be assigned.
+                    if len(_remaining_fb_b) < len(_active_fa):
+                        break
+                    _fp_mat = _fp_cost_matrix(_active_fa, _remaining_fb_b, fps_a, fps_b)
+                    _ri, _ci = linear_sum_assignment(_fp_mat)
+                    _assigned_this_b: Set[int] = set()
+                    for _ii, _jj in zip(_ri, _ci):
+                        _a_id = _active_fa[_ii]
+                        _b_id = _remaining_fb_b[_jj]
+                        if assignment[_a_id] is None:
+                            assignment[_a_id] = _b_id
+                        else:
+                            extras_map[_a_id].append(_b_id)
+                        _assigned_this_b.add(_b_id)
+                    _remaining_fb_b = [b for b in _remaining_fb_b if b not in _assigned_this_b]
+
+            # Remove all _fa nodes from primary groups regardless of vacancy status.
+            # Do NOT register as a refinement bucket (extras_map would be lost).
+            for _a_id in _fa:
+                _pk = _node_bucket(_a_id, cn_a, role_a)
+                if _pk in groups_a and _a_id in groups_a[_pk]:
+                    groups_a[_pk].remove(_a_id)
+
+    # ── Effective CN ─────────────────────────────────────────────────────────
+    eff_cn_a: Dict[int, int] = cn_a   # fallback if max_iter == 0
+
+    # ── Vacancy-choice tracker ────────────────────────────────────────────────
+    # Records A-nodes that explicitly chose the vacancy column during refinement.
+    # These had B-nodes available in their bucket but opted out — they pay cost 1.
+    # A-nodes that were set to None because their bucket was empty pay cost 0.
+    _chose_vacancy: Set[int] = set()
+
+    # ── Iterative edge-cost refinement (canonical assignment only) ────────────
+    n_iter = 0
+    converged = False
+    for iteration in range(max_iter):
+        n_iter = iteration + 1
+        prev           = dict(assignment)
+        prev_extras    = {a: tuple(bs) for a, bs in extras_map.items()}
+        inv            = _invert(assignment)
+
+        # Recompute effective CNs from the current vacancy set.
+        # Nodes chosen as vacancies in the previous iteration reduce the
+        # effective CN of their neighbours, tightening the cost for matched nodes.
+        _vacant_set = {nid for nid in nodes_a if assignment[nid] is None}
+        if _vacant_set:
+            eff_cn_a = {
+                nid: max(cn_a[nid] - sum(
+                    cnt for k, cnt in edges_a.get(nid, Counter()).items()
+                    if k in _vacant_set
+                ), 1)
+                for nid in nodes_a
+            }
+        else:
+            eff_cn_a = cn_a
+
+        for bucket in all_bucket_keys:
+            ids_a = groups_a.get(bucket, [])
+            ids_b = groups_b.get(bucket, [])
+            if not ids_a:
+                continue
+            if not ids_b:
+                for a_id in ids_a:
+                    assignment[a_id] = None
+                    _chose_vacancy.discard(a_id)  # bucket empty — not a vacancy choice
+                continue
+
+            ratio, direction = _bucket_ratio(len(ids_a), len(ids_b), n_fu_a, n_fu_b)
+
+            if _force_k is not None and n_fu_a == n_fu_b:
+                # k-round mode: refine canonical assignment 1:1 from B pool.
+                # Extras are rebuilt in the post-refinement pass below.
+                ids_b_eff = ids_b
+                a_scale   = 1.0
+            elif direction == "a_larger":
+                expand    = _cross_fu_k if n_fu_a == n_fu_b else ratio
+                ids_b_eff = ids_b * expand
+                a_scale   = 1.0
+            else:
+                ids_b_eff = ids_b   # 1:1, mismatch, or b_larger (canonical only)
+                # For genuine supercell b_larger (n_fu_b > n_fu_a), apply the
+                # same 1/ratio scale used in the final cost so that the
+                # refinement doesn't over-cost matches and incorrectly
+                # soft-vacancy B-site nodes (e.g. Ti in SrTiO3 vs Re in ReO3).
+                if direction == "b_larger" and n_fu_b > n_fu_a:
+                    a_scale = 1.0 / ratio
+                else:
+                    a_scale = 1.0
+
+            cost_mat = _build_ged_cost_matrix(
+                ids_a, ids_b_eff, assignment, inv,
+                edges_a, edges_b, nn_a, nn_b, eff_cn_a, cn_b,
+                a_count_scale=a_scale,
+            )
+
+            if direction in ("equal", "mismatch") and len(ids_a) <= brute_force_limit:
+                # Check for ∞-cost pairs; fall back to brute force if found.
+                b_to_idx = {b: jj for jj, b in enumerate(ids_b_eff)}
+                current_has_inf = any(
+                    (b_id := assignment.get(a_id)) is not None
+                    and b_id in b_to_idx
+                    and cost_mat[ii, b_to_idx[b_id]] >= _LARGE
+                    for ii, a_id in enumerate(ids_a)
+                )
+                if current_has_inf:
+                    group_map, _ = _brute_force_assign(
+                        ids_a, ids_b_eff, assignment, inv,
+                        edges_a, edges_b, nn_a, nn_b, eff_cn_a, cn_b,
+                    )
+                    for a_id, b_id in group_map.items():
+                        assignment[a_id] = b_id
+                        if b_id is None:
+                            _chose_vacancy.add(a_id)    # B-nodes existed but were exhausted
+                        else:
+                            _chose_vacancy.discard(a_id)
+                    inv = _invert(assignment)
+                    continue
+
+            # ── Augment cost matrix with per-node vacancy columns ────────────
+            # Each A-node gets one dedicated vacancy column (off-diagonal
+            # entries are _LARGE so only the owning node can choose it).
+            # The vacancy cost is interpolated between absent_cost (no
+            # structural slot) and vacancy_cost (completing a CN deficit).
+            _n_b_eff = len(ids_b_eff)
+            _vac_mat = np.full((len(ids_a), len(ids_a)), _LARGE)
+            for _ii, _a_id in enumerate(ids_a):
+                _comp = _vacancy_completion_fraction(
+                    _a_id, assignment, edges_a, eff_cn_a, cn_b)
+                _vac_mat[_ii, _ii] = (
+                    absent_cost + _comp * (vacancy_cost - absent_cost)
+                )
+            _cost_aug = np.hstack([cost_mat, _vac_mat])
+
+            # Clear canonical mappings for this group, then re-assign.
+            for a_id in ids_a:
+                assignment[a_id] = None
+            row_ind, col_ind = linear_sum_assignment(_cost_aug)
+            for ii, jj in zip(row_ind, col_ind):
+                if jj < _n_b_eff:
+                    assignment[ids_a[ii]] = ids_b_eff[jj]
+                    _chose_vacancy.discard(ids_a[ii])       # re-assigned to a real node
+                else:
+                    # Vacancy chosen — clear any multi-round extras for
+                    # this node so the node_map stays consistent.
+                    extras_map.pop(ids_a[ii], None)
+                    _chose_vacancy.add(ids_a[ii])           # explicitly chose vacancy
+
+            inv = _invert(assignment)
+
+        curr_extras = {a: tuple(bs) for a, bs in extras_map.items()}
+        if assignment == prev and curr_extras == prev_extras:
+            converged = True
+            break
+
+    # ── Post-refinement extras rebuild (cross-FU b_larger buckets) ───────────
+    # The refinement loop updates canonical assignments but leaves extras_map
+    # from the initial b_larger pass.  After refinement, the canonical may have
+    # changed, so some extras are now stale (they duplicate the new canonical,
+    # or they duplicate another A-node's canonical).  Rebuild extras_map for
+    # every cross-FU b_larger bucket using the refined canonical (round 1) as
+    # the anchor, then re-run rounds 2..k on the remaining B-nodes.
+    # Also rebuild _implicit_vacancy_slots for those buckets.
+    # In forced-k mode ALL buckets get k rounds, so we rebuild all of them.
+    # In legacy direction mode (_force_k is None) only b_larger buckets are
+    # rebuilt (other buckets never had extras to begin with).
+    if _cross_fu_k > 1 and n_fu_a == n_fu_b:
+        for _rbkt in list(all_bucket_keys):
+            _ids_a_r = groups_a.get(_rbkt, [])
+            _ids_b_r = groups_b.get(_rbkt, [])
+            if not _ids_a_r or not _ids_b_r:
+                continue
+            if _force_k is None:
+                # Legacy mode: only b_larger buckets had rounds 2..k.
+                _, _rdir = _bucket_ratio(len(_ids_a_r), len(_ids_b_r), n_fu_a, n_fu_b)
+                if _rdir != "b_larger":
+                    continue
+
+            # Clear stale extras and implicit vacancy slots for this bucket.
+            for _a in _ids_a_r:
+                extras_map.pop(_a, None)
+                _implicit_vacancy_slots.pop(_a, None)
+
+            # Round 1 = current canonical.  Remaining = B-nodes in this bucket
+            # not used as a canonical by any A-node in this bucket.
+            _canonical_used = {assignment[_a] for _a in _ids_a_r if assignment.get(_a) is not None}
+            _rem_b = [_b for _b in _ids_b_r if _b not in _canonical_used]
+
+            # Run rounds 2..k.
+            for _ in range(_cross_fu_k - 1):
+                # Uniformity guard: only run a round if every A-node in the
+                # bucket can receive an extra this round.
+                if len(_rem_b) < len(_ids_a_r):
+                    break
+                _fp_r = _fp_cost_matrix(_ids_a_r, _rem_b, fps_a, fps_b)
+                _ri_r, _ci_r = linear_sum_assignment(_fp_r)
+                _done_r: Set[int] = set()
+                for _ii_r, _jj_r in zip(_ri_r, _ci_r):
+                    _aid_r = _ids_a_r[_ii_r]
+                    _bid_r = _rem_b[_jj_r]
+                    # Only add if this A-node still has a canonical assignment
+                    # (nodes that chose vacancy don't get extras).
+                    if assignment.get(_aid_r) is not None:
+                        extras_map[_aid_r].append(_bid_r)
+                    _done_r.add(_bid_r)
+                _rem_b = [_b for _b in _rem_b if _b not in _done_r]
+
+            # Rebuild implicit vacancy slots from final per-node totals.
+            for _a in _ids_a_r:
+                if assignment.get(_a) is None:
+                    continue   # chose vacancy — no slot deficit to charge
+                _got = 1 + len(extras_map.get(_a, []))
+                _deficit = _cross_fu_k - _got
+                if _deficit > 0:
+                    _implicit_vacancy_slots[_a] = _deficit
+
+    # ── Post-refinement extras rebuild (different-FU b_larger buckets) ──────
+    # Analogous to the same-FU rebuild above, but for n_fu_a != n_fu_b.
+    # When the refinement loop changes a canonical assignment, stale extras
+    # from the initial b_larger pass may now duplicate the new canonical,
+    # leaving another B-node as an undeserved vacancy.  Rebuild all b_larger
+    # buckets whose per-bucket ratio > 1.
+    if n_fu_a != n_fu_b:
+        for _rbkt in list(all_bucket_keys):
+            _ids_a_r = groups_a.get(_rbkt, [])
+            _ids_b_r = groups_b.get(_rbkt, [])
+            if not _ids_a_r or not _ids_b_r:
+                continue
+            # Use the GUARDED ratio so the rebuild respects the same
+            # role-balance suppression the main bucket pass used.  Without
+            # this, a bucket that was demoted from b_larger to mismatch by
+            # the guard would still get extras rebuilt here, violating
+            # uniformity (e.g. pyrochlore B→A: 4 Zr each get 2 B-cation
+            # extras even though the main pass only claimed 4 of 8 B's).
+            _ratio_r, _rdir = _bucket_ratio_guarded(_rbkt, _ids_a_r, _ids_b_r)
+            if _rdir != "b_larger" or _ratio_r <= 1:
+                continue
+            # Clear stale extras.
+            for _a in _ids_a_r:
+                extras_map.pop(_a, None)
+            # Round 1 = current canonical.  Remaining = B-nodes not used as canonical.
+            _canonical_used = {assignment[_a] for _a in _ids_a_r
+                               if assignment.get(_a) is not None}
+            _rem_b = [_b for _b in _ids_b_r if _b not in _canonical_used]
+            # Run rounds 2..ratio.
+            for _ in range(_ratio_r - 1):
+                # Uniformity guard — rebuild only runs a round if every
+                # A-node can be assigned.
+                if len(_rem_b) < len(_ids_a_r):
+                    break
+                _fp_r = _fp_cost_matrix(_ids_a_r, _rem_b, fps_a, fps_b)
+                _ri_r, _ci_r = linear_sum_assignment(_fp_r)
+                _done_r: Set[int] = set()
+                for _ii_r, _jj_r in zip(_ri_r, _ci_r):
+                    _aid_r = _ids_a_r[_ii_r]
+                    _bid_r = _rem_b[_jj_r]
+                    if assignment.get(_aid_r) is not None:
+                        extras_map[_aid_r].append(_bid_r)
+                    _done_r.add(_bid_r)
+                _rem_b = [_b for _b in _rem_b if _b not in _done_r]
+
+    # ── Cross-bucket shortfall fill (forced-k mode) ──────────────────────────
+    # After main+fallback+force-assignment+refinement, some A-nodes in forced-k
+    # mode may still have fewer than k real slots because their bucket ran out
+    # of B-partners.  Before charging shortfall cost, give those A-nodes a
+    # chance to pull extras from OTHER cn_buckets of the same role.
+    #
+    # Example — YBCO vs SrTiO3 at k=3: A-Ti gets 2 Cu(CN=5) from its oct-cation
+    # bucket but the 3rd Cu (CN=4, square-planar) is in tet-cation.  Without
+    # this pass the 3rd slot is a shortfall; with it, Ti claims the CN=4 Cu
+    # cross-bucket, lowering total cost.
+    if _force_k is not None and _force_k > 1:
+        _claimed_now: Set[int] = {v for v in assignment.values() if v is not None}
+        _claimed_now.update(b for bs in extras_map.values() for b in bs)
+        # Iterate by role so we only pair compatible (same-role) nodes.
+        for _sf_role in _ROLE_ORDER:
+            _sf_unmatched_b = [
+                b for b in nodes_b
+                if b not in _claimed_now and role_b[b] == _sf_role
+            ]
+            if not _sf_unmatched_b:
+                continue
+            # Repeatedly match short A-nodes to remaining B-nodes.  We do NOT
+            # require |short| <= |unmatched_b| here — partial fills are
+            # allowed because they lower the total shortfall cost without
+            # breaking per-A-node uniformity: each A-node still ends up with
+            # exactly k TOTAL slots (real + shortfall).  Within-bucket real
+            # slot counts can vary (one A-O might get 3 real slots while
+            # another gets 2 real + 1 shortfall); the ratio constraint is on
+            # total slots per A-element, which always equals k × |A-element|.
+            while _sf_unmatched_b:
+                _sf_short = [
+                    a for a in nodes_a
+                    if assignment.get(a) is not None
+                    and role_a[a] == _sf_role
+                    and (1 + len(extras_map.get(a, []))) < _force_k
+                ]
+                if not _sf_short:
+                    break
+                _sf_fp = _fp_cost_matrix(_sf_short, _sf_unmatched_b, fps_a, fps_b)
+                _sf_ri, _sf_ci = linear_sum_assignment(_sf_fp)
+                _sf_done: Set[int] = set()
+                for _ii, _jj in zip(_sf_ri, _sf_ci):
+                    _sf_a = _sf_short[_ii]
+                    _sf_b = _sf_unmatched_b[_jj]
+                    extras_map[_sf_a].append(_sf_b)
+                    _sf_done.add(_sf_b)
+                    _claimed_now.add(_sf_b)
+                _sf_unmatched_b = [
+                    b for b in _sf_unmatched_b if b not in _sf_done
+                ]
+
+    # ── Vacancy-inflation pass ────────────────────────────────────────────────
+    # A tet-bucket node may represent an oct-bucket environment with structural
+    # O-vacancies (e.g. square-planar Cu in YBCO = perovskite B-site with 2
+    # apical O vacant).  Detection criterion (topological): if an oct A-node
+    # has N implicit vacancy slots distributed across its anion neighbors, and
+    # an unmatched tet B-node has CN = A_CN - N and the same role, they are
+    # matched.  The N "vacancy bonds" are excluded from the edge cost (free).
+    #
+    # Two symmetric sub-passes:
+    #   Sub-pass A — unmatched tet B-node matched as extra to an oct A-node
+    #                whose anion-neighbor implicit-vacancy count explains the
+    #                CN deficit.  Uses A-side implicit_vacancy_slots.
+    #   Sub-pass B — unmatched tet A-node matched as canonical to an oct B-node
+    #                whose anion-neighbor implicit-B-vacancy count explains the
+    #                CN deficit.  Uses B-side implicit_vacancy_b_slots.
+    #
+    # Consumed vacancy slots are removed so they are not double-charged later.
+    # Edge reductions are tracked per-pair in _vi_reductions for the final
+    # cost evaluation.
+
+    # key: (a_id, b_id)
+    # value: ("a", {a_neighbor: bond_reduction}) — reduce edges_a[a_id]
+    #     or ("b", {b_neighbor: bond_reduction}) — reduce edges_b[b_id]
+    _vi_reductions: Dict[Tuple[int, int], Tuple[str, Dict[int, int]]] = {}
+
+    # Collect currently unmatched tet-bucket cation/neutral nodes.
+    _vi_matched_b: Set[int] = {
+        b for a in nodes_a
+        for b in (([assignment[a]] if assignment.get(a) is not None else [])
+                  + extras_map.get(a, []))
+    }
+    _vi_unmatched_tet_b: List[int] = [
+        b for b in nodes_b
+        if b not in _vi_matched_b
+        and _cn_bucket(cn_b[b]) == "tet"
+        and role_b.get(b) in ("cation", "neutral")
+    ]
+    _vi_unmatched_tet_a: List[int] = [
+        a for a in nodes_a
+        if assignment.get(a) is None
+        and _cn_bucket(cn_a[a]) == "tet"
+        and role_a.get(a) in ("cation", "neutral")
+    ]
+
+    # Sub-pass A (vacancy-inflation of matched oct A-nodes with unmatched tet
+    # B-nodes as extras) used to live here.  Removed because it added extras
+    # only to SPECIFIC A-nodes that happened to have implicit-vacancy anion
+    # neighbours — violating the uniform-k constraint (some A's got extras,
+    # others didn't).  Unmatched tet B-nodes are now left as vacancies
+    # (classified by the final vacancy-classification pass below).
+
+    # Sub-pass B (symmetric of removed Sub-pass A) is also gone — it
+    # depended on _implicit_vacancy_b_slots which no longer exists under the
+    # uniform-k regime.
+
+    # ── Final evaluation ──────────────────────────────────────────────────────
+    # Use the full inverse (canonical + extras) so that edge_cost correctly
+    # treats extras-assigned B-nodes as matched rather than skipping them as
+    # orphans.  Also charge_unassigned=True so residual mismatches are not
+    # forgiven at this stage.
+    inv = _invert_full(assignment, extras_map)
+
+    # Pre-classify true vacancies (bucket empty on the opposite side) so that
+    # bonds to them are forgiven in edge cost — their absence is already paid
+    # for by the zero-cost vacancy classification.  Soft vacancies (cost 1)
+    # represent "slot existed, node chose to skip" and are NOT forgiven here.
+    _pre_vac_a: Set[int] = {
+        a for a in nodes_a
+        if assignment[a] is None
+        and a not in _chose_vacancy
+        and _node_bucket(a, cn_a, role_a) not in _b_buckets
+    }
+    _matched_b_pre: Set[int] = {b for b in assignment.values() if b is not None}
+    _matched_b_pre.update(b for bs in extras_map.values() for b in bs)
+    _pre_vac_b: Set[int] = {
+        b for b in nodes_b
+        if b not in _matched_b_pre
+        and (_cn_bucket(cn_b[b]), role_b[b]) not in _a_buckets
+    }
+
+    # A-equivalence-class map for aggregation: collapses symmetry-equivalent
+    # siblings (identical element + role + CN bucket + fingerprint) so that
+    # supercell-encoding asymmetries cancel in the final cost.  Truly-distinct
+    # same-CN sites stay separate via fingerprint discrimination.
+    _a_class_map = _compute_class_map(
+        nodes_a, cn_a, role_a, elem_a, fps_a)
+
+    node_map: Dict[int, List[int]] = {}
+    _unmatched_a: List[int]        = []
+    total_cost = 0.0
+
+    def _edge_cost_vi(
+        a_id: int, b_id: int,
+        vi_spec: Optional[Tuple[str, Dict[int, int]]],
+    ) -> float:
+        """Edge cost with vacancy-inflation bond reductions applied.
+
+        Uses aggregate_by_inv=True so that two B-neighbours with the same
+        A-preimage are counted as one equivalence class, cancelling supercell
+        encoding artefacts (e.g. ReO3's "internal" vs "bridging" O-to-Re
+        bond patterns collapse when both Re's inv back to SrTiO3's Ti).
+        """
+        if vi_spec is None:
+            return _edge_cost(a_id, b_id, assignment, inv,
+                              edges_a, edges_b, nn_a, nn_b, eff_cn_a, cn_b,
+                              a_count_scale=1.0,
+                              charge_unassigned=True,
+                              vacancy_a_set=_pre_vac_a,
+                              vacancy_b_set=_pre_vac_b,
+                              aggregate_by_inv=True,
+                              extras_map=extras_map,
+                              a_class_map=_a_class_map)
+        side, reductions = vi_spec
+        n_red = sum(reductions.values())
+        if side == "a":
+            _ea = dict(edges_a)
+            _ea[a_id] = Counter(edges_a.get(a_id, Counter()))
+            for _k, _r in reductions.items():
+                _ea[a_id][_k] -= _r
+                if _ea[a_id][_k] <= 0:
+                    del _ea[a_id][_k]
+            _cna = dict(eff_cn_a)
+            _cna[a_id] = max(eff_cn_a.get(a_id, cn_a[a_id]) - n_red, cn_b[b_id])
+            return _edge_cost(a_id, b_id, assignment, inv,
+                              _ea, edges_b, nn_a, nn_b, _cna, cn_b,
+                              a_count_scale=1.0,
+                              charge_unassigned=True,
+                              vacancy_a_set=_pre_vac_a,
+                              vacancy_b_set=_pre_vac_b,
+                              aggregate_by_inv=True,
+                              extras_map=extras_map,
+                              a_class_map=_a_class_map)
+        else:  # side == "b"
+            _eb = dict(edges_b)
+            _eb[b_id] = Counter(edges_b.get(b_id, Counter()))
+            for _k, _r in reductions.items():
+                _eb[b_id][_k] -= _r
+                if _eb[b_id][_k] <= 0:
+                    del _eb[b_id][_k]
+            _cnb = dict(cn_b)
+            _cnb[b_id] = max(cn_b[b_id] - n_red, cn_a[a_id])
+            return _edge_cost(a_id, b_id, assignment, inv,
+                              edges_a, _eb, nn_a, nn_b, eff_cn_a, _cnb,
+                              a_count_scale=1.0,
+                              charge_unassigned=True,
+                              vacancy_a_set=_pre_vac_a,
+                              vacancy_b_set=_pre_vac_b,
+                              aggregate_by_inv=True,
+                              extras_map=extras_map,
+                              a_class_map=_a_class_map)
+
+    for a_id, b_id in assignment.items():
+        if b_id is None:
+            _unmatched_a.append(a_id)
+            continue
+        c_canon = _edge_cost_vi(a_id, b_id, _vi_reductions.get((a_id, b_id)))
+        extras = extras_map.get(a_id, [])
+
+        if _cross_fu_k > 1:
+            # ── k-round mode: average edge costs over all k rounds ────────────
+            # Each A-node maps to k B-nodes (one per round).  Summing the costs
+            # inflates the total linearly with k, making cross-RP comparisons
+            # incomparable (SrTiO3 vs RP-313 at k=3 would always score ~3×
+            # higher than SrTiO3 vs BaTiO3 at k=1, even for identical local
+            # environments).  Averaging per A-node removes this k-dependency so
+            # that the cost reflects mean structural dissimilarity per site,
+            # independent of how many RP layers are being compared.
+            #
+            # Vacancy-inflation extras (_vi_reductions present) represent a
+            # distinct structural feature (O-vacancy / tet B-site) rather than
+            # a repeated round — they are not included in the k-round average
+            # and are added to the total directly.
+            k_round_costs: List[float] = [c_canon if not math.isinf(c_canon) else 1.0]
+            for b_extra in extras:
+                vi_spec = _vi_reductions.get((a_id, b_extra))
+                if vi_spec is None:
+                    # k-round extra: locally-optimal neighbor re-mapping.
+                    c_extra = _edge_cost_local(
+                        a_id, b_extra,
+                        edges_a, edges_b, fps_a, fps_b,
+                        eff_cn_a, cn_b, elem_a, elem_b,
+                    )
+                    k_round_costs.append(c_extra if not math.isinf(c_extra) else 1.0)
+                else:
+                    # Vacancy-inflation extra: add cost directly (no averaging).
+                    c_vi = _edge_cost_vi(a_id, b_extra, vi_spec)
+                    total_cost += c_vi if not math.isinf(c_vi) else 1.0
+            # Average over the k rounds actually assigned to this A-node.
+            total_cost += sum(k_round_costs) / len(k_round_costs)
+        else:
+            # ── Standard mode (k=1, supercell, or legacy b_larger) ───────────
+            # Cost extra b_ids only for cross-FU comparisons (n_fu_a == n_fu_b).
+            # In genuine supercell cases (n_fu_b > n_fu_a), extras are symmetry
+            # copies — evaluating them with the same assignment creates spurious
+            # topology mismatches because the replicated assignment is inconsistent.
+            total_cost += c_canon if not math.isinf(c_canon) else 1.0
+            if n_fu_a == n_fu_b:
+                for b_extra in extras:
+                    c_extra = _edge_cost_vi(a_id, b_extra,
+                                            _vi_reductions.get((a_id, b_extra)))
+                    total_cost += c_extra if not math.isinf(c_extra) else 1.0
+
+        # Canonical b_id + any extra b_ids from 1:k rounds.
+        node_map[a_id] = [b_id] + extras
+
+    # ── Shortfall-slot classification (forced-k mode) ────────────────────────
+    # At k > 1, each A-node targets k slots.  Real slot count < k means some
+    # slots correspond to MISSING B-partners — hypothetical B-nodes that
+    # would exist if B had them.  These are conceptually "unmatched B" from
+    # the A-node's perspective.  Classify each via slot-level CN deficit:
+    #   * justified (cost 0) → add to vacancy_b
+    #   * not justified (cost 1) → add to unassigned_b
+    # We track per-A-node counts so the display can still show which A-node
+    # each virtual B is tied to.
+    #
+    # Slot-level completion divides both bonds and CN-deficit by k, since
+    # we're evaluating ONE virtual slot's contribution — not the full node:
+    #     bond_per_slot       = edges_a[v][k] / k
+    #     deficit_per_slot(k) = cn_a[k] - mean(cn_b[cohort_of_k])
+    #     welcomed_per_slot  += min(bond_per_slot, deficit_per_slot)
+    #     total_per_slot      = cn_a[v] / k
+    #     fraction            = welcomed_per_slot / total_per_slot
+    #
+    # Example — YBCO vs SrTiO3 at k=3, A[3] O shortfall:
+    #   Sr cohort = {Ba, Ba, Y}, avg CN=9.33, deficit=2.67, bonds/slot=4/3
+    #   Ti cohort = {Cu5, Cu5, Cu4}, avg CN=4.67, deficit=1.33, bonds/slot=2/3
+    #   welcomed = 1.33 + 0.67 = 2.0; total/slot = 6/3 = 2.0 → fraction=1.0 ✓
+    def _slot_completion_fraction(v: int, k_target: int) -> float:
+        total = max(cn_a.get(v, 1), 1) / k_target
+        welcomed = 0.0
+        for _nk, _cnt in edges_a.get(v, Counter()).items():
+            _canon = assignment.get(_nk)
+            if _canon is None:
+                continue
+            _cohort = [_canon] + list(extras_map.get(_nk, []))
+            _k_cohort = len(_cohort)
+            if _k_cohort == 0:
+                continue
+            _avg_cn_b = sum(cn_b.get(b, 0) for b in _cohort) / _k_cohort
+            _deficit_per_slot = max(0.0, cn_a.get(_nk, 0) - _avg_cn_b)
+            _bond_per_slot = _cnt / k_target
+            welcomed += min(_bond_per_slot, _deficit_per_slot)
+        return welcomed / total if total > 0 else 0.0
+
+    # Per-A-node counts of virtual-B entries (A-node → count).  These let the
+    # display section show which A-node each virtual B is tied to.  The counts
+    # also contribute to the totals that go into vacancy_b / unassigned_b.
+    _virtual_vacancy_b_by_a:    Dict[int, int] = {}
+    _virtual_unassigned_b_by_a: Dict[int, int] = {}
+    if _force_k is not None and _force_k > 1:
+        for a_id, b_id in assignment.items():
+            if b_id is None:
+                continue
+            real_slots = 1 + len(extras_map.get(a_id, []))
+            deficit = _force_k - real_slots
+            if deficit <= 0:
+                continue
+            comp = _slot_completion_fraction(a_id, _force_k)
+            if comp >= 1.0 - 1e-9:   # allow numerical slack
+                _virtual_vacancy_b_by_a[a_id] = deficit
+                # cost += 0
+            else:
+                _virtual_unassigned_b_by_a[a_id] = deficit
+                total_cost += deficit * 1.0
+
+    assigned_b   = {b for bs in node_map.values() for b in bs}
+    _all_unassigned_b = [b for b in nodes_b if b not in assigned_b]
+
+    # ── Classify unmatched nodes ──────────────────────────────────────────────
+    # vacancy_*     (cost 0): structurally absent counterparts.
+    # unassigned_*  (cost 1): other side has capacity but this particular node
+    #                         wasn't paired.
+    #
+    # The vacancy / unassigned split triggers on a PER-(element, bucket) basis:
+    #   * element ABSENT in the other graph entirely, OR
+    #   * bucket (cn_bucket, role) absent in the other graph, OR
+    #   * same element+bucket exists on both sides but the other side has
+    #     FEWER nodes of that type — the excess count represents a missing
+    #     sublattice (e.g. pyrochlore 8b-O' absent in defect pyrochlore).
+    # Otherwise the node is unassigned (cost 1) — the other side has enough
+    # capacity but didn't pair this specific node.
+    #
+    # Example — AgSbO3 (tet-anion: 12 O) vs Nd2Zr2O7 (tet-anion: 14 O):
+    #   surplus_b((O, tet, anion)) = 14 - 12 = 2 (the 8b-O' sublattice).
+    #   2 unmatched B-O's consume the surplus → true vacancies (cost 0).
+    #
+    # Example — MgAl2O4 (Mg/Al cations) vs SrTiO3 (Sr/Ti cations):
+    #   Mg and Al are absent in B — unmatched Mg/Al are still true vacancies
+    #   (element ABSENT).  But a Ti unmatched in B would be unassigned (cost 1)
+    #   because Sr/Ti both live in A's cation buckets → non-trivial capacity
+    #   for Ti-type oct-cations but the structures don't actually align there.
+
+    # Classification:
+    #
+    #   vacancy_*   (cost 0): structurally justified — the unmatched node's
+    #                         bonds would fill CN deficits in the mapped
+    #                         counterparts of its neighbours.  Measured via
+    #                         _vacancy_completion_fraction(): returns 1.0 when
+    #                         every bond is "welcomed" by a deficit-carrying
+    #                         counterpart, 0.0 when no deficit exists.
+    #
+    #                         Example — SrTiO3 vs ReO3: A-Sr's 12 bonds all
+    #                         go to A-O's whose B-counterparts (ReO3 O, CN=2)
+    #                         have a deficit of 4 vs A-O's CN=6.  All 12 Sr
+    #                         bonds fill those deficits → completion = 1.0 →
+    #                         Sr is a real structural vacancy.
+    #
+    #                         Counter-example — Sr2TiO4 vs SrTiO3: the "extra"
+    #                         A-Sr's neighbours are A-O (CN=6) mapping to B-O
+    #                         (CN=6).  Deficit = 0.  completion = 0.0 → this
+    #                         Sr has nowhere to "go" structurally in SrTiO3.
+    #
+    #   unassigned_*(cost 1): didn't pair and has no structural justification.
+    #
+    # "Unforced" variants (cost = unforced_cost) fire when the same role has
+    # unmatched nodes on the other side — the pair COULD have matched.
+    _VACANCY_THRESHOLD = 1.0   # strict: every bond must fill a deficit
+
+    _inv_full = _invert_full(assignment, extras_map)
+
+    # Per-role unmatched counts on each side, used to detect the unforced
+    # condition (non-zero on both sides of the same role).
+    _unmatched_a_by_role: Counter = Counter(role_a[a] for a in _unmatched_a)
+    _unmatched_b_by_role: Counter = Counter(role_b[b] for b in _all_unassigned_b)
+    _roles_with_symmetric_unmatched: Set[str] = {
+        r for r in _unmatched_a_by_role
+        if _unmatched_a_by_role[r] > 0 and _unmatched_b_by_role[r] > 0
+    }
+
+    vacancy_a:             List[int] = []
+    unassigned_a:          List[int] = []
+    unforced_vacancy_a:    List[int] = []
+    unforced_unassigned_a: List[int] = []
+    for a_id in sorted(_unmatched_a):
+        # Use RAW cn_a here (not eff_cn_a): eff_cn_a has already subtracted
+        # the bonds to known vacancies from each node's CN, which would make
+        # deficits look zero for the exact vacancy we're evaluating (e.g.
+        # Sr in SrTiO3 vs ReO3 — Sr's O-neighbours would show eff_cn=2
+        # matching B-O=2 giving deficit=0 and incorrect unassigned classification).
+        comp = _vacancy_completion_fraction(
+            a_id, assignment, edges_a, cn_a, cn_b)
+        base_is_vacancy = comp >= _VACANCY_THRESHOLD
+
+        is_unforced = role_a[a_id] in _roles_with_symmetric_unmatched
+        if base_is_vacancy and is_unforced:
+            unforced_vacancy_a.append(a_id)
+            total_cost += unforced_cost
+        elif base_is_vacancy:
+            vacancy_a.append(a_id)
+        elif is_unforced:
+            unforced_unassigned_a.append(a_id)
+            total_cost += unforced_cost
+        else:
+            unassigned_a.append(a_id)
+            total_cost += 1.0
+
+    vacancy_b:             List[int] = []
+    unassigned_b:          List[int] = []
+    unforced_vacancy_b:    List[int] = []
+    unforced_unassigned_b: List[int] = []
+    for b_id in sorted(_all_unassigned_b):
+        # Symmetric: view B-node as a potential vacancy in A's universe.
+        # Its neighbours are B-nodes; their A-counterparts are inv_full[k].
+        # Use raw cn_a here (not eff_cn_a), symmetric to the A-side reasoning.
+        comp = _vacancy_completion_fraction(
+            b_id, _inv_full, edges_b, cn_b, cn_a)
+        base_is_vacancy = comp >= _VACANCY_THRESHOLD
+
+        is_unforced = role_b[b_id] in _roles_with_symmetric_unmatched
+        if base_is_vacancy and is_unforced:
+            unforced_vacancy_b.append(b_id)
+            total_cost += unforced_cost
+        elif base_is_vacancy:
+            vacancy_b.append(b_id)
+        elif is_unforced:
+            unforced_unassigned_b.append(b_id)
+            total_cost += unforced_cost
+        else:
+            unassigned_b.append(b_id)
+            total_cost += 1.0
+
+    return {
+        "node_map":              node_map,
+        "vacancy_a":             sorted(vacancy_a),
+        "vacancy_b":             sorted(vacancy_b),
+        "unassigned_a":          sorted(unassigned_a),
+        "unassigned_b":          sorted(unassigned_b),
+        "unforced_vacancy_a":    sorted(unforced_vacancy_a),
+        "unforced_vacancy_b":    sorted(unforced_vacancy_b),
+        "unforced_unassigned_a": sorted(unforced_unassigned_a),
+        "unforced_unassigned_b": sorted(unforced_unassigned_b),
+        "virtual_vacancy_b_by_a":        dict(_virtual_vacancy_b_by_a),
+        "virtual_unassigned_b_by_a":     dict(_virtual_unassigned_b_by_a),
+        "cost":                  round(total_cost, 6),
+        "n_iter":                n_iter,
+        "converged":             converged,
+        "role_swapped":          False,
+        "cross_fu_k":            _cross_fu_k,
+    }
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Symmetric GED wrapper
+# ──────────────────────────────────────────────────────────────────────────────
+
+def match_nodes_ged_symmetric(
+    graph_a: dict,
+    graph_b: dict,
+    max_iter: int = 10,
+    brute_force_limit: int = 7,
+) -> dict:
+    """
+    Symmetric GED node matching: run both A→B and B→A, return the average cost.
+
+    Because the one-to-many (b_larger) and many-to-one (a_larger) matching
+    directions produce inherently different edge costs for the same structural
+    pair, the raw ``match_nodes_ged`` score is direction-dependent.  Running
+    both directions and averaging yields a symmetric distance metric.
+
+    Consistency check
+    -----------------
+    For each pair (a_id, b_id) in the forward node_map, the backward run is
+    checked for the reciprocal entry b_id → a_id.  Pairs present in both
+    directions are "consistent"; pairs that differ signal genuine ambiguity
+    in the matching (common in cross-FU comparisons where many B-nodes of the
+    same element type can play the same structural role).
+
+    Returns
+    -------
+    dict with keys:
+        cost              : float — symmetric distance (cost_ab + cost_ba) / 2.
+        cost_ab           : float — A→B directional cost.
+        cost_ba           : float — B→A directional cost.
+        node_map          : {a_id: [b_id, ...]} from the lower-cost direction
+                            (re-oriented to A→B convention when B→A wins).
+        consistent_pairs  : list of (a_id, b_id) tuples present in BOTH
+                            directions' node_maps.
+        inconsistent_ab   : (a_id, b_id) pairs found in A→B but not B→A.
+        inconsistent_ba   : (a_id, b_id) pairs found in B→A but not A→B.
+        n_consistent      : int — number of consistent pairs.
+        n_inconsistent    : int — total inconsistent pairs (both sides).
+        cross_fu_k        : int — FU multiplier used.
+        vacancy_a, soft_vacancy_a, vacancy_b, soft_vacancy_b,
+        implicit_vacancy_a, implicit_vacancy_b  : from the lower-cost direction.
+    """
+    # Pre-compute lookups once; reuse for both directions.
+    from crystal_graph_matching import compute_fingerprints
+    fps_a  = compute_fingerprints(graph_a)
+    fps_b  = compute_fingerprints(graph_b)
+    ea     = _build_edge_adjacency(graph_a)
+    eb     = _build_edge_adjacency(graph_b)
+    nna    = _build_nn_sets(graph_a)
+    nnb    = _build_nn_sets(graph_b)
+
+    _kw_ab = dict(fps_a=fps_a, fps_b=fps_b,
+                  edges_a=ea, edges_b=eb, nn_a=nna, nn_b=nnb,
+                  max_iter=max_iter, brute_force_limit=brute_force_limit)
+    _kw_ba = dict(fps_a=fps_b, fps_b=fps_a,
+                  edges_a=eb, edges_b=ea, nn_a=nnb, nn_b=nna,
+                  max_iter=max_iter, brute_force_limit=brute_force_limit)
+
+    result_ab = match_nodes_ged(graph_a, graph_b, **_kw_ab)
+    result_ba = match_nodes_ged(graph_b, graph_a, **_kw_ba)
+
+    cost_ab = result_ab["cost"]
+    cost_ba = result_ba["cost"]
+    sym_cost = round((cost_ab + cost_ba) / 2.0, 6)
+
+    # ── Consistency check ─────────────────────────────────────────────────────
+    # Build pair sets (a_id, b_id) in original A/B numbering.
+    forward_pairs: Set[Tuple[int, int]] = {
+        (a_id, b_id)
+        for a_id, b_ids in result_ab["node_map"].items()
+        for b_id in b_ids
+    }
+    # result_ba node_map has keys = B-node IDs (original graph_b numbering)
+    # and values = A-node IDs (original graph_a numbering).
+    backward_pairs: Set[Tuple[int, int]] = {
+        (a_id, b_id)
+        for b_id, a_ids in result_ba["node_map"].items()
+        for a_id in a_ids
+    }
+
+    consistent_pairs = sorted(forward_pairs & backward_pairs)
+    inconsistent_ab  = sorted(forward_pairs  - backward_pairs)
+    inconsistent_ba  = sorted(backward_pairs - forward_pairs)
+    n_inconsistent   = len(inconsistent_ab) + len(inconsistent_ba)
+
+    # ── Primary result: lower-cost direction (re-oriented to A→B) ─────────────
+    if cost_ab <= cost_ba:
+        primary = result_ab
+    else:
+        # Invert result_ba so the node_map is in A→B convention.
+        inv_map: Dict[int, List[int]] = {}
+        for b_id, a_ids in result_ba["node_map"].items():
+            for a_id in a_ids:
+                inv_map.setdefault(a_id, []).append(b_id)
+        primary = {**result_ba,
+                   "node_map":              inv_map,
+                   "vacancy_a":             result_ba.get("vacancy_b", []),
+                   "vacancy_b":             result_ba.get("vacancy_a", []),
+                   "unassigned_a":          result_ba.get("unassigned_b", []),
+                   "unassigned_b":          result_ba.get("unassigned_a", []),
+                   "unforced_vacancy_a":    result_ba.get("unforced_vacancy_b", []),
+                   "unforced_vacancy_b":    result_ba.get("unforced_vacancy_a", []),
+                   "unforced_unassigned_a": result_ba.get("unforced_unassigned_b", []),
+                   "unforced_unassigned_b": result_ba.get("unforced_unassigned_a", []),
+                   # B→A direction: virtual missing-B tied to B→A's internal A.
+                   # Invert label: externally tied to B (the smaller side).
+                   "virtual_vacancy_a_by_b":       result_ba.get("virtual_vacancy_b_by_a", {}),
+                   "virtual_unassigned_a_by_b":    result_ba.get("virtual_unassigned_b_by_a", {}),
+                   "virtual_vacancy_b_by_a":       {},
+                   "virtual_unassigned_b_by_a":    {},
+                   }
+
+    return {
+        "cost":                  sym_cost,
+        "cost_ab":               cost_ab,
+        "cost_ba":               cost_ba,
+        "node_map":              primary["node_map"],
+        "consistent_pairs":      consistent_pairs,
+        "inconsistent_ab":       inconsistent_ab,
+        "inconsistent_ba":       inconsistent_ba,
+        "n_consistent":          len(consistent_pairs),
+        "n_inconsistent":        n_inconsistent,
+        "vacancy_a":             primary.get("vacancy_a", []),
+        "vacancy_b":             primary.get("vacancy_b", []),
+        "unassigned_a":          primary.get("unassigned_a", []),
+        "unassigned_b":          primary.get("unassigned_b", []),
+        "unforced_vacancy_a":    primary.get("unforced_vacancy_a", []),
+        "unforced_vacancy_b":    primary.get("unforced_vacancy_b", []),
+        "unforced_unassigned_a": primary.get("unforced_unassigned_a", []),
+        "unforced_unassigned_b": primary.get("unforced_unassigned_b", []),
+        "virtual_vacancy_b_by_a":       primary.get("virtual_vacancy_b_by_a", {}),
+        "virtual_unassigned_b_by_a":    primary.get("virtual_unassigned_b_by_a", {}),
+        "virtual_vacancy_a_by_b":       primary.get("virtual_vacancy_a_by_b", {}),
+        "virtual_unassigned_a_by_b":    primary.get("virtual_unassigned_a_by_b", {}),
+        "cross_fu_k":            primary.get("cross_fu_k", 1),
+        "n_iter_ab":          result_ab.get("n_iter", 0),
+        "n_iter_ba":          result_ba.get("n_iter", 0),
+        "converged_ab":       result_ab.get("converged", False),
+        "converged_ba":       result_ba.get("converged", False),
+        "role_swapped":       primary.get("role_swapped", False),
+    }
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# CLI: quick sanity-check
+# ──────────────────────────────────────────────────────────────────────────────
+
+if __name__ == "__main__":
+    import argparse, json
+
+    parser = argparse.ArgumentParser(
+        description="Symmetric GED-based node matching between two crystal graphs."
+    )
+    parser.add_argument("graph_a")
+    parser.add_argument("graph_b")
+    parser.add_argument("--max-iter", type=int, default=10)
+    parser.add_argument(
+        "--brute-force-limit", type=int, default=7,
+        help="Max bucket size for brute-force permutation search (default 7). "
+             "Set to 0 to disable brute-force entirely.",
+    )
+    args = parser.parse_args()
+
+    with open(args.graph_a) as f:
+        ga = json.load(f)
+    with open(args.graph_b) as f:
+        gb = json.load(f)
+
+    result = match_nodes_ged_symmetric(
+        ga, gb, max_iter=args.max_iter,
+        brute_force_limit=args.brute_force_limit,
+    )
+
+    nodes_a = {int(n["id"]): n for n in ga["nodes"]}
+    nodes_b = {int(n["id"]): n for n in gb["nodes"]}
+
+    _k           = result.get("cross_fu_k", 1)
+    _fu_a        = _atoms_per_fu(ga)
+    _fu_b        = _atoms_per_fu(gb)
+
+    # ── Scores ────────────────────────────────────────────────────────────────
+    print(f"Cost (symmetric)     : {result['cost']:.4f}  (0=perfect, = (A→B + B→A) / 2)")
+    print(f"  A→B                : {result['cost_ab']:.4f}")
+    print(f"  B→A                : {result['cost_ba']:.4f}")
+    print(f"Iterations           : A→B={result['n_iter_ab']}, B→A={result['n_iter_ba']}")
+    if _k > 1:
+        print(f"FU multiple          : {_k}  ({_fu_a} atoms/FU vs {_fu_b} atoms/FU)")
+    else:
+        print(f"FU multiple          : 1  ({_fu_a} atoms/FU, direct 1:1)")
+
+    # ── Consistency check ─────────────────────────────────────────────────────
+    n_con   = result["n_consistent"]
+    n_incon = result["n_inconsistent"]
+    n_total = n_con + n_incon // 2   # each inconsistent pair counted on both sides
+    print()
+    if n_incon == 0:
+        print(f"Consistency          : ✓ all {n_con} mapped pairs are consistent (same in both directions)")
+    else:
+        print(f"Consistency          : {n_con} consistent / {n_incon} inconsistent pair-endpoints")
+        # Group inconsistent pairs by element for readability.
+        if result["inconsistent_ab"]:
+            print("  In A→B but not B→A:")
+            for a_id, b_id in result["inconsistent_ab"]:
+                a_el = nodes_a[a_id].get("element", "?")
+                b_el = nodes_b[b_id].get("element", "?")
+                print(f"    A[{a_id}]{a_el} → B[{b_id}]{b_el}")
+        if result["inconsistent_ba"]:
+            print("  In B→A but not A→B:")
+            for a_id, b_id in result["inconsistent_ba"]:
+                a_el = nodes_a[a_id].get("element", "?")
+                b_el = nodes_b[b_id].get("element", "?")
+                print(f"    A[{a_id}]{a_el} → B[{b_id}]{b_el}")
+
+    # ── Vacancy summary ───────────────────────────────────────────────────────
+    # Virtual entries (from forced-k shortfall) are counted under the same
+    # vacancy/unassigned categories as real ones — there is no separate type.
+    _vv_by_a = result.get("virtual_vacancy_b_by_a", {})
+    _vu_by_a = result.get("virtual_unassigned_b_by_a", {})
+    _vv_by_b = result.get("virtual_vacancy_a_by_b", {})
+    _vu_by_b = result.get("virtual_unassigned_a_by_b", {})
+    _vb_virt = sum(_vv_by_a.values()) + sum(_vv_by_b.values())
+    _ub_virt = sum(_vu_by_a.values()) + sum(_vu_by_b.values())
+
+    def _suffix(n_virt: int) -> str:
+        return f" (+{n_virt} virtual)" if n_virt else ""
+
+    print()
+    print(f"Vacancy A            : {result['vacancy_a']}  (cost 0 — structural absence)")
+    print(f"Unassigned A         : {result['unassigned_a']}  (cost 1)")
+    print(f"Unforced vacancy A   : {result.get('unforced_vacancy_a', [])}  (cost 2 — pairing was possible)")
+    print(f"Unforced unassigned A: {result.get('unforced_unassigned_a', [])}  (cost 2 — pairing was possible)")
+    print(f"Vacancy B            : {result['vacancy_b']}{_suffix(_vb_virt)}  (cost 0 — structural absence)")
+    print(f"Unassigned B         : {result['unassigned_b']}{_suffix(_ub_virt)}  (cost 1)")
+    print(f"Unforced vacancy B   : {result.get('unforced_vacancy_b', [])}  (cost 2 — pairing was possible)")
+    print(f"Unforced unassigned B: {result.get('unforced_unassigned_b', [])}  (cost 2 — pairing was possible)")
+
+    # ── Node map (lower-cost direction) ───────────────────────────────────────
+    _primary_dir = "A→B" if result["cost_ab"] <= result["cost_ba"] else "B→A"
+    print()
+    print(f"Node map ({_primary_dir}, lower-cost direction):")
+    for a_id, b_ids in sorted(result["node_map"].items()):
+        a_el   = nodes_a[a_id].get("element", "?")
+        a_cn   = nodes_a[a_id].get("coordination_number", "?")
+        a_role = nodes_a[a_id].get("ion_role", "?")
+        b_strs = ", ".join(
+            f"B[{b_id}] {nodes_b[b_id].get('element','?')} (CN={nodes_b[b_id].get('coordination_number','?')})"
+            for b_id in b_ids
+        )
+        # Virtual-B slots are displayed separately in the "Unmatched B-nodes"
+        # section, not inline here.
+        suffix = ""
+        # Mark consistency of each pair.
+        consistent_b = {b for (a, b) in result["consistent_pairs"] if a == a_id}
+        pair_marks = []
+        for b_id in b_ids:
+            mark = "✓" if b_id in consistent_b else "~"
+            pair_marks.append(
+                f"B[{b_id}] {nodes_b[b_id].get('element','?')} "
+                f"(CN={nodes_b[b_id].get('coordination_number','?')}) {mark}"
+            )
+        print(f"  A[{a_id}] {a_el:2s} ({a_role}, CN={a_cn})  →  {', '.join(pair_marks)}{suffix}")
+    for a_id in result["vacancy_a"]:
+        a_el   = nodes_a[a_id].get("element", "?")
+        a_role = nodes_a[a_id].get("ion_role", "?")
+        a_cn   = nodes_a[a_id].get("coordination_number", "?")
+        print(f"  A[{a_id}] {a_el:2s} ({a_role}, CN={a_cn})  →  [vacancy, cost=0]")
+    for a_id in result["unassigned_a"]:
+        a_el   = nodes_a[a_id].get("element", "?")
+        a_role = nodes_a[a_id].get("ion_role", "?")
+        a_cn   = nodes_a[a_id].get("coordination_number", "?")
+        print(f"  A[{a_id}] {a_el:2s} ({a_role}, CN={a_cn})  →  [unassigned, cost=1]")
+    for a_id in result.get("unforced_vacancy_a", []):
+        a_el   = nodes_a[a_id].get("element", "?")
+        a_role = nodes_a[a_id].get("ion_role", "?")
+        a_cn   = nodes_a[a_id].get("coordination_number", "?")
+        print(f"  A[{a_id}] {a_el:2s} ({a_role}, CN={a_cn})  →  [unforced vacancy, cost=2]")
+    for a_id in result.get("unforced_unassigned_a", []):
+        a_el   = nodes_a[a_id].get("element", "?")
+        a_role = nodes_a[a_id].get("ion_role", "?")
+        a_cn   = nodes_a[a_id].get("coordination_number", "?")
+        print(f"  A[{a_id}] {a_el:2s} ({a_role}, CN={a_cn})  →  [unforced unassigned, cost=2]")
+    print()
+    print("Unmatched B-nodes:")
+    _virt_v_by_a = result.get("virtual_vacancy_b_by_a", {})
+    _virt_u_by_a = result.get("virtual_unassigned_b_by_a", {})
+    # When direction is swapped, virtual-B entries flip to virtual-A tied-to-B:
+    # display those as unfilled slots on the named B-node.
+    _virt_v_slot_on_b = result.get("virtual_vacancy_a_by_b", {})
+    _virt_u_slot_on_b = result.get("virtual_unassigned_a_by_b", {})
+    _any_unmatched_b = (result["unassigned_b"] or result["vacancy_b"]
+                        or result.get("unforced_vacancy_b") or
+                        result.get("unforced_unassigned_b")
+                        or _virt_v_by_a or _virt_u_by_a
+                        or _virt_v_slot_on_b or _virt_u_slot_on_b)
+    if not _any_unmatched_b:
+        print("  (none)")
+    for b_id in result["unassigned_b"]:
+        b_el   = nodes_b[b_id].get("element", "?")
+        b_role = nodes_b[b_id].get("ion_role", "?")
+        b_cn   = nodes_b[b_id].get("coordination_number", "?")
+        print(f"  B[{b_id}] {b_el:2s} ({b_role}, CN={b_cn})  →  [unassigned, cost=1]")
+    for b_id in result.get("unforced_vacancy_b", []):
+        b_el   = nodes_b[b_id].get("element", "?")
+        b_role = nodes_b[b_id].get("ion_role", "?")
+        b_cn   = nodes_b[b_id].get("coordination_number", "?")
+        print(f"  B[{b_id}] {b_el:2s} ({b_role}, CN={b_cn})  →  [unforced vacancy, cost=2]")
+    for b_id in result.get("unforced_unassigned_b", []):
+        b_el   = nodes_b[b_id].get("element", "?")
+        b_role = nodes_b[b_id].get("ion_role", "?")
+        b_cn   = nodes_b[b_id].get("coordination_number", "?")
+        print(f"  B[{b_id}] {b_el:2s} ({b_role}, CN={b_cn})  →  [unforced unassigned, cost=2]")
+    for b_id in result["vacancy_b"]:
+        b_el   = nodes_b[b_id].get("element", "?")
+        b_role = nodes_b[b_id].get("ion_role", "?")
+        b_cn   = nodes_b[b_id].get("coordination_number", "?")
+        print(f"  B[{b_id}] {b_el:2s} ({b_role}, CN={b_cn})  →  [vacancy, cost=0]")
+    # Virtual B-entries: structurally required by k but with no real B-node.
+    # Print element/role from the A-node they are tied to.
+    for a_id, cnt in sorted(_virt_v_by_a.items()):
+        if not cnt:
+            continue
+        a_el   = nodes_a[a_id].get("element", "?")
+        a_role = nodes_a[a_id].get("ion_role", "?")
+        for _ in range(cnt):
+            print(f"  B[virtual, tied to A[{a_id}] {a_el} ({a_role})]  →  [vacancy, cost=0]")
+    for a_id, cnt in sorted(_virt_u_by_a.items()):
+        if not cnt:
+            continue
+        a_el   = nodes_a[a_id].get("element", "?")
+        a_role = nodes_a[a_id].get("ion_role", "?")
+        for _ in range(cnt):
+            print(f"  B[virtual, tied to A[{a_id}] {a_el} ({a_role})]  →  [unassigned, cost=1]")
+    # Swapped direction: virtual slots on a specific B-node (same vacancy /
+    # unassigned categories, not a separate type).
+    for b_id, cnt in sorted(_virt_v_slot_on_b.items()):
+        if not cnt:
+            continue
+        b_el   = nodes_b[b_id].get("element", "?")
+        b_role = nodes_b[b_id].get("ion_role", "?")
+        b_cn   = nodes_b[b_id].get("coordination_number", "?")
+        for _ in range(cnt):
+            print(f"  B[{b_id}] {b_el:2s} ({b_role}, CN={b_cn})  →  [vacancy, cost=0]")
+    for b_id, cnt in sorted(_virt_u_slot_on_b.items()):
+        if not cnt:
+            continue
+        b_el   = nodes_b[b_id].get("element", "?")
+        b_role = nodes_b[b_id].get("ion_role", "?")
+        b_cn   = nodes_b[b_id].get("coordination_number", "?")
+        for _ in range(cnt):
+            print(f"  B[{b_id}] {b_el:2s} ({b_role}, CN={b_cn})  →  [unassigned, cost=1]")

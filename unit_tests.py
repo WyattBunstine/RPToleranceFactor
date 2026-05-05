@@ -374,7 +374,10 @@ def _run_ged_test(
     builder_module: str,
     rebuild: bool,
 ) -> Dict[str, Any]:
-    from crystal_graph_ged import match_nodes_ged
+    from crystal_graph_ged import match_nodes_ged, score_mapping
+    from crystal_graph_costs import (
+        BondLengthCost, BondAngleCost, PolyhedralCost,
+    )
 
     result_base = {
         "id": test["id"], "type": "ged",
@@ -438,6 +441,31 @@ def _run_ged_test(
         "unforced_unassigned_b_count": float(len(ged.get("unforced_unassigned_b", []))),
         "cross_fu_k":                 float(ged.get("cross_fu_k", 1)),
     }
+
+    # Cost-lens scores: re-score the alignment under each non-default lens.
+    # Lazily computed only when an assertion references one of these names —
+    # most tests only assert on `cost` (the topology score) so we don't pay
+    # the re-scoring cost across the suite.
+    lens_keys = {"cost_bond_length", "cost_bond_angle", "cost_polyhedral"}
+    if any(a.get("assert", "") in lens_keys for a in test.get("assertions", [])):
+        try:
+            score_lookup["cost_bond_length"] = float(
+                score_mapping(ged, ga, gb, BondLengthCost())
+            )
+        except Exception as exc:
+            score_lookup["cost_bond_length"] = float("nan")
+        try:
+            score_lookup["cost_bond_angle"] = float(
+                score_mapping(ged, ga, gb, BondAngleCost())
+            )
+        except Exception as exc:
+            score_lookup["cost_bond_angle"] = float("nan")
+        try:
+            score_lookup["cost_polyhedral"] = float(
+                score_mapping(ged, ga, gb, PolyhedralCost())
+            )
+        except Exception as exc:
+            score_lookup["cost_polyhedral"] = float("nan")
 
     assertion_results = []
     for a in test.get("assertions", []):
@@ -1024,10 +1052,15 @@ def print_suite_summary(suite_result: Dict[str, Any]) -> None:
     for t in suite_result["tests"]:
         tests_by_cat.setdefault(t.get("category", "uncategorized"), []).append(t)
 
+    # Within each category, list FAIL and ERROR cases before PASS so the
+    # failing tests are visible without scrolling past the green output.
+    # Stable sort preserves original order within each status bucket.
+    _STATUS_PRIORITY = {"FAIL": 0, "ERROR": 1, "PASS": 2}
     for cat in cat_order or sorted(tests_by_cat):
         tests = tests_by_cat.get(cat, [])
         if not tests:
             continue
+        tests = sorted(tests, key=lambda t: _STATUS_PRIORITY.get(t.get("status"), 3))
         c = by_cat.get(cat, {})
         cp = c.get("PASS", 0); cf = c.get("FAIL", 0); ce = c.get("ERROR", 0)
         print(f"\n--- Category: {cat}  ({cp}/{cp+cf+ce} passed) ---")

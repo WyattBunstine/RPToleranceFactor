@@ -1,0 +1,696 @@
+{
+  "$schema": "unit_test_suite_v1",
+  "version": "1",
+  "graph_builder": "crystal_graph_v4",
+  "description": "Graph build tests for structures with well-known coordination geometries",
+  "cif_root": "data/cifs",
+  "graph_cache_dir": "data/unit_tests/graphs",
+  "tests": [
+    {
+      "id": "srtio3_node_cn",
+      "type": "graph_build",
+      "description": "SrTiO3 cubic perovskite (Pm-3m): coordination numbers",
+      "cif": "SrTiO3_mp-5229.cif",
+      "assertions": [
+        {
+          "assert": "node_cn",
+          "description": "Sr should have CN=12 (cuboctahedral, ABO3 A-site)",
+          "element": "Sr",
+          "expected": 12,
+          "tolerance": 0
+        },
+        {
+          "assert": "node_cn",
+          "description": "Ti should have CN=6 (octahedral, ABO3 B-site)",
+          "element": "Ti",
+          "expected": 6,
+          "tolerance": 0
+        },
+        {
+          "assert": "node_cn",
+          "description": "O should have CN=6 (2 Ti + 4 Sr in cubic perovskite)",
+          "element": "O",
+          "expected": 6,
+          "tolerance": 1
+        }
+      ]
+    },
+    {
+      "id": "srtio3_graph_size",
+      "type": "graph_build",
+      "description": "SrTiO3 cubic perovskite: total nodes and edges for primitive cell",
+      "cif": "SrTiO3_mp-5229.cif",
+      "assertions": [
+        {
+          "assert": "num_nodes",
+          "description": "Primitive cell has 5 sites (1 Sr + 1 Ti + 3 O)",
+          "expected": 5,
+          "tolerance": 0
+        },
+        {
+          "assert": "num_edges",
+          "description": "18 edges expected (12 Sr-O + 6 Ti-O in the primitive cell)",
+          "expected": 18,
+          "tolerance": 4
+        }
+      ]
+    },
+    {
+      "id": "srtio3_polyhedral_sharing",
+      "type": "graph_build",
+      "description": "SrTiO3 cubic perovskite: corner-sharing TiO6 octahedra; Sr-Ti face-sharing",
+      "cif": "SrTiO3_mp-5229.cif",
+      "assertions": [
+        {
+          "assert": "polyhedral_sharing",
+          "description": "Each TiO6 corner-shares with 6 other TiO6 (all 6 octahedral neighbors via corner-linked network)",
+          "element_a": "Ti",
+          "element_b": "Ti",
+          "mode": "corner",
+          "min_count": 6,
+          "per_node": true
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "description": "Each SrO12 face-shares with 8 TiO6 (A-B interface: each cuboctahedron has 8 triangular faces shared with octahedra)",
+          "element_a": "Sr",
+          "element_b": "Ti",
+          "mode": "face",
+          "min_count": 8,
+          "per_node": true
+        }
+      ]
+    },
+    {
+      "id": "tifeo3_node_cn",
+      "type": "graph_build",
+      "description": "TiFeO3 ilmenite (R-3): coordination numbers",
+      "cif": "TiFeO3_mp-19270.cif",
+      "assertions": [
+        {
+          "assert": "node_cn",
+          "description": "Ti should have CN=6 (octahedral in ilmenite)",
+          "element": "Ti",
+          "expected": 6,
+          "tolerance": 0
+        },
+        {
+          "assert": "node_cn",
+          "description": "Fe should have CN=6 (octahedral in ilmenite)",
+          "element": "Fe",
+          "expected": 6,
+          "tolerance": 0
+        },
+        {
+          "assert": "node_cn",
+          "description": "O should have CN=4 in ilmenite corundum-type structure",
+          "element": "O",
+          "expected": 4,
+          "tolerance": 1
+        }
+      ]
+    },
+    {
+      "id": "tifeo3_polyhedral_sharing",
+      "type": "graph_build",
+      "description": "TiFeO3 ilmenite: face- and edge-sharing between Ti and Fe octahedra (corundum-type)",
+      "cif": "TiFeO3_mp-19270.cif",
+      "assertions": [
+        {
+          "assert": "polyhedral_sharing",
+          "description": "Each TiO6 face-shares with 1 FeO6 (defining feature of ilmenite)",
+          "element_a": "Ti",
+          "element_b": "Fe",
+          "mode": "face",
+          "min_count": 1,
+          "per_node": true
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "description": "Each TiO6 edge-shares with 3 FeO6 (secondary corundum-type connection)",
+          "element_a": "Ti",
+          "element_b": "Fe",
+          "mode": "edge",
+          "min_count": 3,
+          "per_node": true
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "description": "Each TiO6 corner-shares with 3 FeO6 (long-range inter-layer connection beyond the face- and edge-sharing pair)",
+          "element_a": "Ti",
+          "element_b": "Fe",
+          "mode": "corner",
+          "min_count": 3,
+          "per_node": true
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "description": "Each TiO6 corner-shares with 6 other TiO6 (NOTE: textbook 'edge-sharing within Ti layers' refers to hexagonal supercell, not primitive R-3)",
+          "element_a": "Ti",
+          "element_b": "Ti",
+          "mode": "corner",
+          "min_count": 6,
+          "per_node": true
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "description": "Each FeO6 corner-shares with 6 other FeO6 (same reason as Ti-Ti)",
+          "element_a": "Fe",
+          "element_b": "Fe",
+          "mode": "corner",
+          "min_count": 6,
+          "per_node": true
+        }
+      ]
+    },
+    {
+      "id": "nacl_rocksalt_cn",
+      "type": "graph_build",
+      "description": "NaCl rocksalt (Fm-3m): octahedral coordination for both ions, prototype ionic structure",
+      "cif": "NaCl_mp-22862.cif",
+      "assertions": [
+        {
+          "assert": "node_cn",
+          "description": "Na should have CN=6 (octahedral in rocksalt)",
+          "element": "Na",
+          "expected": 6,
+          "tolerance": 0
+        },
+        {
+          "assert": "node_cn",
+          "description": "Cl should have CN=6 (octahedral in rocksalt)",
+          "element": "Cl",
+          "expected": 6,
+          "tolerance": 0
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "description": "Each NaCl6 corner-shares with 6 other NaCl6 (next-nearest-neighbor Na through Cl)",
+          "element_a": "Na",
+          "element_b": "Na",
+          "mode": "corner",
+          "min_count": 6,
+          "per_node": true
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "description": "Each NaCl6 edge-shares with 12 other NaCl6 (nearest-neighbor Na pairs share 2 Cl — the dominant connectivity in rocksalt)",
+          "element_a": "Na",
+          "element_b": "Na",
+          "mode": "edge",
+          "min_count": 12,
+          "per_node": true
+        }
+      ]
+    },
+    {
+      "id": "tio2_rutile_cn",
+      "type": "graph_build",
+      "description": "TiO2 rutile (P42/mnm): octahedral Ti, trigonal O; edge-sharing chains",
+      "cif": "TiO2_mp-1439.cif",
+      "assertions": [
+        {
+          "assert": "node_cn",
+          "description": "Ti should have CN=6 (octahedral in rutile)",
+          "element": "Ti",
+          "expected": 6,
+          "tolerance": 0
+        },
+        {
+          "assert": "node_cn",
+          "description": "O should have CN=3 (trigonal, bonded to 3 Ti in rutile)",
+          "element": "O",
+          "expected": 3,
+          "tolerance": 0
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "description": "Each TiO6 edge-shares with 2 other TiO6 along the c-axis chain (1 above, 1 below)",
+          "element_a": "Ti",
+          "element_b": "Ti",
+          "mode": "edge",
+          "min_count": 2,
+          "per_node": true
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "description": "Each TiO6 corner-shares with 8 other TiO6 between chains (4-fold connectivity in the ab-plane plus 4 diagonal)",
+          "element_a": "Ti",
+          "element_b": "Ti",
+          "mode": "corner",
+          "min_count": 8,
+          "per_node": true
+        }
+      ]
+    },
+    {
+      "id": "al2o3_corundum_cn",
+      "type": "graph_build",
+      "description": "Al2O3 corundum (R-3c): octahedral Al, 4-coordinate O; face+edge sharing",
+      "cif": "Al2O3_mp-1143.cif",
+      "assertions": [
+        {
+          "assert": "node_cn",
+          "description": "Al should have CN=6 (octahedral in corundum)",
+          "element": "Al",
+          "expected": 6,
+          "tolerance": 0
+        },
+        {
+          "assert": "node_cn",
+          "description": "O should have CN=4 (bonded to 4 Al in corundum)",
+          "element": "O",
+          "expected": 4,
+          "tolerance": 0
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "description": "Each AlO6 face-shares with 1 other AlO6 (along c — the corundum face-sharing pair)",
+          "element_a": "Al",
+          "element_b": "Al",
+          "mode": "face",
+          "min_count": 1,
+          "per_node": true
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "description": "Each AlO6 edge-shares with 3 in-plane AlO6 neighbors (corundum honeycomb layer)",
+          "element_a": "Al",
+          "element_b": "Al",
+          "mode": "edge",
+          "min_count": 3,
+          "per_node": true
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "description": "Each AlO6 corner-shares with 9 other AlO6 (longer-range connections beyond face and edge sharing)",
+          "element_a": "Al",
+          "element_b": "Al",
+          "mode": "corner",
+          "min_count": 9,
+          "per_node": true
+        }
+      ]
+    },
+    {
+      "id": "cr2o3_corundum_cn",
+      "type": "graph_build",
+      "description": "Cr2O3 corundum (R-3c): same topology as Al2O3; validates that different chemistry gives identical connectivity fingerprint",
+      "cif": "Cr2O3_mp-19399.cif",
+      "assertions": [
+        {
+          "assert": "node_cn",
+          "description": "Cr should have CN=6 (octahedral in corundum)",
+          "element": "Cr",
+          "expected": 6,
+          "tolerance": 0
+        },
+        {
+          "assert": "node_cn",
+          "description": "O should have CN=4",
+          "element": "O",
+          "expected": 4,
+          "tolerance": 0
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "description": "Each CrO6 face-shares with 1 other CrO6 (same corundum motif as Al2O3)",
+          "element_a": "Cr",
+          "element_b": "Cr",
+          "mode": "face",
+          "min_count": 1,
+          "per_node": true
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "description": "Each CrO6 edge-shares with 3 in-plane CrO6 neighbors (corundum honeycomb layer)",
+          "element_a": "Cr",
+          "element_b": "Cr",
+          "mode": "edge",
+          "min_count": 3,
+          "per_node": true
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "description": "Each CrO6 corner-shares with 9 other CrO6 (identical to Al2O3 corundum topology)",
+          "element_a": "Cr",
+          "element_b": "Cr",
+          "mode": "corner",
+          "min_count": 9,
+          "per_node": true
+        }
+      ]
+    },
+    {
+      "id": "mgal2o4_spinel_cn",
+      "type": "graph_build",
+      "description": "MgAl2O4 normal spinel (Fd-3m): tetrahedral Mg (A-site) and octahedral Al (B-site) — mixed coordination",
+      "cif": "MgAl2O4_mp-3536.cif",
+      "assertions": [
+        {
+          "assert": "node_cn",
+          "description": "Mg should have CN=4 (tetrahedral A-site in normal spinel)",
+          "element": "Mg",
+          "expected": 4,
+          "tolerance": 0
+        },
+        {
+          "assert": "node_cn",
+          "description": "Al should have CN=6 (octahedral B-site in normal spinel)",
+          "element": "Al",
+          "expected": 6,
+          "tolerance": 0
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "description": "Each AlO6 edge-shares with 6 other AlO6 (B-site octahedral chains in spinel)",
+          "element_a": "Al",
+          "element_b": "Al",
+          "mode": "edge",
+          "min_count": 6,
+          "per_node": true
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "description": "Each MgO4 tetrahedron corner-shares with 6 AlO6 octahedra (A-B site connectivity in normal spinel)",
+          "element_a": "Mg",
+          "element_b": "Al",
+          "mode": "corner",
+          "min_count": 6,
+          "per_node": true
+        }
+      ]
+    },
+    {
+      "id": "reo3_cn",
+      "type": "graph_build",
+      "description": "ReO3 (Pm-3m): fully corner-connected ReO6 network — the perovskite B-site sublattice without an A-site",
+      "cif": "ReO3_mp-190.cif",
+      "assertions": [
+        {
+          "assert": "node_cn",
+          "description": "Re should have CN=6 (corner-linked octahedral network)",
+          "element": "Re",
+          "expected": 6,
+          "tolerance": 0
+        },
+        {
+          "assert": "node_cn",
+          "description": "O should have CN=2 (bridging between exactly 2 Re octahedra)",
+          "element": "O",
+          "expected": 2,
+          "tolerance": 0
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "description": "Each ReO6 corner-shares with 6 other ReO6 (fully corner-connected cubic network — same count as Ti-Ti in SrTiO3)",
+          "element_a": "Re",
+          "element_b": "Re",
+          "mode": "corner",
+          "min_count": 6,
+          "per_node": true
+        }
+      ]
+    },
+    {
+      "id": "bazro3_cubic_perovskite_cn",
+      "type": "graph_build",
+      "description": "BaZrO3 cubic perovskite (Pm-3m): Ba/Zr chemistry variant of SrTiO3; validates CN assignment for larger A-site cation",
+      "cif": "BaZrO3_mp-3834.cif",
+      "assertions": [
+        {
+          "assert": "node_cn",
+          "description": "Ba should have CN=12 (cuboctahedral A-site)",
+          "element": "Ba",
+          "expected": 12,
+          "tolerance": 0
+        },
+        {
+          "assert": "node_cn",
+          "description": "Zr should have CN=6 (octahedral B-site)",
+          "element": "Zr",
+          "expected": 6,
+          "tolerance": 0
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "description": "Each ZrO6 corner-shares with 6 other ZrO6 (same topology as SrTiO3 Ti-Ti)",
+          "element_a": "Zr",
+          "element_b": "Zr",
+          "mode": "corner",
+          "min_count": 6,
+          "per_node": true
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "description": "Each BaO12 face-shares with 8 ZrO6 (same A-B count as SrTiO3)",
+          "element_a": "Ba",
+          "element_b": "Zr",
+          "mode": "face",
+          "min_count": 8,
+          "per_node": true
+        }
+      ]
+    },
+    {
+      "id": "lafeo3_gdfe03_type_cn",
+      "type": "graph_build",
+      "description": "LaFeO3 GdFeO3-type distorted perovskite (Pbnm): tilted FeO6 octahedra; La A-site remains ~12-coordinate",
+      "cif": "LaFeO3_mp-22590.cif",
+      "assertions": [
+        {
+          "assert": "node_cn",
+          "description": "La should have CN≈12 (tolerance 2 for GdFeO3-type distortion which splits the 12-fold site)",
+          "element": "La",
+          "expected": 12,
+          "tolerance": 2
+        },
+        {
+          "assert": "node_cn",
+          "description": "Fe should have CN=6 (octahedral; preserved through the tilt transition)",
+          "element": "Fe",
+          "expected": 6,
+          "tolerance": 0
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "description": "Each FeO6 corner-shares with 6 other FeO6 despite the tilt (GdFeO3-type is a=a-c+ tilt, not a connectivity change)",
+          "element_a": "Fe",
+          "element_b": "Fe",
+          "mode": "corner",
+          "min_count": 6,
+          "per_node": true
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "description": "Each FeO6 face-shares with 8 LaO12 polyhedra (A-B face-sharing preserved through the GdFeO3-type tilt, same count as cubic perovskite)",
+          "element_a": "Fe",
+          "element_b": "La",
+          "mode": "face",
+          "min_count": 8,
+          "per_node": true
+        }
+      ]
+    },
+    {
+      "id": "licoo2_layered_cn",
+      "type": "graph_build",
+      "description": "LiCoO2 layered oxide (R-3m, alpha-NaFeO2 type): edge-sharing CoO6 slabs alternating with LiO6 slabs",
+      "cif": "LiCoO2_mp-22526.cif",
+      "assertions": [
+        {
+          "assert": "node_cn",
+          "description": "Co should have CN=6 (octahedral in the Co slab)",
+          "element": "Co",
+          "expected": 6,
+          "tolerance": 0
+        },
+        {
+          "assert": "node_cn",
+          "description": "Li should have CN=6 (octahedral in the Li slab)",
+          "element": "Li",
+          "expected": 6,
+          "tolerance": 0
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "description": "Each CoO6 edge-shares with 6 other CoO6 within the Co triangular layer",
+          "element_a": "Co",
+          "element_b": "Co",
+          "mode": "edge",
+          "min_count": 6,
+          "per_node": true
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "description": "Each LiO6 edge-shares with 6 CoO6 across the interlayer boundary (rock-salt derived — no face-sharing)",
+          "element_a": "Li",
+          "element_b": "Co",
+          "mode": "edge",
+          "min_count": 6,
+          "per_node": true
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "description": "Each LiO6 edge-shares with 6 other LiO6 within the Li triangular layer (same topology as Co-Co)",
+          "element_a": "Li",
+          "element_b": "Li",
+          "mode": "edge",
+          "min_count": 6,
+          "per_node": true
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "description": "Each CoO6 corner-shares with 6 LiO6 (longer-range interlayer connection beyond the edge-sharing pair)",
+          "element_a": "Co",
+          "element_b": "Li",
+          "mode": "corner",
+          "min_count": 6,
+          "per_node": true
+        }
+      ]
+    },
+    {
+      "id": "mgtio3_ilmenite_cn",
+      "type": "graph_build",
+      "description": "MgTiO3 ilmenite (R-3): non-transition-metal A-site variant; validates ilmenite detection with Mg at the Fe position",
+      "cif": "MgTiO3_mp-3771.cif",
+      "assertions": [
+        {
+          "assert": "node_cn",
+          "description": "Mg should have CN=6 (octahedral, like Fe in FeTiO3)",
+          "element": "Mg",
+          "expected": 6,
+          "tolerance": 0
+        },
+        {
+          "assert": "node_cn",
+          "description": "Ti should have CN=6 (octahedral)",
+          "element": "Ti",
+          "expected": 6,
+          "tolerance": 0
+        },
+        {
+          "assert": "node_cn",
+          "description": "O should have CN=4 (corundum-type)",
+          "element": "O",
+          "expected": 4,
+          "tolerance": 1
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "description": "Each MgO6 face-shares with 1 TiO6 (the defining ilmenite motif — same as Fe-Ti in TiFeO3)",
+          "element_a": "Mg",
+          "element_b": "Ti",
+          "mode": "face",
+          "min_count": 1,
+          "per_node": true
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "description": "Each MgO6 corner-shares with 9 TiO6 (3 to the face-sharing Ti partner + 6 to the opposite Ti layer; no edge-sharing between unlike cations in MgTiO3 unlike FeTiO3)",
+          "element_a": "Mg",
+          "element_b": "Ti",
+          "mode": "corner",
+          "min_count": 9,
+          "per_node": true
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "description": "Each MgO6 edge-shares with 3 other MgO6 (within the Mg honeycomb layer, same as Al-Al in corundum)",
+          "element_a": "Mg",
+          "element_b": "Mg",
+          "mode": "edge",
+          "min_count": 3,
+          "per_node": true
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "description": "Each TiO6 edge-shares with 3 other TiO6 (within the Ti honeycomb layer)",
+          "element_a": "Ti",
+          "element_b": "Ti",
+          "mode": "edge",
+          "min_count": 3,
+          "per_node": true
+        }
+      ]
+    },
+    {
+      "id": "fe3o4_inverse_spinel_mixed_cn",
+      "type": "graph_build",
+      "description": "Fe3O4 inverse spinel (Fd-3m): Fe occupies both tetrahedral (CN=4) and octahedral (CN=6) sites — tests any_node_cn for mixed coordination",
+      "cif": "Fe3O4_mp-19306.cif",
+      "assertions": [
+        {
+          "assert": "any_node_cn",
+          "description": "At least one Fe node should have CN=4 (tetrahedral A-site in inverse spinel, occupied by Fe3+)",
+          "element": "Fe",
+          "expected": 4,
+          "tolerance": 0
+        },
+        {
+          "assert": "any_node_cn",
+          "description": "At least one Fe node should have CN=6 (octahedral B-site in inverse spinel, mixed Fe2+/Fe3+)",
+          "element": "Fe",
+          "expected": 6,
+          "tolerance": 0
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "description": "Octahedral Fe-Fe edge-sharing (B-site chains, characteristic of spinel B sublattice)",
+          "element_a": "Fe",
+          "element_b": "Fe",
+          "mode": "edge",
+          "min_count": 1
+        }
+      ]
+    },
+    {
+      "id": "cobio3_perovskite_cn",
+      "type": "graph_build",
+      "description": "CoBiO3 tetragonal perovskite (mp-545522, P1 primitive cell): Co at B-site (CN=6), Bi at A-site (CN=12); validates perovskite detection with heavy A-site cation",
+      "cif": "CoBiO3_mp-545522.cif",
+      "assertions": [
+        {
+          "assert": "node_cn",
+          "description": "Co should have CN=6 (octahedral B-site)",
+          "element": "Co",
+          "expected": 6,
+          "tolerance": 0
+        },
+        {
+          "assert": "node_cn",
+          "description": "Bi should have CN=12 (cuboctahedral A-site)",
+          "element": "Bi",
+          "expected": 12,
+          "tolerance": 0
+        },
+        {
+          "assert": "node_cn",
+          "description": "O should have CN=6 (2 Co + 4 Bi neighbours, same as SrTiO3 oxygen)",
+          "element": "O",
+          "expected": 6,
+          "tolerance": 1
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "description": "Each CoO6 corner-shares with 6 other CoO6 (same corner-linked octahedral network as TiO6 in SrTiO3)",
+          "element_a": "Co",
+          "element_b": "Co",
+          "mode": "corner",
+          "min_count": 6,
+          "per_node": true
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "description": "Each CoO6 face-shares with 8 BiO12 polyhedra (A-B interface; same count as Ti-Sr in SrTiO3)",
+          "element_a": "Co",
+          "element_b": "Bi",
+          "mode": "face",
+          "min_count": 8,
+          "per_node": true
+        }
+      ]
+    }
+  ]
+}

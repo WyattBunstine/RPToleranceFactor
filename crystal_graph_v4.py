@@ -445,6 +445,28 @@ def _determine_ion_roles(
             "cation" if o > 0 else ("anion" if o < 0 else "neutral")
             for o in oxidation_states
         ]
+
+        # Inconsistent-guess detection: when oxidation states came from
+        # composition_guess (pymatgen's compositional fallback after BV
+        # analysis fails) AND the result mixes "neutral" atoms with
+        # "cation"/"anion" atoms, the guess is internally inconsistent.
+        # composition_guess fits a charge-balanced ionic interpretation,
+        # but a genuinely ionic compound shouldn't have neutral atoms
+        # sitting next to ionic ones — that pattern is the signature of
+        # a covalent / cluster compound (e.g. carboranes like B2H4C,
+        # where pymatgen guesses C=-4, H=+1, B=0 because the H/C charges
+        # already balance and B gets dropped).  Trusting that mixed
+        # labelling propagates wrong roles into the graph builder's
+        # role-aware filters and causes spurious role-swap firing in
+        # GED matching.  Override all roles to "neutral" so downstream
+        # treats the structure uniformly as a covalent framework.
+        if oxidation_state_source.startswith("composition_guess"):
+            has_neutral = any(r == "neutral" for r in roles)
+            has_charged = any(r in ("cation", "anion") for r in roles)
+            if has_neutral and has_charged:
+                roles = ["neutral"] * len(roles)
+                return roles, False, "composition_guess_inconsistent_neutralised"
+
         has_cation = any(r == "cation" for r in roles)
         has_anion  = any(r == "anion"  for r in roles)
         return roles, (has_cation and has_anion), "oxidation_state_sign"
@@ -692,6 +714,7 @@ def build_crystal_graph_from_cif(
     ecn_core_threshold: float = 0.5,
     legacy_strict_role_filter: bool = False,
     same_role_max_bond_ratio: float = 1.15,
+    opposite_role_max_bond_ratio: float = 1.2,
 ) -> Dict[str, Any]:
     """
     Build a JSON-serializable crystal graph from a CIF file (v4).
@@ -755,6 +778,33 @@ def build_crystal_graph_from_cif(
                                 (ratio ≈ 1.42 vs Sr-O = 2.76).  Only
                                 applied when ``legacy_strict_role_filter``
                                 is False.
+    opposite_role_max_bond_ratio :
+                                Maximum ratio of (opposite-role bond
+                                distance) to (closest same-role geometric
+                                distance at either endpoint) for an
+                                opposite-role bond to be admitted.  Default
+                                1.2 — bounds the spatial extent of cation-
+                                anion edges by the lattice scale set by
+                                like-charge atoms.  Catches BaCO3-style
+                                cases where the extended sphere admits long
+                                cation-anion bonds (Ba-O at 4.14 Å > 1.2 ×
+                                3.25 Å Ba-C = 3.90 Å cap → excluded) past
+                                closer same-role neighbours that were
+                                excluded by the same-role guard, leaving
+                                the cation appearing 12-coordinate to one
+                                anion type alone.  The same-role distance
+                                is read from ``per_center_all`` (geometric,
+                                all atom types) plus self-images so a
+                                single-atom-per-element primitive cell
+                                (zinc-blende ZnS, NaCl) gets a finite
+                                reference; otherwise the cap would behave
+                                inconsistently between cells with one vs.
+                                multiple atoms-per-element.  Only applied
+                                when ``legacy_strict_role_filter`` is
+                                False.  κ=1.2 was chosen empirically:
+                                κ=1.1 over-prunes brownmillerite Ca-O at
+                                3.5–3.9 Å and BeO long bonds; κ≥1.27
+                                re-admits BaCO3's 4.14 Å Ba-O.
 
     Node payload
     ------------
@@ -965,6 +1015,44 @@ def build_crystal_graph_from_cif(
             d_min_filt[i] = float("inf")
 
     # ------------------------------------------------------------------
+    # Per-centre closest same-role geometric distance (for opposite-role
+    # cap below).  Read from per_center_all so that same-role pairs
+    # excluded by the same-role guard still contribute their geometric
+    # distance — the cap bounds opposite-role bond reach by the lattice
+    # scale set by like-charge atoms, regardless of whether those
+    # same-role pairs ended up as edges.
+    #
+    # Self-images count too: in a single-atom-per-element primitive cell
+    # (zinc-blende ZnS, NaCl, etc.) per_center_all contains no entries
+    # with the same atom-id (i==j is filtered above), so the closest
+    # same-role atom is the periodic image of atom i itself.  Without
+    # this, d_sr would be inf for those cells and the cap wouldn't fire,
+    # giving asymmetric behaviour vs cells with multiple atoms-per-
+    # element where the cap does fire.
+    # ------------------------------------------------------------------
+    self_image_min: Dict[int, float] = {i: float("inf") for i in range(n_nodes)}
+    for ci, pi, _ov, d in zip(center_indices, point_indices, offset_vectors, distances):
+        if int(ci) == int(pi):
+            d_f = float(d)
+            if d_f > 1e-9 and d_f < self_image_min[int(ci)]:
+                self_image_min[int(ci)] = d_f
+
+    d_sr_all: Dict[int, float] = {}
+    for i in range(n_nodes):
+        role_i = ion_roles[i]
+        if role_i not in ("cation", "anion"):
+            d_sr_all[i] = float("inf")
+            continue
+        closest = self_image_min[i]
+        for j, _offset, cart_vec in per_center_all[i]:
+            if ion_roles[j] != role_i:
+                continue
+            d = float(np.linalg.norm(cart_vec))
+            if d < closest:
+                closest = d
+        d_sr_all[i] = closest
+
+    # ------------------------------------------------------------------
     # Collect candidate edges
     # ------------------------------------------------------------------
     selected_edges: Dict[Tuple, Dict[str, Any]] = {}
@@ -984,10 +1072,22 @@ def build_crystal_graph_from_cif(
             # are the shortest contact (ratio ~1.0).
             if not legacy_strict_role_filter:
                 ri, rj = ion_roles[i], ion_roles[j]
-                if ri == rj and ri in ("cation", "anion"):
-                    ref = max(d_min_filt[i], d_min_filt[j])
-                    if ref > 0 and d_ij > same_role_max_bond_ratio * ref:
-                        continue
+                if ri in ("cation", "anion") and rj in ("cation", "anion"):
+                    if ri == rj:
+                        ref = max(d_min_filt[i], d_min_filt[j])
+                        if ref > 0 and d_ij > same_role_max_bond_ratio * ref:
+                            continue
+                    else:
+                        # Opposite-role cap: bound cation-anion bond reach
+                        # by closest same-role geometric distance at either
+                        # endpoint.  Uses max() (more permissive — same
+                        # convention as the same-role guard above) so a
+                        # tight same-role neighbour at one endpoint doesn't
+                        # over-restrict the other endpoint's environment.
+                        ref_sr = max(d_sr_all[i], d_sr_all[j])
+                        if (ref_sr < float("inf")
+                                and d_ij > opposite_role_max_bond_ratio * ref_sr):
+                            continue
             w_ij = voronoi_weights[i].get((j, offset), 0.0)
             neg: Tuple[int, int, int] = (-offset[0], -offset[1], -offset[2])
             w_ji = voronoi_weights[j].get((i, neg), 0.0)
@@ -1315,21 +1415,35 @@ def build_crystal_graph_from_cif(
     for pedge in polyhedral_edges:
         na, nb = pedge["node_a"], pedge["node_b"]
         key = _MODE_LABELS.get(pedge["shared_count"], "other")
+        # Always increment both endpoints, even when na == nb (self-image
+        # polyhedral edge through a periodic image of the same atom).  This
+        # makes the per-atom hist supercell-invariant: a self-image edge in
+        # a unit cell becomes a cross-atom edge in a supercell, and both
+        # forms now contribute the same total to the hist.  Without this,
+        # SrTiO3 unit-cell Sr hist {corner:6,face:8,other:3} jumps to
+        # {corner:10,face:8,other:4} in a 1×1×2 supercell — same crystal,
+        # different normalised proportions, breaking PolyhedralCost.
         sharing_hists[na][key] += 1
-        if na != nb:
-            sharing_hists[nb][key] += 1
+        sharing_hists[nb][key] += 1
 
     # ------------------------------------------------------------------
-    # 20 nearest neighbours (all atom types, distance-ranked, DISTINCT)
+    # Nearest neighbours (all atom types, distance-ranked, MULTI-IMAGE)
     # ------------------------------------------------------------------
     # per_center_all[i] contains (j, offset, cart_vec) for every contact
     # within max_search_radius.  Sort by Cartesian distance and keep the
-    # 20 closest DISTINCT neighbour ids — i.e. the closest periodic image
-    # is recorded once per neighbour atom.  Without dedup, stretched
-    # supercells (e.g. SrTiO3 1×1×2) have most NN slots consumed by
-    # periodic images of just a few close atoms, leaving structurally
-    # important neighbours (the next O along the stretched axis) absent
-    # from the list and treated as "preclude" by the GED NN check.
+    # closest N_NEAR entries WITHOUT deduplicating by neighbour id, so
+    # multiple periodic images of the same id are preserved.  This is
+    # what the GED walk-admission needs: in small primitive cells (e.g.
+    # SrTiO3 cubic, 5 atoms total) an O atom has only 4 unique neighbour
+    # ids, but physically it is surrounded by many more O atoms via
+    # periodic images at second-shell distances; the walk needs those
+    # images to admit a legitimate cohort surplus without falsely
+    # charging preclude_cost.
+    #
+    # The matching pair_cost path uses ``_build_nn_sets`` downstream
+    # which keeps min-distance per id, so duplicate-id entries here do
+    # not affect membership tests or the closest-distance used by the
+    # distance-ratio gate.
     N_NEAR = 20
     nearest_neighbors: List[List[Dict[str, Any]]] = []
     for i in range(n_nodes):
@@ -1339,11 +1453,7 @@ def build_crystal_graph_from_cif(
             continue
         ranked = sorted(entries, key=lambda t: float(np.linalg.norm(t[2])))
         nn_list: List[Dict[str, Any]] = []
-        seen_ids: Set[int] = set()
         for j, offset, cv in ranked:
-            if j in seen_ids:
-                continue
-            seen_ids.add(j)
             nn_list.append({
                 "node_id":   j,
                 "to_jimage": [int(x) for x in offset],
@@ -1399,6 +1509,7 @@ def build_crystal_graph_from_cif(
             ),
             "legacy_strict_role_filter": bool(legacy_strict_role_filter),
             "same_role_max_bond_ratio": float(same_role_max_bond_ratio),
+            "opposite_role_max_bond_ratio": float(opposite_role_max_bond_ratio),
             "shannon_radius_type": "crystal_max_known_no_extrapolation",
             "lattice_matrix": [[float(x) for x in row] for row in lattice.matrix],
             "non_shannon_crystal_radius_nodes": non_shannon_nodes,

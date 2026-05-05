@@ -32,7 +32,7 @@ import json
 import math
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 import matplotlib.colors as mc
 import matplotlib.pyplot as plt
@@ -45,37 +45,49 @@ from matplotlib.patches import FancyArrowPatch
 
 
 # ===========================================================================
-# Jmol element colours
+# VESTA element colours
 # ===========================================================================
+# Defaults from VESTA's `elements.ini` (Momma & Izumi), as shipped in
+# pymatgen.vis.structure_vtk.EL_COLORS["VESTA"] — the canonical Python
+# reference.  Differs noticeably from Jmol/CPK for many elements:
+# Fe is dark orange-brown (not cinnamon), N is pastel blue (not deep
+# indigo), Cu is bright blue, Ti is light blue, La is green, Si is deep
+# blue, etc.  Lanthanide series uses a green-cyan gradient (Gd = #45FFC7).
 
-_JMOL: Dict[str, str] = {
-    "H": "#FFFFFF", "He": "#D9FFFF", "Li": "#CC80FF", "Be": "#C2FF00",
-    "B": "#FFB5B5", "C": "#909090", "N": "#3050F8", "O": "#FF0D0D",
-    "F": "#90E050", "Ne": "#B3E3F5", "Na": "#AB5CF2", "Mg": "#8AFF00",
-    "Al": "#BFA6A6", "Si": "#F0C8A0", "P": "#FF8000", "S": "#FFFF30",
-    "Cl": "#1FF01F", "Ar": "#80D1E3", "K": "#8F40D4", "Ca": "#3DFF00",
-    "Sc": "#E6E6E6", "Ti": "#BFC2C7", "V": "#A6A6AB", "Cr": "#8A99C7",
-    "Mn": "#9C7AC7", "Fe": "#E06633", "Co": "#F090A0", "Ni": "#50D050",
-    "Cu": "#C88033", "Zn": "#7D80B0", "Ga": "#C28F8F", "Ge": "#668F8F",
-    "As": "#BD80E3", "Se": "#FFA100", "Br": "#A62929", "Kr": "#5CB8D1",
-    "Rb": "#702EB0", "Sr": "#00FF00", "Y": "#94FFFF", "Zr": "#94E0E0",
-    "Nb": "#73C2C9", "Mo": "#54B5B5", "Tc": "#3B9E9E", "Ru": "#248F8F",
-    "Rh": "#0A7D8C", "Pd": "#006985", "Ag": "#C0C0C0", "Cd": "#FFD98F",
-    "In": "#A67573", "Sn": "#668080", "Sb": "#9E63B5", "Te": "#D47A00",
-    "I": "#940094", "Xe": "#429EB0", "Cs": "#57178F", "Ba": "#00C900",
-    "La": "#70D4FF", "Ce": "#FFFFC7", "Pr": "#D9FFC7", "Nd": "#C7FFC7",
-    "Pm": "#A3FFC7", "Sm": "#8FFFC7", "Eu": "#61FFC7", "Gd": "#45FFC7",
-    "Tb": "#30FFC7", "Dy": "#1FFFC7", "Ho": "#00FF9C", "Er": "#00E675",
-    "Tm": "#00D452", "Yb": "#00BF38", "Lu": "#00AB24", "Hf": "#4DC2FF",
-    "Ta": "#4DA6FF", "W": "#2194D6", "Re": "#267DAB", "Os": "#266696",
-    "Ir": "#175487", "Pt": "#D0D0E0", "Au": "#FFD123", "Hg": "#B8B8D0",
-    "Tl": "#A6544D", "Pb": "#575961", "Bi": "#9E4FB5", "Po": "#AB5C00",
-    "At": "#754F45", "Rn": "#428296",
+_VESTA: Dict[str, str] = {
+    "Ac": "#70ABFA", "Ag": "#C0C0C0", "Al": "#81B2D6", "Am": "#545CF2",
+    "Ar": "#CFFEC4", "As": "#74D057", "At": "#754F45", "Au": "#FFD123",
+    "B":  "#1FA20F", "Ba": "#00C900", "Be": "#5ED77B", "Bh": "#E00038",
+    "Bi": "#9E4FB5", "Bk": "#8A4FE3", "Br": "#7E3102", "C":  "#4C4C4C",
+    "Ca": "#5A96BD", "Cd": "#FFD98F", "Ce": "#FFFFC7", "Cf": "#A136D4",
+    "Cl": "#31FC02", "Cm": "#785CE3", "Co": "#0000AF", "Cr": "#00009E",
+    "Cs": "#57178F", "Cu": "#2247DC", "Db": "#D1004F", "Dy": "#1FFFC7",
+    "Er": "#00E675", "Es": "#B31FD4", "Eu": "#61FFC7", "F":  "#B0B9E6",
+    "Fe": "#B57100", "Fm": "#B31FBA", "Fr": "#420066", "Ga": "#9EE373",
+    "Gd": "#C004FF", "Ge": "#7E6EA6", "H":  "#FFCCCC", "He": "#FCE8CE",
+    "Hf": "#4DC2FF", "Hg": "#B8B8D0", "Ho": "#00FF9C", "Hs": "#E6002E",
+    "I":  "#940094", "In": "#A67573", "Ir": "#175487", "K":  "#A121F6",
+    "Kr": "#FAC1F3", "La": "#5AC449", "Li": "#86DF73", "Lr": "#C70066",
+    "Lu": "#00AB24", "Md": "#B30DA6", "Mg": "#FB7B15", "Mn": "#A7089D",
+    "Mo": "#54B5B5", "Mt": "#EB0026", "N":  "#B0B9E6", "Na": "#F9DC3C",
+    "Nb": "#73C2C9", "Nd": "#C7FFC7", "Ne": "#FE37B5", "Ni": "#B7BBBD",
+    "No": "#BD0D87", "Np": "#0080FF", "O":  "#FE0300", "Os": "#266696",
+    "P":  "#C09CC2", "Pa": "#00A1FF", "Pb": "#575961", "Pd": "#006985",
+    "Pm": "#A3FFC7", "Po": "#AB5C00", "Pr": "#D9FFC7", "Pt": "#D0D0E0",
+    "Pu": "#006BFF", "Ra": "#007D00", "Rb": "#702EB0", "Re": "#267DAB",
+    "Rf": "#CC0059", "Rh": "#0A7D8C", "Rn": "#428296", "Ru": "#248F8F",
+    "S":  "#FFFA00", "Sb": "#9E63B5", "Sc": "#B563AB", "Se": "#9AEF0F",
+    "Sg": "#D90045", "Si": "#1B3BFA", "Sm": "#8FFFC7", "Sn": "#9A8EB9",
+    "Sr": "#00FF00", "Ta": "#4DA6FF", "Tb": "#30FFC7", "Tc": "#3B9E9E",
+    "Te": "#D47A00", "Th": "#00BAFF", "Ti": "#78CAFF", "Tl": "#A6544D",
+    "Tm": "#00D452", "U":  "#008FFF", "V":  "#E51900", "W":  "#2194D6",
+    "Xe": "#429EB0", "Y":  "#94FFFF", "Yb": "#00BF38", "Zn": "#8F8F81",
+    "Zr": "#00FF00",
 }
 
 
-def _jmol_color(element: str) -> str:
-    return _JMOL.get(element, "#808080")
+def _vesta_color(element: str) -> str:
+    return _VESTA.get(element, "#808080")
 
 
 # ===========================================================================
@@ -391,7 +403,7 @@ def _draw_structure(
             float(atom_depth_all[idx]),
             atom_2d_all[idx],
             float(shannon_r[idx]) * r_scale,
-            _jmol_color(elements[idx]),
+            _vesta_color(elements[idx]),
             elements[idx],
             False,
         ))
@@ -402,7 +414,7 @@ def _draw_structure(
             float(g_depth[0]),
             g_2d[0],
             gr * r_scale,
-            _jmol_color(elem),
+            _vesta_color(elem),
             elem,
             True,
         ))
@@ -426,7 +438,7 @@ def _draw_structure(
         Line2D(
             [0], [0],
             marker="o", color="none",
-            markerfacecolor=_jmol_color(e),
+            markerfacecolor=_vesta_color(e),
             markeredgecolor="#333333", markeredgewidth=0.5,
             markersize=18, label=e,
         )
@@ -525,6 +537,193 @@ _MODE_COLORS: Dict[str, str] = {
 _POLY_MODE_NAMES = ("corner", "edge", "face", "multi_4")
 
 
+# ===========================================================================
+# Equivalence-class collapse  (--collapse-equivalent)
+# ===========================================================================
+
+def _collapse_by_element_cn(
+    nodes: List[dict],
+    edges: List[dict],
+    polyhedral_edges: List[dict],
+) -> Tuple[List[dict], List[dict], List[dict], Dict[int, int]]:
+    """Collapse nodes by ``(element, coordination_number)`` equivalence.
+
+    Edge / polyhedral-edge handling: for each super-class C, pick a
+    representative atom rep(C) — the lowest-id member.  Walk *only*
+    rep(C)'s incident bonds (and polyhedral edges); each unique
+    rep_a-to-other-atom pair becomes one super-edge.  Periodic-image
+    multi-edges between the *same* atom pair are merged (their bond
+    length / ratio averaged).  Bonds between different atom pairs in
+    the same super-class pair stay separate, so a super-node ends up
+    with the same number of incident arcs as its representative had —
+    e.g. each Fe in GdFeO3 has CN=6, so the Fe ×4 super-node has
+    exactly 6 arcs in the drawing.
+
+    A class-id tie-break (only emit when class(rep_a) ≤ class(other))
+    avoids double-counting the rare bond between two representatives.
+
+    Returns
+    -------
+    new_nodes : super-nodes; each carries `_multiplicity` plus the
+                element / CN / averaged shannon radius of its members.
+    new_edges : per-(rep_a, other) bond edges; each carries
+                `_multiplicity` (= periodic-image count for this exact
+                atom pair), `_bond_length_std`, mean bond_length /
+                ratio, and ``coordination_sphere`` ∈ {"core","extended",
+                "mixed"}.  Most arcs will have `_multiplicity == 1`.
+    new_poly  : per-(rep_a, other, mode) polyhedral edges; each carries
+                `_multiplicity`, mean angle, and the union of underlying
+                angles_deg (so geometry classification still works).
+    orig_to_super : mapping original node id → super-node id.
+    """
+    # 1. Group original nodes by (element, CN).
+    key_to_members: Dict[Tuple[str, int], List[dict]] = defaultdict(list)
+    for n in nodes:
+        key = (str(n["element"]), int(n.get("coordination_number", 0)))
+        key_to_members[key].append(n)
+
+    ordered_keys = sorted(key_to_members.keys())
+    super_id_of: Dict[Tuple[str, int], int] = {k: i for i, k in enumerate(ordered_keys)}
+
+    orig_to_super: Dict[int, int] = {}
+    rep_id_of_super: Dict[int, int] = {}
+    n_members_of_super: Dict[int, int] = {}
+    for k, members in key_to_members.items():
+        sid = super_id_of[k]
+        # Representative = lowest-id member (deterministic, stable).
+        rep_id_of_super[sid] = min(int(m["id"]) for m in members)
+        n_members_of_super[sid] = len(members)
+        for m in members:
+            orig_to_super[int(m["id"])] = sid
+
+    def _emit_from_a(sid_a: int, sid_b: int) -> bool:
+        """Tie-break for inter-class super-edges: only the smaller class
+        emits (alphabetical/lower-sid fallback on a tie).  Smaller class →
+        the per-rep view aligns with each member's actual CN, so e.g. Ti
+        in SrTiO3 (1 atom) drives the Ti–O count, not O (3 atoms).  Self-
+        class bonds (sid_a == sid_b) always emit from rep_a's enumeration
+        — there's no "other side" to choose."""
+        if sid_a == sid_b:
+            return True
+        n_a = n_members_of_super[sid_a]
+        n_b = n_members_of_super[sid_b]
+        if n_a < n_b:
+            return True
+        if n_a > n_b:
+            return False
+        return sid_a <= sid_b
+
+    # 2. Build super-nodes (mean Shannon radius across members so circle
+    # sizing remains reasonable).
+    new_nodes: List[dict] = []
+    for k in ordered_keys:
+        members = key_to_members[k]
+        radii = [m.get("shannon_radius_angstrom") for m in members
+                 if m.get("shannon_radius_angstrom") is not None]
+        new_nodes.append({
+            "id":                       super_id_of[k],
+            "element":                  k[0],
+            "coordination_number":      k[1],
+            "shannon_radius_angstrom":  (sum(radii) / len(radii)) if radii else None,
+            "_members":                 [int(m["id"]) for m in members],
+            "_multiplicity":            len(members),
+        })
+
+    # 3. Bond edges: rep-based enumeration with cross-rep dedup by atom pair.
+    # Each rep enumerates its own incident bonds (collapsing periodic-image
+    # multi-edges per physical atom pair).  Each unordered (rep, other)
+    # atom-pair is emitted at most once across ALL reps' enumerations —
+    # so a bond between two reps is drawn once instead of twice, but every
+    # rep still preserves its full coordination environment.  Replaces the
+    # earlier class-id tie-break, which suppressed the high-CN side's view
+    # whenever its element happened to sort alphabetically later (e.g. Ti
+    # in SrTiO3 lost its 3 distinct O neighbours to rep(O)'s 1-distinct-Ti
+    # view).
+    new_edges: List[dict] = []
+    emitted_pairs: Set[Tuple[int, int]] = set()
+    for sid_a, rep_id in sorted(rep_id_of_super.items()):
+        # Group bonds incident to rep_id by the OTHER atom, so periodic-
+        # image multi-edges of the same physical bond merge into one entry.
+        per_neighbor: Dict[int, List[dict]] = defaultdict(list)
+        for e in edges:
+            s, t = int(e["source"]), int(e["target"])
+            if s == rep_id and t == rep_id:
+                # Periodic-image self-loop on the rep atom itself.
+                per_neighbor[rep_id].append(e)
+            elif s == rep_id:
+                per_neighbor[t].append(e)
+            elif t == rep_id:
+                per_neighbor[s].append(e)
+
+        for other_id, elist in per_neighbor.items():
+            pair_key = (min(rep_id, other_id), max(rep_id, other_id))
+            if pair_key in emitted_pairs:
+                continue
+            emitted_pairs.add(pair_key)
+            sid_b = orig_to_super[other_id]
+            bls    = [float(e.get("bond_length") or 0.0) for e in elist]
+            ratios = [float(e.get("bond_length_over_sum_radii") or 1.0) for e in elist]
+            cores  = [e.get("coordination_sphere", "core") == "core" for e in elist]
+            if all(cores):
+                sphere = "core"
+            elif not any(cores):
+                sphere = "extended"
+            else:
+                sphere = "mixed"
+            new_edges.append({
+                "source":                       sid_a,
+                "target":                       sid_b,
+                "bond_length":                  (sum(bls) / len(bls)) if bls else 0.0,
+                "bond_length_over_sum_radii":   (sum(ratios) / len(ratios)) if ratios else 1.0,
+                "coordination_sphere":          sphere,
+                # to_jimage is meaningless after collapse; keep [0,0,0].
+                "to_jimage":                    [0, 0, 0],
+                "_multiplicity":                len(elist),
+                "_bond_length_std":             float(np.std(bls)) if len(bls) > 1 else 0.0,
+                "_ratio_std":                   float(np.std(ratios)) if len(ratios) > 1 else 0.0,
+            })
+
+    # 4. Polyhedral edges: same rep-based enumeration with per-physical-pair
+    # dedup, keyed additionally by sharing mode so mixed-mode pairs render
+    # as separate arcs.
+    new_poly: List[dict] = []
+    emitted_poly_pairs: Set[Tuple[int, int, str]] = set()
+    for sid_a, rep_id in sorted(rep_id_of_super.items()):
+        per_neighbor_poly: Dict[Tuple[int, str], List[dict]] = defaultdict(list)
+        for pe in polyhedral_edges:
+            na, nb = int(pe["node_a"]), int(pe["node_b"])
+            mode   = str(pe.get("mode", ""))
+            if na == rep_id and nb == rep_id:
+                per_neighbor_poly[(rep_id, mode)].append(pe)
+            elif na == rep_id:
+                per_neighbor_poly[(nb, mode)].append(pe)
+            elif nb == rep_id:
+                per_neighbor_poly[(na, mode)].append(pe)
+
+        for (other_id, mode), pgroup in per_neighbor_poly.items():
+            poly_key = (min(rep_id, other_id), max(rep_id, other_id), mode)
+            if poly_key in emitted_poly_pairs:
+                continue
+            emitted_poly_pairs.add(poly_key)
+            sid_b = orig_to_super[other_id]
+            angle_means = [
+                float(pe.get("mean_angle_deg",
+                             pe["angles_deg"][0] if pe.get("angles_deg") else 0.0))
+                for pe in pgroup
+            ]
+            merged_angles = [a for pe in pgroup for a in pe.get("angles_deg", [])]
+            new_poly.append({
+                "node_a":          sid_a,
+                "node_b":          sid_b,
+                "mode":            mode,
+                "mean_angle_deg":  float(np.mean(angle_means)) if angle_means else 0.0,
+                "angles_deg":      merged_angles,
+                "_multiplicity":   len(pgroup),
+            })
+
+    return new_nodes, new_edges, new_poly, orig_to_super
+
+
 def _filter_bonds(edges: List[dict], mode: str) -> List[dict]:
     """Filter direct-bond edges by coordination_sphere."""
     if mode == "core":
@@ -561,12 +760,18 @@ def _draw_topology(
     edge_fontsize: float = 10.0,
     legend_fontsize: float = 14.0,
     edge_scale: float = 1.0,
+    collapse_equivalent: bool = False,
 ) -> None:
     """Draw topology graph with spring layout, all edges and inline labels.
 
-    bonds_filter: "all" | "core" | "extended" | "none".
-    poly_modes:   None = all modes; empty set = drop all; otherwise allowed modes.
-    edge_scale:   multiplier on all edge linewidths (bonds and polyhedral).
+    bonds_filter:        "all" | "core" | "extended" | "none".
+    poly_modes:          None = all modes; empty set = drop all; otherwise allowed modes.
+    edge_scale:          multiplier on all edge linewidths (bonds and polyhedral).
+    collapse_equivalent: if True, fold nodes sharing (element, coordination_number)
+                         into a single super-node and collapse all bonds /
+                         polyhedral edges between super-nodes accordingly.
+                         Applied AFTER bond/poly filters; CN comes from the
+                         canonical node field, not recomputed from visible bonds.
     """
     # CN/geometry sub-label scales with the node element fontsize.
     subnode_fontsize = max(7.0, node_fontsize * 11.0 / 17.0)
@@ -579,23 +784,39 @@ def _draw_topology(
 
     # Per-node angle lists for geometry classification — uses unfiltered data
     # so the geometry label reflects the actual structure, not the displayed edges.
-    node_angles: Dict[int, List[float]] = defaultdict(list)
+    node_angles_orig: Dict[int, List[float]] = defaultdict(list)
     if all_poly:
         for pe in all_poly:
             for ang in pe.get("angles_deg", []):
-                node_angles[int(pe["node_a"])].append(ang)
+                node_angles_orig[int(pe["node_a"])].append(ang)
                 if int(pe["node_b"]) != int(pe["node_a"]):
-                    node_angles[int(pe["node_b"])].append(ang)
+                    node_angles_orig[int(pe["node_b"])].append(ang)
     else:
         for t in graph.get("triplets", []):
-            node_angles[t["center_node"]].append(t["angle_deg"])
+            node_angles_orig[t["center_node"]].append(t["angle_deg"])
 
-    # Collapsed graph for spring_layout — uses unfiltered edges so node
-    # positions stay stable when bond filters are toggled.
+    # ── Equivalence-class collapse ────────────────────────────────────────────
+    if collapse_equivalent:
+        nodes, edges, polyhedral_edges, orig_to_super = _collapse_by_element_cn(
+            nodes, edges, polyhedral_edges,
+        )
+        # Re-key the per-node angle dict from original ids → super-node ids so
+        # geometry classification still works after collapse.
+        node_angles: Dict[int, List[float]] = defaultdict(list)
+        for orig_id, angs in node_angles_orig.items():
+            sid = orig_to_super.get(orig_id)
+            if sid is not None:
+                node_angles[sid].extend(angs)
+    else:
+        node_angles = node_angles_orig
+
+    # Collapsed graph for spring_layout — uses (filtered/collapsed) edges
+    # so node positions reflect what's actually drawn.
     G_layout = nx.Graph()
     for n in nodes:
         G_layout.add_node(n["id"])
-    for e in all_edges:
+    layout_edges = edges if collapse_equivalent else all_edges
+    for e in layout_edges:
         G_layout.add_edge(e["source"], e["target"])
 
     pos_raw = nx.spring_layout(G_layout, seed=42, k=3.0)
@@ -613,6 +834,55 @@ def _draw_topology(
     node_display_radii: Dict[int, float] = {
         n["id"]: _node_radius(shannon_r_map[n["id"]]) for n in nodes
     }
+
+    # ── Pre-compute per-node label strings (used for sizing & drawing) ───────
+    node_labels: Dict[int, Tuple[str, str]] = {}
+    for n in nodes:
+        elem_str = str(n["element"])
+        cn       = int(n.get("coordination_number", 0))
+        geom     = _classify_geometry(cn, node_angles[n["id"]])
+        mult     = int(n.get("_multiplicity", 1))
+        elem_lab = f"{elem_str} ×{mult}" if mult > 1 else elem_str
+        sub_lab  = f"CN{cn} · {geom}"
+        node_labels[n["id"]] = (elem_lab, sub_lab)
+
+    # ── Grow node radii to enclose both labels ───────────────────────────────
+    # Use the actual matplotlib renderer to measure each label's bbox in data
+    # units, so circles are sized correctly for any fontsize / figsize combo.
+    # Requires a provisional xlim/ylim so transData has a valid transform.
+    xs_init = [p[0] for p in pos.values()]
+    ys_init = [p[1] for p in pos.values()]
+    init_pad = 0.55
+    ax.set_xlim(min(xs_init) - init_pad, max(xs_init) + init_pad)
+    ax.set_ylim(min(ys_init) - init_pad - 0.20, max(ys_init) + init_pad)
+    ax.set_aspect("equal")
+    ax.figure.canvas.draw()
+    renderer = ax.figure.canvas.get_renderer()
+
+    LABEL_PAD = 0.025  # extra radial padding around the text bbox
+
+    label_vstack: Dict[int, Tuple[float, float, float]] = {}
+    for nid, (elem_lab, sub_lab) in node_labels.items():
+        t1 = ax.text(0, 0, elem_lab,
+                     fontsize=node_fontsize, fontweight="bold")
+        t2 = ax.text(0, 0, sub_lab,
+                     fontsize=subnode_fontsize, linespacing=1.2)
+        b1 = t1.get_window_extent(renderer=renderer).transformed(
+            ax.transData.inverted())
+        b2 = t2.get_window_extent(renderer=renderer).transformed(
+            ax.transData.inverted())
+        t1.remove(); t2.remove()
+        elem_w, elem_h = b1.width, b1.height
+        sub_w,  sub_h  = b2.width, b2.height
+        gap = 0.012
+        total_h = elem_h + gap + sub_h
+        half_w  = max(elem_w, sub_w) / 2.0
+        # Circle must enclose the full text bbox: half-diagonal of the
+        # tightest enclosing rectangle, plus a small padding.
+        needed_r = math.hypot(half_w, total_h / 2.0) + LABEL_PAD
+        node_display_radii[nid] = max(node_display_radii[nid], needed_r)
+        # Cache the per-label vertical layout for the draw step.
+        label_vstack[nid] = (elem_h, sub_h, gap)
 
     # ── Group edges by unordered (src, tgt) pair ──────────────────────────────
     edge_groups: Dict[Tuple[int, int], List[dict]] = defaultdict(list)
@@ -632,10 +902,14 @@ def _draw_topology(
         p2 = pos[tgt]
 
         for e, rad in zip(elist, rads):
-            is_core = e.get("coordination_sphere", "core") == "core"
-            lw      = (2.4 if is_core else 1.35) * edge_scale
-            ls      = "-" if is_core else "--"
-            conn    = "arc3,rad=0.6" if src == tgt else f"arc3,rad={rad:.3f}"
+            sphere   = e.get("coordination_sphere", "core")
+            is_mixed = sphere == "mixed"
+            # Mixed (post-collapse) renders solid like core, with a tag in
+            # the label.  Pure-extended renders dashed and thinner.
+            solid    = sphere in ("core", "mixed")
+            lw       = (2.4 if solid else 1.35) * edge_scale
+            ls       = "-" if solid else "--"
+            conn     = "arc3,rad=0.6" if src == tgt else f"arc3,rad={rad:.3f}"
 
             ax.add_patch(FancyArrowPatch(
                 posA=tuple(p1), posB=tuple(p2),
@@ -645,14 +919,25 @@ def _draw_topology(
                 zorder=2,
             ))
 
-            if src != tgt and edge_labels:
-                bl    = float(e.get("bond_length") or 0.0)
-                ratio = float(e.get("bond_length_over_sum_radii") or 1.0)
-                mid   = _arc_midpoint(p1, p2, rad)
-                label_items_raw.append((
-                    float(mid[0]), float(mid[1]),
-                    f"{bl:.2f}Å\n{ratio:.3f}",
-                ))
+            if edge_labels:
+                bl     = float(e.get("bond_length") or 0.0)
+                ratio  = float(e.get("bond_length_over_sum_radii") or 1.0)
+                mult   = int(e.get("_multiplicity", 1))
+                bl_std = float(e.get("_bond_length_std", 0.0))
+                if mult > 1:
+                    extra = " (mixed)" if is_mixed else ""
+                    label_text = (f"{bl:.2f}±{bl_std:.2f}Å\n"
+                                  f"{ratio:.3f}\n×{mult}{extra}")
+                else:
+                    label_text = f"{bl:.2f}Å\n{ratio:.3f}"
+                # Self-loop labels need their own placement (arc midpoint
+                # math doesn't apply); for now skip — self-loop visuals
+                # speak for themselves.
+                if src != tgt:
+                    mid = _arc_midpoint(p1, p2, rad)
+                    label_items_raw.append((
+                        float(mid[0]), float(mid[1]), label_text,
+                    ))
 
     # Nudge labels away from node circles before drawing
     if edge_labels:
@@ -709,7 +994,10 @@ def _draw_topology(
                 r_loop = max(0.075, r_node * 0.80)
                 for i, mode in enumerate(modes):
                     pes = poly_key_groups[(na, nb, mode)]
-                    n_copies = len(pes)
+                    # Each pe may itself carry `_multiplicity` from a prior
+                    # collapse pass; sum so the displayed count reflects the
+                    # underlying physical poly-edge count.
+                    n_copies = sum(int(pe.get("_multiplicity", 1)) for pe in pes)
                     mean_angle = float(np.mean([
                         pe.get("mean_angle_deg",
                                pe["angles_deg"][0] if pe.get("angles_deg") else 0.0)
@@ -743,7 +1031,10 @@ def _draw_topology(
 
                 for mode, rad in zip(modes, rads):
                     pes = poly_key_groups[(na, nb, mode)]
-                    n_copies = len(pes)
+                    # Each pe may itself carry `_multiplicity` from a prior
+                    # collapse pass; sum so the displayed count reflects the
+                    # underlying physical poly-edge count.
+                    n_copies = sum(int(pe.get("_multiplicity", 1)) for pe in pes)
                     mean_angle = float(np.mean([
                         pe.get("mean_angle_deg",
                                pe["angles_deg"][0] if pe.get("angles_deg") else 0.0)
@@ -782,41 +1073,83 @@ def _draw_topology(
                 )
 
     # ── Draw nodes ────────────────────────────────────────────────────────────
+    # Both labels (element + CN/geometry) are drawn INSIDE the node circle,
+    # stacked vertically.  Circle radius was sized in the prep block above
+    # to enclose the bounding box of both labels plus padding.
     for n in nodes:
-        nid   = n["id"]
-        p     = pos[nid]
-        elem  = n["element"]
-        cn    = n.get("coordination_number", 0)
-        geom  = _classify_geometry(cn, node_angles[nid])
-        color = _jmol_color(elem)
-        r_d   = node_display_radii[nid]
+        nid        = n["id"]
+        p          = pos[nid]
+        elem_label, sub_label = node_labels[nid]
+        color      = _vesta_color(n["element"])
+        r_d        = node_display_radii[nid]
+        elem_h, sub_h, gap = label_vstack[nid]
 
         ax.add_patch(plt.Circle(
             (p[0], p[1]), r_d,
             color=color, ec="#333333", lw=1.2, zorder=3,
         ))
+
+        # Stack the two labels symmetrically around the node centre.
+        total_h = elem_h + gap + sub_h
+        elem_y  = p[1] + (total_h / 2.0 - elem_h / 2.0)
+        sub_y   = p[1] - (total_h / 2.0 - sub_h / 2.0)
+
         ax.text(
-            p[0], p[1], elem,
+            p[0], elem_y, elem_label,
             ha="center", va="center",
             fontsize=node_fontsize, fontweight="bold", color="#111111",
             zorder=4,
         )
         ax.text(
-            p[0], p[1] - r_d - 0.01,
-            f"CN{cn} · {geom}",
-            ha="center", va="top",
+            p[0], sub_y, sub_label,
+            ha="center", va="center",
             fontsize=subnode_fontsize, color="#444444", linespacing=1.2,
             zorder=4,
         )
 
     # ── Axis limits ───────────────────────────────────────────────────────────
-    xs  = [p[0] for p in pos.values()]
-    ys  = [p[1] for p in pos.values()]
-    pad = 0.55
-    ax.set_xlim(min(xs) - pad, max(xs) + pad)
-    ax.set_ylim(min(ys) - pad - 0.20, max(ys) + pad)
+    # Compute limits from the actual rendered bounding box of every patch
+    # and text we just added.  This catches self-loop arcs (drawn beyond
+    # the node circle), polyhedral-label boxes, and edge-label boxes that a
+    # heuristic node-radius pad would miss.  The legend isn't in
+    # ax.patches/ax.texts (it's a separate Legend artist) so it doesn't
+    # contribute to the limits.
     ax.set_aspect("equal")
     ax.axis("off")
+    ax.figure.canvas.draw()
+    renderer = ax.figure.canvas.get_renderer()
+    inv = ax.transData.inverted()
+
+    xmin = float("inf");  xmax = float("-inf")
+    ymin = float("inf");  ymax = float("-inf")
+    for artist in list(ax.patches) + list(ax.texts):
+        try:
+            bbox = artist.get_window_extent(renderer=renderer)
+        except Exception:
+            continue
+        if not (math.isfinite(bbox.x0) and math.isfinite(bbox.y0)):
+            continue
+        if bbox.width <= 0 or bbox.height <= 0:
+            continue
+        d = bbox.transformed(inv)
+        xmin = min(xmin, d.x0); xmax = max(xmax, d.x1)
+        ymin = min(ymin, d.y0); ymax = max(ymax, d.y1)
+
+    if math.isfinite(xmin):
+        # Padding scales with the bbox span so it always reads as "a bit of
+        # margin" regardless of the structure size.
+        pad_x = 0.04 * max(xmax - xmin, 1.0)
+        pad_y = 0.04 * max(ymax - ymin, 1.0)
+        ax.set_xlim(xmin - pad_x, xmax + pad_x)
+        ax.set_ylim(ymin - pad_y, ymax + pad_y)
+    else:
+        # Fallback if bbox iteration found nothing usable.
+        xs  = [p[0] for p in pos.values()]
+        ys  = [p[1] for p in pos.values()]
+        max_r = max(node_display_radii.values()) if node_display_radii else 0.2
+        pad   = max(0.55, max_r * 1.4)
+        ax.set_xlim(min(xs) - pad, max(xs) + pad)
+        ax.set_ylim(min(ys) - pad, max(ys) + pad)
 
     # ── Legend ────────────────────────────────────────────────────────────────
     legend_handles: List[Line2D] = []
@@ -864,6 +1197,7 @@ def plot_crystal_graph(
     edge_fontsize: float = 10.0,
     legend_fontsize: float = 14.0,
     edge_scale: float = 1.0,
+    collapse_equivalent: bool = False,
 ) -> None:
     with open(json_path) as f:
         graph = json.load(f)
@@ -888,6 +1222,7 @@ def plot_crystal_graph(
         edge_fontsize=edge_fontsize,
         legend_fontsize=legend_fontsize,
         edge_scale=edge_scale,
+        collapse_equivalent=collapse_equivalent,
     )
 
     ax_topo.set_title(
@@ -948,6 +1283,13 @@ def main() -> None:
     parser.add_argument("--edge-scale",      type=float, default=1.0,
                         help="Multiplier on all edge linewidths "
                              "(bonds and polyhedral edges).")
+    parser.add_argument("--collapse-equivalent", action="store_true",
+                        help="Collapse nodes that share (element, "
+                             "coordination_number) into a single super-node, "
+                             "and fold all bonds / polyhedral edges between "
+                             "super-nodes into one representative edge each "
+                             "(with multiplicity, mean bond length, and "
+                             "dispersion stats).")
     args = parser.parse_args()
 
     poly_arg = args.poly.strip().lower()
@@ -980,6 +1322,7 @@ def main() -> None:
         edge_fontsize=args.edge_fontsize,
         legend_fontsize=args.legend_fontsize,
         edge_scale=args.edge_scale,
+        collapse_equivalent=args.collapse_equivalent,
     )
 
 

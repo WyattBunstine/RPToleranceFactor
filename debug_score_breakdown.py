@@ -23,9 +23,9 @@ from crystal_graph_matching import compute_fingerprints
 
 # ── Load cached graphs ────────────────────────────────────────────────────────
 print("Loading graphs...")
-with open("data/unit_tests/graphs/SrTiO3_mp-5229.json") as f:
+with open("unit_tests/graphs/SrTiO3_mp-5229.json") as f:
     g_a = json.load(f)       # A = SrTiO3
-with open("data/unit_tests/graphs/Sr4Ti3O10_mp-31213.json") as f:
+with open("unit_tests/graphs/Sr4Ti3O10_mp-31213.json") as f:
     g_b = json.load(f)       # B = Sr4Ti3O10
 
 

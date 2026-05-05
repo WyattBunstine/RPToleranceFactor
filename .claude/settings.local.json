@@ -50,7 +50,12 @@
       "Bash(awk '/✓ \\\\[ged\\\\]|✗ \\\\[ged\\\\]/ { name=$3; status=$1; print status, name }' /tmp/run.txt)",
       "Bash(awk '/--- Category:/ { print }')",
       "Bash(awk '/--- Category: core_consistency / { in_c=1; next } /--- Category:/ { in_c=0; next } in_c && /✗ \\\\[ged_consistency\\\\]/ { print }' /tmp/run.txt)",
-      "Bash(awk '/--- Category: core / { in_c=1; next } /--- Category:/ { in_c=0; next } in_c && /✗ \\\\[ged\\\\]/ { print }' /tmp/run.txt)"
+      "Bash(awk '/--- Category: core / { in_c=1; next } /--- Category:/ { in_c=0; next } in_c && /✗ \\\\[ged\\\\]/ { print }' /tmp/run.txt)",
+      "Bash(grep *)",
+      "Bash(awk '/Category: core/,/Category:/{if\\(/Category:/&&!/core/\\)exit; print}')",
+      "Bash(awk '/^def _draw_topology/,/^def [^_]/' scripts/plot_crystal_graph.py)",
+      "Bash(awk '/Category: core/,/Category: defect/' /tmp/out.txt)",
+      "Bash(wait)"
     ]
   }
 }

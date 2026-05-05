@@ -1,0 +1,173 @@
+{
+  "$schema": "unit_test_suite_v1",
+  "version": "1",
+  "graph_builder": "crystal_graph_v4",
+  "description": "Family clustering tests: verifies that structurally related materials cluster together and unrelated ones separate",
+  "cif_root": "data/cifs",
+  "graph_cache_dir": "data/unit_tests/graphs",
+  "tests": [
+    {
+      "id": "perovskite_ilmenite_families",
+      "type": "family",
+      "description": "Cubic perovskites (SrTiO3, BaTiO3) should form one family; ilmenite (TiFeO3) a separate family; LaNiO3 R-3c perovskite should be distinct from ilmenite",
+      "graphs": [
+        {"stem": "SrTiO3_mp-5229",   "cif": "SrTiO3_mp-5229.cif"},
+        {"stem": "BaTiO3_mp-2998",   "cif": "BaTiO3_mp-2998.cif"},
+        {"stem": "LaNiO3_mp-19339",  "cif": "LaNiO3_mp-19339.cif"},
+        {"stem": "TiFeO3_mp-19270",  "cif": "TiFeO3_mp-19270.cif"}
+      ],
+      "cut_height": 0.25,
+      "assertions": [
+        {
+          "assert": "same_family",
+          "description": "SrTiO3 and BaTiO3 are both cubic Pm-3m perovskites and should cluster together",
+          "members": ["SrTiO3_mp-5229", "BaTiO3_mp-2998"]
+        },
+        {
+          "assert": "different_family",
+          "description": "Perovskite and ilmenite are structurally unrelated",
+          "a": "SrTiO3_mp-5229",
+          "b": "TiFeO3_mp-19270"
+        },
+        {
+          "assert": "different_family",
+          "description": "Rhombohedral perovskite and ilmenite are structurally unrelated",
+          "a": "LaNiO3_mp-19339",
+          "b": "TiFeO3_mp-19270"
+        }
+      ]
+    },
+    {
+      "id": "perovskite_subtypes",
+      "type": "family",
+      "description": "Three distinct perovskite symmetry classes: cubic (SrTiO3, BaZrO3), GdFeO3-type Pbnm (LaFeO3, GdFeO3), and unrelated ilmenite (TiFeO3) as out-group",
+      "graphs": [
+        {"stem": "SrTiO3_mp-5229",    "cif": "SrTiO3_mp-5229.cif"},
+        {"stem": "BaZrO3_mp-3834",    "cif": "BaZrO3_mp-3834.cif"},
+        {"stem": "LaFeO3_mp-22590",   "cif": "LaFeO3_mp-22590.cif"},
+        {"stem": "GdFeO3_mp-600576",  "cif": "GdFeO3_mp-600576.cif"},
+        {"stem": "TiFeO3_mp-19270",   "cif": "TiFeO3_mp-19270.cif"}
+      ],
+      "cut_height": 0.25,
+      "assertions": [
+        {
+          "assert": "same_family",
+          "description": "SrTiO3 and BaZrO3 are both cubic Pm-3m perovskites",
+          "members": ["SrTiO3_mp-5229", "BaZrO3_mp-3834"]
+        },
+        {
+          "assert": "same_family",
+          "description": "LaFeO3 and GdFeO3 are both Pbnm GdFeO3-type distorted perovskites",
+          "members": ["LaFeO3_mp-22590", "GdFeO3_mp-600576"]
+        },
+        {
+          "assert": "different_family",
+          "description": "Ilmenite TiFeO3 should not cluster with any perovskite",
+          "a": "TiFeO3_mp-19270",
+          "b": "SrTiO3_mp-5229"
+        },
+        {
+          "assert": "different_family",
+          "description": "Ilmenite TiFeO3 should not cluster with GdFeO3-type perovskites either",
+          "a": "TiFeO3_mp-19270",
+          "b": "LaFeO3_mp-22590"
+        }
+      ]
+    },
+    {
+      "id": "corundum_ilmenite_families",
+      "type": "family",
+      "description": "Corundum (Al2O3, Cr2O3) and ilmenite (TiFeO3, MgTiO3) should each form a family — or a joint corundum-type family since they are topologically equivalent (element-agnostic). KSbO3 and AgSbO3 ilmenite pair as control.",
+      "graphs": [
+        {"stem": "Al2O3_mp-1143",       "cif": "Al2O3_mp-1143.cif"},
+        {"stem": "Cr2O3_mp-19399",      "cif": "Cr2O3_mp-19399.cif"},
+        {"stem": "TiFeO3_mp-19270",     "cif": "TiFeO3_mp-19270.cif"},
+        {"stem": "MgTiO3_mp-3771",      "cif": "MgTiO3_mp-3771.cif"},
+        {"stem": "KSbO3_mp-16293",      "cif": "KSbO3_mp-16293.cif"},
+        {"stem": "AgSbO3_mp-545999",    "cif": "AgSbO3_mp-545999.cif"}
+      ],
+      "cut_height": 0.25,
+      "assertions": [
+        {
+          "assert": "same_family",
+          "description": "Al2O3 and Cr2O3 share R-3c corundum topology and should cluster together",
+          "members": ["Al2O3_mp-1143", "Cr2O3_mp-19399"]
+        },
+        {
+          "assert": "same_family",
+          "description": "TiFeO3 and MgTiO3 are both R-3 ilmenite and should cluster together",
+          "members": ["TiFeO3_mp-19270", "MgTiO3_mp-3771"]
+        },
+        {
+          "assert": "same_family",
+          "description": "KSbO3 and AgSbO3 (ilmenite-structured, mp-16293 and mp-545999) should cluster together",
+          "members": ["KSbO3_mp-16293", "AgSbO3_mp-545999"]
+        }
+      ]
+    },
+    {
+      "id": "rutile_family",
+      "type": "family",
+      "description": "TiO2, SnO2, RuO2 are all rutile-type (P42/mnm) and should form one family; SrTiO3 (perovskite) and TiFeO3 (ilmenite) as out-groups",
+      "graphs": [
+        {"stem": "TiO2_mp-1439",      "cif": "TiO2_mp-1439.cif"},
+        {"stem": "SnO2_mp-856",       "cif": "SnO2_mp-856.cif"},
+        {"stem": "RuO2_mp-825",       "cif": "RuO2_mp-825.cif"},
+        {"stem": "SrTiO3_mp-5229",    "cif": "SrTiO3_mp-5229.cif"},
+        {"stem": "TiFeO3_mp-19270",   "cif": "TiFeO3_mp-19270.cif"}
+      ],
+      "cut_height": 0.25,
+      "assertions": [
+        {
+          "assert": "same_family",
+          "description": "TiO2, SnO2, and RuO2 are all rutile-type — should cluster together",
+          "members": ["TiO2_mp-1439", "SnO2_mp-856", "RuO2_mp-825"]
+        },
+        {
+          "assert": "different_family",
+          "description": "SrTiO3 (perovskite, CN=12/6 with corner-sharing and CN=6 O) should not join the rutile family (CN=6/3, edge+corner-sharing)",
+          "a": "SrTiO3_mp-5229",
+          "b": "TiO2_mp-1439"
+        },
+        {
+          "assert": "different_family",
+          "description": "TiFeO3 ilmenite should not join the rutile family",
+          "a": "TiFeO3_mp-19270",
+          "b": "TiO2_mp-1439"
+        }
+      ]
+    },
+    {
+      "id": "rocksalt_family",
+      "type": "family",
+      "description": "NaCl, MgO, NiO are all rocksalt (Fm-3m, all CN=6 corner-sharing); TiO2 (rutile, CN=3 O) and TiFeO3 (ilmenite, face-sharing) as out-groups",
+      "graphs": [
+        {"stem": "NaCl_mp-22862",     "cif": "NaCl_mp-22862.cif"},
+        {"stem": "MgO_mp-1265",       "cif": "MgO_mp-1265.cif"},
+        {"stem": "NiO_mp-19009",      "cif": "NiO_mp-19009.cif"},
+        {"stem": "TiO2_mp-1439",      "cif": "TiO2_mp-1439.cif"},
+        {"stem": "TiFeO3_mp-19270",   "cif": "TiFeO3_mp-19270.cif"}
+      ],
+      "cut_height": 0.25,
+      "assertions": [
+        {
+          "assert": "same_family",
+          "description": "NaCl, MgO, and NiO are all rocksalt — identical corner-only octahedral topology",
+          "members": ["NaCl_mp-22862", "MgO_mp-1265", "NiO_mp-19009"]
+        },
+        {
+          "assert": "different_family",
+          "description": "TiO2 rutile (CN=3 O, edge-sharing chains) should not join the rocksalt family",
+          "a": "TiO2_mp-1439",
+          "b": "NaCl_mp-22862"
+        },
+        {
+          "assert": "different_family",
+          "description": "TiFeO3 ilmenite (face+edge-sharing) should not join the rocksalt family",
+          "a": "TiFeO3_mp-19270",
+          "b": "MgO_mp-1265"
+        }
+      ]
+    }
+  ]
+}

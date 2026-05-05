@@ -2,3 +2,128 @@ claude --resume fa75a0e2-82e5-4f9b-8d1e-02d363c4ad35
 claude --resume d8d37836-c3fe-4056-85b7-b2b70352bff2
  --resume f69fba60-223f-42d2-be5f-b12959a522d6
 claude --resume 688b65e1-6755-452d-8b3e-e4c61c6d8beb
+
+ The new run shows incremental improvement and reveals what's left. Big-picture comparison:
+
+  ┌────────────────┬──────────┬─────────┬───────────────────────┐
+  │     Metric     │ Previous │ Current │           Δ           │
+  ├────────────────┼──────────┼─────────┼───────────────────────┤
+  │ Total families │ 92       │ 93      │ +1 (B2H4C peeled out) │
+  ├────────────────┼──────────┼─────────┼───────────────────────┤
+  │ Largest family │ 20       │ 19      │ −1                    │
+  ├────────────────┼──────────┼─────────┼───────────────────────┤
+  │ Singletons     │ 65       │ 66      │ +1                    │
+  ├────────────────┼──────────┼─────────┼───────────────────────┤
+  │ Run time       │ 8.4 min  │ 8.6 min │ flat                  │
+  └────────────────┴──────────┴─────────┴───────────────────────┘
+
+  Confirmed wins from the new fixes
+
+  - B2H4C is now a singleton (Family 91, n=1). The composition_guess role-fix peeled it out of Family 2 (the spinel cluster). Exactly as intended. ✓
+  - Run time stayed comparable despite the new shell-walk rule and bonded-element-related logic. Perf optimizations are doing their job.
+
+  Coherent families that look correct
+
+  These are mostly genuine structural families:
+
+  - Family 4 (n=13, Ba2SnO4) — K₂NiF₄-type RP n=1 perovskite + antiperovskite carbides/nitrides: Ba₂HfS₄, Ba₂IrO₄, Ba₂PbO₄, Ba₂SnO₄, Ba₂ZrO₄, Ba₄As₂O, Ba₄P₂O, Ba₄Sb₂O. Correct cluster.
+  - Family 30 (n=5, BaPr2O4) — CaFe₂O₄-type rare-earth oxides. Coherent.
+  - Family 35, 39, 71 (n=4-5) — layered ABX₂ rare-earth chalcogenides. Coherent.
+  - Family 19 (n=4, Ca(YS2)2) — square-antiprismatic Ca-rare-earth chalcogenides. Coherent.
+  - Family 65 (n=7, BeTl2F4) — Ba₂(MO₄)/Ba₂(MX₄) compounds with isolated tetrahedra (β-K₂SO₄-derivative). Coherent if they all have isolated-tetrahedra topology.
+
+  Residual false-positive clusters (same failure mode as before)
+
+  These all share the first-shell-histogram-isomorphism failure that TopologyCost can't catch:
+
+  1. Family 2 (n=19) — spinels + outliers
+
+  The genuine spinels are correctly clustered (Al₂CoO₄, Al₂NiO₄, Al₂FeO₄, Al₂CuO₄, Al₂ZnO₄, AlV₂O₄, BeCr₂O₄). But these don't belong:
+  - Ag₂MoO₄ — silver molybdate with isolated MoO₄ tetrahedra (not spinel framework)
+  - Al(FeO₂)₂ — CaFe₂O₄-post-spinel (different connectivity)
+  - Ba(AlTe₂)₂ — layered ABX₂ (totally different topology)
+  - Ca(PtO₂)₂ — delafossite-like square-planar Pt
+  - Ca₂GeO₄ — likely olivine or β-K₂SO₄
+
+  2. Family 1 (n=10) — mixed-tetrahedral
+
+  Sphalerite-derivatives (Al₂CdTe₄, Al₂HgTe₄, Al₂ZnTe₄, Al₂ZnSe₄) sitting alongside:
+  - Be₂SiO₄ (phenakite — different tetrahedral packing)
+  - BeAl₂O₄ (chrysoberyl — olivine-derivative)
+  - Ca₂SiO₄ (olivine)
+  - Ag₂HgI₄ (cubic argyrodite)
+  - Ca₂GeS₄ (different framework)
+
+  All have CN=4 cations + CN=4 anions, so first-shell histograms match.
+
+  3. Family 42 (n=9) — Bi₂PdO₄ + layered telluride chalcogenides
+
+  Mixes square-planar Pd in Bi₂PdO₄ with the Ba(REM Te₂)₂ family (layered ABX₂) and Ca(ScS₂)₂. Different topologies again.
+
+  4. Family 23 (n=4) — borate / sulfide chains / chalcogenide
+
+  Al₂BiSe₄, Ba(BO₂)₂, Ba(FeS₂)₂, Ca(BS₂)₂ — these are completely different topologies (borate triangles vs sulfide chains vs selenide). Egregious false positive.
+
+  5. Family 7 (n=5), Family 31 (n=4), Family 55 (n=5)
+
+  Smaller mixed-topology clusters (delafossite + chalcogenide + sphalerite, CaFe₂O₄ + ABX₂ + delafossite + sphalerite, sulfates + Ba₂-chalcogenides).
+
+  6. Family 44 (n=4)
+
+  CaFe₂O₄-type rare-earth oxides + Ca(FeO₂)₂ (delafossite). One outlier in an otherwise coherent family.
+
+  Polymorph fragmentation
+
+  Same compounds appearing in multiple families (often legitimate polymorph splits, sometimes over-fragmentation):
+
+  - Ca(BO₂)₂ in 4 families (5, 24, 77, 85) — borate has multiple genuine polymorphs (calcite-like vs aragonite-like, anhydrous vs hydrated), splitting may be correct.
+  - Ca₂SiO₄ in 3 families (1, 34, 82) — olivine vs willemite vs other polymorphs, partial correct splitting.
+  - Ca(GaS₂)₂ in 3 families (7, 67, 71) — likely chalcogenide polymorphs.
+  - Al₂ZnSe₄ in 2 families (1, 2) — sphalerite vs spinel polymorphs, legitimately different topologies, correct split.
+  - Al₂CdSe₄, Al₂HgSe₄, Al₂CdS₄, Al₂HgS₄ in 2 families (2, 89) — same pattern as Al₂ZnSe₄.
+  - Bi₂PdO₄ in 2 families (7, 42) — possibly polymorphs.
+
+  What's not affecting the picture
+
+  - Shell-walk rule is doing its job — Family 2 has shrunk from 169 → 19 since the original run, and the genuine spinel cluster is much cleaner.
+  - B2H4C role-fix worked precisely as designed — the carborane is now correctly isolated.
+  - BaCO3-class false positives (carbonates clustering with antiperovskites) — none visible in this 200-material set since BaCO3 itself isn't in this 214-stoichiometry sample. Will matter when we run the broader 1159-material set.
+
+  What's still wrong, prioritized
+
+  The residual false positives are all variants of the same problem: first-shell-isomorphic but topologically distinct compounds. Concrete examples:
+
+  - Spinel vs sphalerite-derived (both have cation CN=4 + cation CN=6 + anion CN=4)
+  - Phenakite/willemite vs sphalerite (both all-CN=4)
+  - Layered ABX₂ vs CaFe₂O₄-type (different sharing modes but similar bond multiplicity)
+  - Borates vs sulfide chains (when the bond histograms accidentally match)
+
+  TopologyCost can't catch these — by construction. They genuinely have the same first-shell bond-element histogram. The structural difference lives in:
+  1. Polyhedral connectivity (corner vs edge vs face sharing) → captured by PolyhedralCost
+  2. Bond-angle distributions → captured by BondAngleCost
+  3. Bond-length distributions → captured by BondLengthCost
+
+  We measured earlier that on Mg₂SiO₄ ↔ MgAl₂O₄ specifically:
+  - Topology = 0
+  - BondLength = 1.63
+  - BondAngle = 0.48
+  - Polyhedral = 1.27
+
+  The clustering is currently using TopologyCost only. Switching to a WeightedSum([1.0 × Topology, 0.5 × Polyhedral, 0.3 × BondLength]) would shrink Families 1, 2, 7, 23, 31, 42, 44, 55 — at threshold 0.1 most of these would split
+  into chemistry-correct sub-families.
+
+  What's NEW that I didn't see last time
+
+  Honestly, no new failure pattern appeared. The fixes that landed each chipped at a specific case (B2H4C, BaCO3, Al2CuO4) without uncovering a new class. The remaining issues are all the same fundamental TopologyCost limitation —
+  first-shell isomorphism doesn't distinguish second-shell-different topologies.
+
+  Recommendation
+
+  The next step that delivers the most clustering improvement is switching the unsupervised driver to a WeightedSum cost. The infrastructure is already in place — crystal_graph_unsupervised_v4.py accepts a cost via the cost_fn
+  parameter on match_nodes_ged, and WeightedSum is implemented. A small CLI extension to let --cost-mix or similar pick the lens combination, then a re-run of the 200-material clustering, should compress these mixed-topology families
+   substantially.
+
+  Want me to:
+  - (a) Add a --cost-mix CLI option to the unsupervised script (e.g. --cost-mix topology+0.5*polyhedral+0.3*bondlength)?
+  - (b) Investigate one of the residual mixed families (Family 1 or 23) under all four lenses to confirm WeightedSum would split them correctly?
+  - (c) Do the deeper Mg2SiO4-class second-shell investigation?

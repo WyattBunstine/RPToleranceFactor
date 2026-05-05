@@ -191,6 +191,67 @@ def _ged_vs_protos(
 
 
 # ---------------------------------------------------------------------------
+# Mapping post-pass — captures full match_nodes_ged result for each
+# (member, prototype) pair so the L2 sub-cluster script can compose
+# member-to-member alignments through the parent.
+# ---------------------------------------------------------------------------
+
+_MAPPING_FIELDS = (
+    "node_map",
+    "vacancy_a", "vacancy_b",
+    "unassigned_a", "unassigned_b",
+    "unforced_vacancy_a", "unforced_vacancy_b",
+    "unforced_unassigned_a", "unforced_unassigned_b",
+    "cost", "cross_fu_k", "role_swapped",
+)
+
+
+def _serialize_mapping_result(r: Dict[str, Any]) -> Dict[str, Any]:
+    """Strip a match_nodes_ged result down to the JSON-friendly fields the
+    L2 sub-cluster script needs.  node_map keys are converted to strings
+    so json.dumps round-trips cleanly across readers."""
+    out: Dict[str, Any] = {}
+    for k in _MAPPING_FIELDS:
+        if k not in r:
+            continue
+        v = r[k]
+        if k == "node_map":
+            out[k] = {str(int(a)): [int(b) for b in bs] for a, bs in v.items()}
+        elif k == "cost":
+            out[k] = round(float(v), 6)
+        elif k == "cross_fu_k":
+            out[k] = int(v)
+        elif k == "role_swapped":
+            out[k] = bool(v)
+        else:
+            out[k] = [int(x) for x in v]
+    return out
+
+
+def _compute_mapping(args: Tuple[int, int]) -> Tuple[int, int, Optional[Dict[str, Any]]]:
+    """Worker: compute match_nodes_ged for one (mat, proto) pair and return
+    the serialized result dict (or None on exception)."""
+    mat_idx, proto_idx = args
+    try:
+        if _g_symmetric:
+            r = match_nodes_ged_symmetric(
+                _g_graphs[mat_idx], _g_graphs[proto_idx],
+                brute_force_limit=_g_brute_force_limit,
+            )
+        else:
+            r = match_nodes_ged(
+                _g_graphs[mat_idx], _g_graphs[proto_idx],
+                fps_a=_g_fps[mat_idx],    fps_b=_g_fps[proto_idx],
+                edges_a=_g_edges[mat_idx], edges_b=_g_edges[proto_idx],
+                nn_a=_g_nn[mat_idx],       nn_b=_g_nn[proto_idx],
+                brute_force_limit=_g_brute_force_limit,
+            )
+        return (mat_idx, proto_idx, _serialize_mapping_result(r))
+    except Exception:
+        return (mat_idx, proto_idx, None)
+
+
+# ---------------------------------------------------------------------------
 # Greedy clustering
 # ---------------------------------------------------------------------------
 
@@ -386,6 +447,72 @@ def _greedy_cluster(
 
 
 # ---------------------------------------------------------------------------
+# Stoichiometry filter
+# ---------------------------------------------------------------------------
+
+def _parse_ratio(ratio_str: str) -> Optional[List[int]]:
+    """Parse ``--ratio`` strings into a sorted-amounts list, or None.
+
+    Accepts:
+      - Colon-separated ("1:2:4", "2:1:4")  — multi-digit-safe, order-agnostic.
+      - Digit-only           ("214", "113") — single-digit only, sorted.
+
+    Returns the SORTED list of amounts (e.g. "214" → [1,2,4]), suitable for
+    direct comparison against ``Composition.reduced_composition`` amount lists.
+    """
+    s = ratio_str.strip()
+    if not s:
+        return None
+    if ":" in s:
+        try:
+            return sorted(int(p) for p in s.split(":"))
+        except ValueError:
+            return None
+    if s.isdigit():
+        return sorted(int(c) for c in s)
+    return None
+
+
+def _matches_ratio(stem: str, target: List[int]) -> bool:
+    """True iff the stem's reduced composition has element amounts == target.
+
+    `target` should be the sorted-amounts list (from `_parse_ratio`).
+    Mirrors the filter logic in build_graphs_v4_113 / build_graphs_v4_214.
+    """
+    formula = stem.split("_mp-")[0]
+    try:
+        from pymatgen.core import Composition
+        comp = Composition(formula).reduced_composition
+        amounts = sorted(int(round(comp[el])) for el in comp.elements)
+        return amounts == target
+    except Exception:
+        return False
+
+
+def _normalize_element_symbol(s: str) -> str:
+    """'o' → 'O', 'fe' → 'Fe'.  Single-letter symbols upper-cased; two-letter
+    symbols get title-case so user input doesn't have to match Pymatgen's
+    canonical capitalisation."""
+    s = s.strip()
+    if not s:
+        return s
+    return s[0].upper() + s[1:].lower() if len(s) > 1 else s.upper()
+
+
+def _matches_element(stem: str, element: str) -> bool:
+    """True iff the stem's composition contains `element` (case-insensitive
+    after normalisation).  Uses pymatgen so multi-character symbols (Fe, Cl)
+    aren't accidentally matched as substrings of other element names."""
+    formula = stem.split("_mp-")[0]
+    try:
+        from pymatgen.core import Composition
+        comp = Composition(formula)
+        return any(el.symbol == element for el in comp.elements)
+    except Exception:
+        return False
+
+
+# ---------------------------------------------------------------------------
 # Main driver
 # ---------------------------------------------------------------------------
 
@@ -398,6 +525,8 @@ def run_clustering(
     limit:             int   = 0,
     brute_force_limit: int   = 7,
     symmetric:         bool  = False,
+    ratio:             Optional[str] = None,
+    element:           Optional[str] = None,
 ) -> None:
     t0 = time.time()
 
@@ -406,6 +535,30 @@ def run_clustering(
         p for p in graph_dir.glob("*.json")
         if not any(p.stem.startswith(pref) for pref in _SKIP_PREFIXES)
     )
+
+    # Stoichiometry filter (e.g. --ratio 214 to keep only A2BX4 compounds).
+    if ratio is not None:
+        target = _parse_ratio(ratio)
+        if target is None:
+            raise ValueError(
+                f"Could not parse --ratio {ratio!r}.  Use either digit-only "
+                f"('214') or colon-separated ('2:1:4') form."
+            )
+        before = len(graph_paths)
+        graph_paths = [p for p in graph_paths if _matches_ratio(p.stem, target)]
+        print(f"Stoichiometry filter (ratio={ratio} → {target}): "
+              f"{len(graph_paths)}/{before} graphs match", flush=True)
+
+    # Element filter (e.g. --element O to keep only oxygen-containing materials).
+    if element is not None:
+        sym = _normalize_element_symbol(element)
+        if not sym:
+            raise ValueError(f"Could not parse --element {element!r}.")
+        before = len(graph_paths)
+        graph_paths = [p for p in graph_paths if _matches_element(p.stem, sym)]
+        print(f"Element filter (element={sym}): "
+              f"{len(graph_paths)}/{before} graphs match", flush=True)
+
     if limit > 0:
         graph_paths = graph_paths[:limit]
     if not graph_paths:
@@ -499,6 +652,30 @@ def run_clustering(
         n_families = len(family_protos)
         print(f"→ {n_families} families  ({time.time()-t1:.1f}s)", flush=True)
 
+        # ── Mapping post-pass ──────────────────────────────────────────────
+        # Re-run match_nodes_ged for each (member, prototype) pair to
+        # capture the full node_map.  Stored alongside each family in the
+        # output JSON so the L2 sub-cluster script can compose member-to-
+        # member alignments through the parent without redoing the L1 work.
+        # Members that ARE the prototype get an identity placeholder.
+        t_map = time.time()
+        pairs: List[Tuple[int, int]] = [
+            (i, family_protos[family_map[i]])
+            for i in all_indices
+            if family_map[i] >= 0 and i != family_protos[family_map[i]]
+        ]
+        print(f"\nMapping post-pass: {len(pairs)} (member, prototype) pairs ...",
+              flush=True)
+        mapping_lookup: Dict[Tuple[int, int], Optional[Dict[str, Any]]] = {}
+        if pairs:
+            if pool_ctx is not None:
+                results = pool_ctx.map(_compute_mapping, pairs)
+            else:
+                results = [_compute_mapping(p) for p in pairs]
+            for mat_idx, proto_idx, ser in results:
+                mapping_lookup[(mat_idx, proto_idx)] = ser
+        print(f"Mapping post-pass done  ({time.time()-t_map:.1f}s)", flush=True)
+
     finally:
         if pool_ctx is not None:
             pool_ctx.close()
@@ -542,12 +719,46 @@ def run_clustering(
     for fid in range(n_families):
         members = [i for i in all_indices if family_map[i] == fid]
         members_sorted = sorted(members, key=lambda i: distortion[i])
+        proto_idx = family_protos[fid]
+
+        # Per-member parent→member mapping.  Prototype maps to itself with
+        # an identity node_map (needed by the L2 composer so the prototype
+        # is also a valid sub-cluster seed).
+        member_mappings: Dict[str, Any] = {}
+        for i in members_sorted:
+            if i == proto_idx:
+                proto_node_ids = [int(n["id"]) for n in graphs[i]["nodes"]]
+                member_mappings[stems[i]] = {
+                    "node_map": {str(nid): [nid] for nid in proto_node_ids},
+                    "vacancy_a": [], "vacancy_b": [],
+                    "unassigned_a": [], "unassigned_b": [],
+                    "unforced_vacancy_a": [], "unforced_vacancy_b": [],
+                    "unforced_unassigned_a": [], "unforced_unassigned_b": [],
+                    "cost": 0.0, "cross_fu_k": 1, "role_swapped": False,
+                }
+            else:
+                ser = mapping_lookup.get((i, proto_idx))
+                # ser may be None if the worker raised; emit an empty
+                # placeholder so the JSON shape stays consistent and the
+                # L2 script can flag/skip the member explicitly.
+                member_mappings[stems[i]] = ser if ser is not None else {
+                    "node_map": {},
+                    "vacancy_a": [], "vacancy_b": [],
+                    "unassigned_a": [], "unassigned_b": [],
+                    "unforced_vacancy_a": [], "unforced_vacancy_b": [],
+                    "unforced_unassigned_a": [], "unforced_unassigned_b": [],
+                    "cost": float("inf"), "cross_fu_k": 1,
+                    "role_swapped": False,
+                    "error": "mapping_post_pass_failed",
+                }
+
         families_out.append({
             "id":                fid,
             "n":                 len(members),
-            "prototype":         stems[family_protos[fid]],
-            "prototype_formula": formulas[family_protos[fid]],
+            "prototype":         stems[proto_idx],
+            "prototype_formula": formulas[proto_idx],
             "members":           [stems[i] for i in members_sorted],
+            "member_mappings":   member_mappings,
         })
 
     summary = {
@@ -605,6 +816,18 @@ def main() -> None:
                         help="Use match_nodes_ged_symmetric (averages A→B and "
                              "B→A; ~2× slower but more defensive against "
                              "direction-asymmetric edge cases).")
+    parser.add_argument("--ratio",        type=str, default=None,
+                        help="Restrict to graphs whose reduced composition "
+                             "matches the given stoichiometry ratio.  Accepts "
+                             "digit-only ('113' = ABX3, '214' = A2BX4) or "
+                             "colon-separated ('1:2:4', '2:1:4') form.  "
+                             "Filter is order-agnostic — '214' and '124' "
+                             "both match any 1:2:4 reduced composition.")
+    parser.add_argument("--element",      type=str, default=None,
+                        help="Restrict to graphs whose composition contains "
+                             "the given element (e.g. --element O for all "
+                             "oxygen-containing materials).  Case-insensitive. "
+                             "Composes with --ratio.")
     args = parser.parse_args()
 
     graph_dir = Path(args.graph_dir)
@@ -620,6 +843,8 @@ def main() -> None:
         limit=args.limit,
         brute_force_limit=args.brute_force_limit,
         symmetric=args.symmetric,
+        ratio=args.ratio,
+        element=args.element,
     )
 
 
