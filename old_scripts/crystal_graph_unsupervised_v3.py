@@ -69,7 +69,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from crystal_graph_comparison import compare_graphs, compare_node_match
-from crystal_graph_matching import compute_fingerprints
+from scripts.crystal_graph_matching import compute_fingerprints
 
 # ---------------------------------------------------------------------------
 # Distortion metric

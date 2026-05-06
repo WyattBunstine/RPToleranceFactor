@@ -35,7 +35,7 @@ import tempfile
 import traceback
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 
 # ---------------------------------------------------------------------------
@@ -366,6 +366,76 @@ def _run_graph_build_test(
     }
 
 
+class TestResult:
+    """Unified result wrapper for v1 dict and v2 Mapping outputs.
+
+    Both v1 (`crystal_graph_ged.match_nodes_ged`) and v2
+    (`Mapping.to_v1_result`) return the same v1-shape dict, so this
+    class is a thin pass-through that gives assertion code a stable,
+    typed entry point and a single place to evolve later as v2 adds
+    semantics v1 lacks (e.g. structured vacancy categories).
+    """
+
+    def __init__(self, data: Dict[str, Any]):
+        self._data = data
+
+    def __getitem__(self, key: str) -> Any:
+        return self._data[key]
+
+    def get(self, key: str, default: Any = None) -> Any:
+        return self._data.get(key, default)
+
+    def __contains__(self, key: str) -> bool:
+        return key in self._data
+
+    @property
+    def raw(self) -> Dict[str, Any]:
+        return self._data
+
+
+def _run_ged_match(
+    ga: Dict[str, Any],
+    gb: Dict[str, Any],
+    optimizer_tag: str,
+    cost_fn_tag: str,
+    optimizer_params: Dict[str, Any],
+    cost_function_params: Dict[str, Any],
+) -> TestResult:
+    """Dispatch to v1 or v2 based on optimizer tag, return TestResult.
+
+    optimizer_tag == "v1" runs the legacy script (cost_fn_tag is
+    ignored).  Any other tag is looked up in v2's registries.
+    """
+    if optimizer_tag == "v1":
+        from crystal_graph_ged import match_nodes_ged
+        return TestResult(match_nodes_ged(ga, gb))
+
+    from crystal_graph_ged_v2 import (
+        OPTIMIZER_REGISTRY, COST_FUNCTION_REGISTRY, match_nodes_ged_v2,
+    )
+    # Side-effect import: registers v2 cost functions (TopologyCost, ...)
+    # into COST_FUNCTION_REGISTRY at import time.
+    import crystal_graph_costs_v2  # noqa: F401
+    if optimizer_tag not in OPTIMIZER_REGISTRY:
+        raise KeyError(
+            f"Unknown optimizer tag: '{optimizer_tag}' "
+            f"(available: {list(OPTIMIZER_REGISTRY)})"
+        )
+    if cost_fn_tag not in COST_FUNCTION_REGISTRY:
+        raise KeyError(
+            f"Unknown cost_function tag: '{cost_fn_tag}' "
+            f"(available: {list(COST_FUNCTION_REGISTRY)})"
+        )
+    mapping = match_nodes_ged_v2(
+        ga, gb,
+        optimizer_cls=OPTIMIZER_REGISTRY[optimizer_tag],
+        cost_fn_cls=COST_FUNCTION_REGISTRY[cost_fn_tag],
+        optimizer_params=optimizer_params,
+        cost_function_params=cost_function_params,
+    )
+    return TestResult(mapping.to_v1_result())
+
+
 def _run_ged_test(
     test: Dict[str, Any],
     repo_root: Path,
@@ -374,14 +444,21 @@ def _run_ged_test(
     builder_module: str,
     rebuild: bool,
 ) -> Dict[str, Any]:
-    from crystal_graph_ged import match_nodes_ged, score_mapping
+    from crystal_graph_ged import score_mapping
     from crystal_graph_costs import (
         BondLengthCost, BondAngleCost, PolyhedralCost,
     )
 
+    optimizer_tag        = test.get("optimizer", "v1")
+    cost_fn_tag          = test.get("cost_function", "v1")
+    optimizer_params     = test.get("optimizer_params", {}) or {}
+    cost_function_params = test.get("cost_function_params", {}) or {}
+
     result_base = {
         "id": test["id"], "type": "ged",
         "description": test.get("description", ""),
+        "optimizer": optimizer_tag,
+        "cost_function": cost_fn_tag,
     }
 
     for side in ("a", "b"):
@@ -403,12 +480,15 @@ def _run_ged_test(
             ga = json.load(f)
         with open(path_b) as f:
             gb = json.load(f)
-        ged = match_nodes_ged(ga, gb)
+        ged = _run_ged_match(
+            ga, gb, optimizer_tag, cost_fn_tag,
+            optimizer_params, cost_function_params,
+        )
     except Exception as exc:
         import traceback as _tb
         return {
             **result_base, "status": "ERROR",
-            "error_message": f"match_nodes_ged failed: {exc}\n{_tb.format_exc()}",
+            "error_message": f"GED match failed: {exc}\n{_tb.format_exc()}",
             "assertions": [],
         }
 
@@ -418,11 +498,14 @@ def _run_ged_test(
     is_symmetric: Optional[bool] = None
     asym_error: Optional[str] = None
     try:
-        ged_rev = match_nodes_ged(gb, ga)
+        ged_rev = _run_ged_match(
+            gb, ga, optimizer_tag, cost_fn_tag,
+            optimizer_params, cost_function_params,
+        )
         cost_reverse = float(ged_rev["cost"])
         is_symmetric = abs(float(ged["cost"]) - cost_reverse) < 1e-4
     except Exception as exc:
-        asym_error = f"reverse match_nodes_ged failed: {exc}"
+        asym_error = f"reverse GED match failed: {exc}"
         is_symmetric = False
 
     # Element lookups for structural-mapping assertions.
@@ -450,19 +533,19 @@ def _run_ged_test(
     if any(a.get("assert", "") in lens_keys for a in test.get("assertions", [])):
         try:
             score_lookup["cost_bond_length"] = float(
-                score_mapping(ged, ga, gb, BondLengthCost())
+                score_mapping(ged.raw, ga, gb, BondLengthCost())
             )
         except Exception as exc:
             score_lookup["cost_bond_length"] = float("nan")
         try:
             score_lookup["cost_bond_angle"] = float(
-                score_mapping(ged, ga, gb, BondAngleCost())
+                score_mapping(ged.raw, ga, gb, BondAngleCost())
             )
         except Exception as exc:
             score_lookup["cost_bond_angle"] = float("nan")
         try:
             score_lookup["cost_polyhedral"] = float(
-                score_mapping(ged, ga, gb, PolyhedralCost())
+                score_mapping(ged.raw, ga, gb, PolyhedralCost())
             )
         except Exception as exc:
             score_lookup["cost_polyhedral"] = float("nan")
@@ -570,7 +653,7 @@ def _run_comparison_test(
     builder_module: str,
     rebuild: bool,
 ) -> Dict[str, Any]:
-    from crystal_graph_comparison import compare_graph_files
+    from old_scripts.crystal_graph_comparison import compare_graph_files
 
     result_base = {
         "id": test["id"], "type": "comparison",
@@ -899,12 +982,44 @@ def _builder_module_for(builder_str: str) -> str:
     return builder_str  # already a module name
 
 
+def _resolve_test_tags(test: Dict[str, Any]) -> List[str]:
+    """Extract a tag list for *test*, preferring the new ``tags`` field.
+
+    Falls back to the legacy ``category`` field as a single-tag list to
+    keep un-migrated suites running.  An empty/missing tags list maps
+    to ``["uncategorized"]`` so display logic always has a label.
+    """
+    if "tags" in test and test["tags"]:
+        return list(test["tags"])
+    if "category" in test and test["category"]:
+        return [test["category"]]
+    return ["uncategorized"]
+
+
+def _display_category(tags: List[str]) -> str:
+    """Pick the tag used for grouped display.  ``smoke`` is treated as
+    a meta-tag (subset selector) so it never wins; the first remaining
+    tag is the display category."""
+    for t in tags:
+        if t != "smoke":
+            return t
+    return tags[0] if tags else "uncategorized"
+
+
 def run_suite(
     suite_path: Path,
     repo_root: Path,
     rebuild: bool = False,
+    filter_tags: Optional[Set[str]] = None,
+    exclude_tags: Optional[Set[str]] = None,
 ) -> Dict[str, Any]:
-    """Run all tests in one JSON suite file.  Returns a result dict."""
+    """Run all tests in one JSON suite file.  Returns a result dict.
+
+    ``filter_tags`` (AND intersection): when non-empty, only tests whose
+    tag set is a superset of *filter_tags* are run.
+    ``exclude_tags`` (OR): tests with ANY of these tags are skipped.
+    Excluded tests are not counted in totals.
+    """
     try:
         suite = json.loads(suite_path.read_text())
     except Exception as exc:
@@ -922,16 +1037,27 @@ def run_suite(
     builder   = suite.get("graph_builder", "crystal_graph_v4")
     builder_module = _builder_module_for(builder)
 
+    n_skipped = 0
     test_results = []
     for test in suite.get("tests", []):
+        tags = _resolve_test_tags(test)
+        tag_set = set(tags)
+        if filter_tags and not filter_tags.issubset(tag_set):
+            n_skipped += 1
+            continue
+        if exclude_tags and exclude_tags & tag_set:
+            n_skipped += 1
+            continue
+
         test_type = test.get("type", "")
-        category  = test.get("category", "uncategorized")
+        category  = _display_category(tags)
         runner    = _TEST_RUNNERS.get(test_type)
         if runner is None:
             result = {
                 "id": test.get("id", "?"),
                 "type": test_type,
                 "category": category,
+                "tags": tags,
                 "description": test.get("description", ""),
                 "status": "ERROR",
                 "error_message": f"Unknown test type: '{test_type}'",
@@ -953,8 +1079,9 @@ def run_suite(
                     "error_message": traceback.format_exc(),
                     "assertions": [],
                 }
-            # Stamp category onto the result so summaries can group by it.
+            # Stamp category + tags onto the result so summaries can group by them.
             result["category"] = category
+            result["tags"] = tags
         test_results.append(result)
 
     n_passed = sum(1 for r in test_results if r["status"] == "PASS")
@@ -990,6 +1117,9 @@ def run_suite(
         "n_passed": n_passed,
         "n_failed": n_failed,
         "n_error":  n_error,
+        "n_skipped": n_skipped,
+        "filter_tags": sorted(filter_tags) if filter_tags else [],
+        "exclude_tags": sorted(exclude_tags) if exclude_tags else [],
         "n_symmetric":      n_symmetric,
         "n_asymmetric":     n_asymmetric,
         "n_sym_applicable": n_sym_applicable,
@@ -1022,6 +1152,16 @@ def print_suite_summary(suite_result: Dict[str, Any]) -> None:
     print(f"{sym} Suite: {suite_result['description']}")
     print(f"  File: {suite_result['file']}")
     print(f"  Builder: {suite_result.get('graph_builder', '?')}")
+    n_skipped = suite_result.get("n_skipped", 0)
+    filter_tags = suite_result.get("filter_tags", [])
+    exclude_tags = suite_result.get("exclude_tags", [])
+    if filter_tags or exclude_tags:
+        bits = []
+        if filter_tags:
+            bits.append(f"include={filter_tags} (AND)")
+        if exclude_tags:
+            bits.append(f"exclude={exclude_tags} (OR)")
+        print(f"  Filter: {'  '.join(bits)}; skipped {n_skipped} test(s)")
     print(f"  Results: {n_p}/{total} passed, {n_f} failed, {n_e} error")
     if n_sym_app:
         print(f"  Symmetry: {n_sym}/{n_sym_app} symmetric"
@@ -1208,7 +1348,30 @@ def main() -> None:
         "--repo-root", metavar="DIR", default=".",
         help="Repo root for resolving relative paths (default: current dir).",
     )
+    parser.add_argument(
+        "--tag", action="append", default=[], metavar="TAG",
+        help="Filter tests by tag.  Repeat for AND intersection — only "
+             "tests whose tag set contains every --tag value run.  "
+             "Default when omitted: {core}.  Pass --tag explicitly to "
+             "override (e.g. --tag v2 runs every v2 test regardless of "
+             "core).  Tags listed here are also stripped from the "
+             "default exclude set, so --tag slow runs slow tests.",
+    )
+    parser.add_argument(
+        "--exclude-tag", action="append", default=[], metavar="TAG",
+        help="Skip tests carrying any of these tags (OR).  Default when "
+             "omitted: {slow}.  Pass --exclude-tag explicitly to override "
+             "(e.g. --exclude-tag formula_unit excludes only that tag and "
+             "no longer auto-excludes slow).",
+    )
     args = parser.parse_args()
+    filter_tags: Set[str] = set(args.tag) if args.tag else {"core"}
+    exclude_tags: Set[str] = (
+        set(args.exclude_tag) if args.exclude_tag else {"slow"}
+    )
+    # Explicit include trumps default exclude — passing --tag slow runs
+    # slow tests rather than auto-excluding them.
+    exclude_tags -= filter_tags
 
     repo_root = Path(args.repo_root).resolve()
 
@@ -1223,6 +1386,8 @@ def main() -> None:
             suite_path=suite_path,
             repo_root=repo_root,
             rebuild=args.rebuild_graphs,
+            filter_tags=filter_tags,
+            exclude_tags=exclude_tags,
         )
         all_results.append(result)
         print_suite_summary(result)

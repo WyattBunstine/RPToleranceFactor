@@ -4,7 +4,7 @@
   "graph_builder": "crystal_graph_v4",
   "description": "GED node-matching tests (match_nodes_ged) \u2014 cost, unassigned counts",
   "cif_root": "data/cifs",
-  "graph_cache_dir": "unit_tests/graphs",
+  "graph_cache_dir": "data/unit_tests/graphs",
   "tests": [
     {
       "id": "srtio3_vs_srtio3_ged",
@@ -46,12 +46,7 @@
           "value": 0.0
         }
       ],
-      "tags": [
-        "core",
-        "smoke"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "srtio3_vs_batio3_ged",
@@ -93,11 +88,7 @@
           "value": 0.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "srtio3_vs_ktao3_ged",
@@ -139,11 +130,7 @@
           "value": 0.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "srtio3_vs_lanio3_ged",
@@ -185,11 +172,7 @@
           "value": 0.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "srtio3_vs_laalO3_ged",
@@ -231,11 +214,7 @@
           "value": 0.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "mgo_vs_nacl_ged",
@@ -277,11 +256,7 @@
           "value": 0.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "tio2_vs_sno2_ged",
@@ -323,11 +298,7 @@
           "value": 0.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "mgtio3_vs_tifeo3_ged",
@@ -357,11 +328,7 @@
           "value": 0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "tifeo3_vs_ticoo3_ged",
@@ -391,11 +358,7 @@
           "value": 0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "srtio3_vs_tifeo3_ged",
@@ -419,11 +382,7 @@
           "value": 100
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "mgtio3_vs_srtio3_ged",
@@ -447,11 +406,7 @@
           "value": 100
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "reo3_vs_batio3_site_mapping",
@@ -480,11 +435,7 @@
           "description": "Ba (A-site) has no counterpart in ReO3 \u2014 all Ba nodes must be in vacancy_b"
         }
       ],
-      "tags": [
-        "defect"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "defect"
     },
     {
       "id": "reo3_vs_ktao3_site_mapping",
@@ -513,11 +464,7 @@
           "description": "K (A-site) has no counterpart in ReO3 \u2014 must be in vacancy_b"
         }
       ],
-      "tags": [
-        "defect"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "defect"
     },
     {
       "id": "reo3_vs_lanio3_site_mapping",
@@ -546,11 +493,7 @@
           "description": "La (A-site) has no counterpart in ReO3 \u2014 all La nodes must be in vacancy_b"
         }
       ],
-      "tags": [
-        "defect"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "defect"
     },
     {
       "id": "reo3_vs_laalO3_site_mapping",
@@ -579,11 +522,7 @@
           "description": "La (A-site) has no counterpart in ReO3 \u2014 all La nodes must be in vacancy_b"
         }
       ],
-      "tags": [
-        "defect"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "defect"
     },
     {
       "id": "babio3_vs_ba3pbo_ged",
@@ -625,11 +564,7 @@
           "value": 0.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "babio3_vs_batio3_ged",
@@ -671,11 +606,7 @@
           "value": 0.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "ba3pbo_vs_ba3sno_ged",
@@ -717,11 +648,7 @@
           "value": 0.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "kcl_vs_nacl_ged",
@@ -763,11 +690,7 @@
           "value": 0.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "lif_vs_nacl_ged",
@@ -809,11 +732,7 @@
           "value": 0.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "cao_vs_mgo_ged",
@@ -855,11 +774,7 @@
           "value": 0.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "nio_vs_mgo_ged",
@@ -901,11 +816,7 @@
           "value": 0.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "zno_vs_gan_ged",
@@ -947,11 +858,7 @@
           "value": 0.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "aln_vs_gan_ged",
@@ -993,11 +900,7 @@
           "value": 0.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "beo_vs_zno_ged",
@@ -1027,11 +930,7 @@
           "value": 0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "gaas_vs_inp_ged",
@@ -1073,11 +972,7 @@
           "value": 0.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "zns_vs_gaas_ged",
@@ -1119,11 +1014,7 @@
           "value": 0.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "ruo2_vs_tio2_ged",
@@ -1165,11 +1056,7 @@
           "value": 0.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "caf2_vs_zro2_ged",
@@ -1211,11 +1098,7 @@
           "value": 0.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "tho2_vs_caf2_ged",
@@ -1257,11 +1140,7 @@
           "value": 0.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "catio3_vs_srtio3_ged",
@@ -1303,11 +1182,7 @@
           "value": 0.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "knbo3_vs_srtio3_ged",
@@ -1349,11 +1224,7 @@
           "value": 0.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "lacoo3_vs_lanio3_ged",
@@ -1395,11 +1266,7 @@
           "value": 0.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "cr2o3_vs_al2o3_ged",
@@ -1441,11 +1308,7 @@
           "value": 0.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "fe2o3_vs_al2o3_ged",
@@ -1487,11 +1350,7 @@
           "value": 0.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "mgcr2o4_vs_mgal2o4_ged",
@@ -1533,11 +1392,7 @@
           "value": 0.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "y2ti2o7_vs_nd2zr2o7_ged",
@@ -1579,11 +1434,7 @@
           "value": 0.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "pr2zr2o7_vs_nd2zr2o7_ged",
@@ -1625,11 +1476,7 @@
           "value": 0.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "nacl_vs_cscl_ged",
@@ -1647,11 +1494,7 @@
           "value": 6.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "nacl_vs_zno_ged",
@@ -1669,11 +1512,7 @@
           "value": 6.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "zno_vs_zns_ged",
@@ -1715,11 +1554,7 @@
           "value": 0.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "tio2_vs_caf2_ged",
@@ -1737,11 +1572,7 @@
           "value": 6.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "al2o3_vs_srtio3_ged",
@@ -1765,11 +1596,7 @@
           "value": 100
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "mg2sio4_vs_mgal2o4_ged",
@@ -1787,11 +1614,7 @@
           "value": 1.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "baco3_vs_ba3pbo_ged",
@@ -1802,7 +1625,7 @@
       "cif_a": "BaCO3_mp-4559.cif",
       "cif_b": "Ba3PbO_mp-29242.cif",
       "assertions": [
-        {
+                {
           "assert": "cost",
           "description": "Carbonate vs perovskite, no shared cation: different topology and chemistry \u2014 cost must reflect mismatch",
           "op": "ge",
@@ -1815,11 +1638,7 @@
           "value": 100
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "baco3_vs_babio3_ged",
@@ -1830,7 +1649,7 @@
       "cif_a": "BaCO3_mp-4559.cif",
       "cif_b": "BaBiO3_mp-545783.cif",
       "assertions": [
-        {
+                {
           "assert": "cost",
           "description": "Carbonate vs perovskite, no shared cation: different topology and chemistry \u2014 cost must reflect mismatch",
           "op": "ge",
@@ -1843,11 +1662,7 @@
           "value": 100
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "baco3_vs_srtio3_ged",
@@ -1871,16 +1686,12 @@
           "value": 100
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "b2h4c_vs_al2znse4_spinel",
       "type": "ged",
-      "description": "B2H4C (carborane B/C cluster compound, B-B + B-H + B-C + C-H covalent bonds, 56 atoms) vs Al2ZnSe4_mp-1104860 (spinel polymorph, 14 atoms, Al(CN=6) octahedra + Zn(CN=4) tetrahedra + Se anions).  Originally discovered as a false positive in the 200-material clustering \u2014 the role-swap fired because B2H4C had inconsistent role labels (B='neutral', C='anion', H='cation') from pymatgen's composition_guess fallback, while Al2ZnSe4's clean cation/anion split let the matcher find a cohort-averaged near-zero alignment.  Fixed via the 'composition_guess_inconsistent_neutralised' rule in the v4 graph builder (`_determine_ion_roles`): when composition_guess produces a mix of neutral and ionic atoms in the same compound, all atoms get re-labelled neutral, which prevents the role-swap from finding a target alignment.  Test asserts non-trivial cost across all four lenses to enforce that the fix stays in place.",
+      "description": "B2H4C (carborane B/C cluster compound, B-B + B-H + B-C + C-H covalent bonds, 56 atoms) vs Al2ZnSe4_mp-1104860 (spinel polymorph, 14 atoms, Al(CN=6) octahedra + Zn(CN=4) tetrahedra + Se anions).  Originally discovered as a false positive in the 200-material clustering — the role-swap fired because B2H4C had inconsistent role labels (B='neutral', C='anion', H='cation') from pymatgen's composition_guess fallback, while Al2ZnSe4's clean cation/anion split let the matcher find a cohort-averaged near-zero alignment.  Fixed via the 'composition_guess_inconsistent_neutralised' rule in the v4 graph builder (`_determine_ion_roles`): when composition_guess produces a mix of neutral and ionic atoms in the same compound, all atoms get re-labelled neutral, which prevents the role-swap from finding a target alignment.  Test asserts non-trivial cost across all four lenses to enforce that the fix stays in place.",
       "graph_a": "B2H4C_mp-29655",
       "graph_b": "Al2ZnSe4_mp-1104860",
       "cif_a": "B2H4C_mp-29655.cif",
@@ -1888,7 +1699,7 @@
       "assertions": [
         {
           "assert": "cost",
-          "description": "Carborane cluster vs spinel \u2014 topology cost must reflect the topology mismatch.  Bound: at least 1.0 (well above clustering threshold of 0.1).  Pre-fix this scored 0.0.",
+          "description": "Carborane cluster vs spinel — topology cost must reflect the topology mismatch.  Bound: at least 1.0 (well above clustering threshold of 0.1).  Pre-fix this scored 0.0.",
           "op": "ge",
           "value": 1.0
         },
@@ -1906,21 +1717,17 @@
         },
         {
           "assert": "cost_bond_length",
-          "description": "Bond lengths differ by ~2\u00d7 (B-H ~1.1 \u00c5 vs Al-Se ~2.5 \u00c5)",
+          "description": "Bond lengths differ by ~2× (B-H ~1.1 Å vs Al-Se ~2.5 Å)",
           "op": "ge",
           "value": 1.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "baal2te4_vs_mgal2o4_spinel",
       "type": "ged",
-      "description": "BaAl2Te4 (P4/nbm tetragonal layered structure with Ba at 8-coordinate sites + Al at tetrahedral sites + Te bridging) vs MgAl2O4 (Fd-3m canonical normal spinel).  Discovered as a false positive in the 200-material 214-stoichiometry clustering: BaAl2Te4 is in Family 2 alongside genuine spinels.  The mapping is Ba(CN=8)\u2192Al(CN=6), Al(CN=4)\u2192Mg(CN=4) and Al(CN=4)\u2192Al(CN=6) [cross-CN fallback], Te\u2192O.  TopologyCost gives 0.0 because the cohort averaging across cross-CN matches: cohort A's mix of Ba(8 bonds) and Al(4 bonds) averages to 6 per cohort member, accidentally matching Al(spinel)'s CN=6.  The shell-walk rule's NN admissions absorb the per-key surpluses (cohort wants more O bonds, spinel has more O atoms in next-shell NN).  Bond-length, bond-angle, and polyhedral lenses all flag the mismatch (Ba CN=8 in tetragonal layers \u2260 spinel's 3D framework).  Test asserts non-trivial cost; **expected to FAIL until a deeper cohort-validation fix lands** (this test is an aspirational regression-direction guard).",
+      "description": "BaAl2Te4 (P4/nbm tetragonal layered structure with Ba at 8-coordinate sites + Al at tetrahedral sites + Te bridging) vs MgAl2O4 (Fd-3m canonical normal spinel).  Discovered as a false positive in the 200-material 214-stoichiometry clustering: BaAl2Te4 is in Family 2 alongside genuine spinels.  The mapping is Ba(CN=8)→Al(CN=6), Al(CN=4)→Mg(CN=4) and Al(CN=4)→Al(CN=6) [cross-CN fallback], Te→O.  TopologyCost gives 0.0 because the cohort averaging across cross-CN matches: cohort A's mix of Ba(8 bonds) and Al(4 bonds) averages to 6 per cohort member, accidentally matching Al(spinel)'s CN=6.  The shell-walk rule's NN admissions absorb the per-key surpluses (cohort wants more O bonds, spinel has more O atoms in next-shell NN).  Bond-length, bond-angle, and polyhedral lenses all flag the mismatch (Ba CN=8 in tetragonal layers ≠ spinel's 3D framework).  Test asserts non-trivial cost; **expected to FAIL until a deeper cohort-validation fix lands** (this test is an aspirational regression-direction guard).",
       "graph_a": "Ba(AlTe2)2_mp-28505",
       "graph_b": "MgAl2O4_mp-3536",
       "cif_a": "Ba(AlTe2)2_mp-28505.cif",
@@ -1928,7 +1735,7 @@
       "assertions": [
         {
           "assert": "cost",
-          "description": "Tetragonal layered Ba(8)+Al(4) vs cubic spinel Al(6)+Mg(4) \u2014 must charge real topological mismatch (currently fails: cost=0)",
+          "description": "Tetragonal layered Ba(8)+Al(4) vs cubic spinel Al(6)+Mg(4) — must charge real topological mismatch (currently fails: cost=0)",
           "op": "ge",
           "value": 0.5
         },
@@ -1946,21 +1753,17 @@
         },
         {
           "assert": "cost_bond_length",
-          "description": "Al-Te (~2.7 \u00c5) vs Mg/Al-O (~1.9-2.0 \u00c5) \u2014 large length deviation",
+          "description": "Al-Te (~2.7 Å) vs Mg/Al-O (~1.9-2.0 Å) — large length deviation",
           "op": "ge",
           "value": 1.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "capt2o4_vs_mgal2o4_spinel",
       "type": "ged",
-      "description": "CaPt2O4 (P4_2/mmc tetragonal with Ca at 8-coordinate sites + Pt in square-planar coordination) vs MgAl2O4 spinel.  This is the most striking false positive in Family 2 \u2014 CaPt2O4 doesn't even have spinel-compatible cation CNs (Ca CN=8 vs spinel A-site CN=4 or B-site CN=6; Pt is 4-coordinate but in SQUARE-PLANAR geometry, fundamentally different from tetrahedral or octahedral).  The structure is essentially layered/intercalation-like.  Despite being 'pretty far off from a spinel' on inspection, the algorithm finds a cohort-consistent zero-cost alignment via cross-CN fallback: Ca(CN=8)\u2192Al(CN=6), Pt distributed as Pt\u2192Mg and Pt\u2192Al.  TopologyCost gives 0.0 because cohort averaging (8+4)/2=6 accidentally matches spinel's CN=6 for B-site.  All non-topology lenses correctly flag the mismatch.  **Expected to FAIL** as a regression-direction guard.",
+      "description": "CaPt2O4 (P4_2/mmc tetragonal with Ca at 8-coordinate sites + Pt in square-planar coordination) vs MgAl2O4 spinel.  This is the most striking false positive in Family 2 — CaPt2O4 doesn't even have spinel-compatible cation CNs (Ca CN=8 vs spinel A-site CN=4 or B-site CN=6; Pt is 4-coordinate but in SQUARE-PLANAR geometry, fundamentally different from tetrahedral or octahedral).  The structure is essentially layered/intercalation-like.  Despite being 'pretty far off from a spinel' on inspection, the algorithm finds a cohort-consistent zero-cost alignment via cross-CN fallback: Ca(CN=8)→Al(CN=6), Pt distributed as Pt→Mg and Pt→Al.  TopologyCost gives 0.0 because cohort averaging (8+4)/2=6 accidentally matches spinel's CN=6 for B-site.  All non-topology lenses correctly flag the mismatch.  **Expected to FAIL** as a regression-direction guard.",
       "graph_a": "Ca(PtO2)2_mp-558172",
       "graph_b": "MgAl2O4_mp-3536",
       "cif_a": "Ca(PtO2)2_mp-558172.cif",
@@ -1968,7 +1771,7 @@
       "assertions": [
         {
           "assert": "cost",
-          "description": "Square-planar Pt + Ca CN=8 layered vs cubic spinel \u2014 must charge (currently fails: cost=0)",
+          "description": "Square-planar Pt + Ca CN=8 layered vs cubic spinel — must charge (currently fails: cost=0)",
           "op": "ge",
           "value": 0.5
         },
@@ -1985,16 +1788,12 @@
           "value": 1.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "becr2o4_chrysoberyl_vs_mgal2o4_spinel",
       "type": "ged",
-      "description": "BeCr2O4 (Pnma \u2014 chrysoberyl/olivine-derived, isolated BeO4 tetrahedra in HCP-O sublattice + edge-sharing CrO6 octahedra) vs MgAl2O4 (Fd-3m spinel \u2014 corner+edge-sharing octahedra in CCP-O sublattice + tetrahedra).  Same first-shell histograms (Be CN=4=Mg CN=4, Cr CN=6=Al CN=6, O CN=4=O CN=4) but fundamentally different framework topology.  This is a textbook instance of the Mg2SiO4 vs MgAl2O4 failure mode applied to the spinel/olivine pair.  All cation-anion bond counts match per atom; cohort comparison gives perfect equality with no surplus/deficit; TopologyCost gives 0.0 by construction.  Polyhedral connectivity is the distinguishing signal (BeCr2O4 is purely corner-sharing for its tetrahedra; MgAl2O4 has edge-sharing octahedra).  **Expected to FAIL** under TopologyCost; addressing it requires either second-shell features in TopologyCost or moving the unsupervised clustering to a WeightedSum that includes PolyhedralCost.",
+      "description": "BeCr2O4 (Pnma — chrysoberyl/olivine-derived, isolated BeO4 tetrahedra in HCP-O sublattice + edge-sharing CrO6 octahedra) vs MgAl2O4 (Fd-3m spinel — corner+edge-sharing octahedra in CCP-O sublattice + tetrahedra).  Same first-shell histograms (Be CN=4=Mg CN=4, Cr CN=6=Al CN=6, O CN=4=O CN=4) but fundamentally different framework topology.  This is a textbook instance of the Mg2SiO4 vs MgAl2O4 failure mode applied to the spinel/olivine pair.  All cation-anion bond counts match per atom; cohort comparison gives perfect equality with no surplus/deficit; TopologyCost gives 0.0 by construction.  Polyhedral connectivity is the distinguishing signal (BeCr2O4 is purely corner-sharing for its tetrahedra; MgAl2O4 has edge-sharing octahedra).  **Expected to FAIL** under TopologyCost; addressing it requires either second-shell features in TopologyCost or moving the unsupervised clustering to a WeightedSum that includes PolyhedralCost.",
       "graph_a": "BeCr2O4_mp-1193887",
       "graph_b": "MgAl2O4_mp-3536",
       "cif_a": "BeCr2O4_mp-1193887.cif",
@@ -2002,7 +1801,7 @@
       "assertions": [
         {
           "assert": "cost",
-          "description": "Chrysoberyl vs spinel \u2014 same first-shell, different second-shell topology \u2014 must charge (currently fails: cost=0)",
+          "description": "Chrysoberyl vs spinel — same first-shell, different second-shell topology — must charge (currently fails: cost=0)",
           "op": "ge",
           "value": 0.5
         },
@@ -2019,16 +1818,12 @@
           "value": 1.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "ca2geo4_olivine_vs_mgal2o4_spinel",
       "type": "ged",
-      "description": "Ca2GeO4 (Pnma \u2014 olivine structure with isolated GeO4 tetrahedra + Ca octahedra in HCP-O sublattice) vs MgAl2O4 spinel.  Companion to the chrysoberyl test: same Mg2SiO4-vs-MgAl2O4 failure mode.  Identical first-shell histograms (Ca CN=6=Al CN=6, Ge CN=4=Mg CN=4, O CN=4=O CN=4) \u2014 cohort comparison is perfectly balanced \u2014 but the framework topologies (olivine HCP-O isolated tetrahedra vs spinel CCP-O corner+edge-sharing) are textbook-different.  TopologyCost gives 0.0; polyhedral and bond-length lenses correctly flag the mismatch.  **Expected to FAIL** until second-shell signal is in the cost function.",
+      "description": "Ca2GeO4 (Pnma — olivine structure with isolated GeO4 tetrahedra + Ca octahedra in HCP-O sublattice) vs MgAl2O4 spinel.  Companion to the chrysoberyl test: same Mg2SiO4-vs-MgAl2O4 failure mode.  Identical first-shell histograms (Ca CN=6=Al CN=6, Ge CN=4=Mg CN=4, O CN=4=O CN=4) — cohort comparison is perfectly balanced — but the framework topologies (olivine HCP-O isolated tetrahedra vs spinel CCP-O corner+edge-sharing) are textbook-different.  TopologyCost gives 0.0; polyhedral and bond-length lenses correctly flag the mismatch.  **Expected to FAIL** until second-shell signal is in the cost function.",
       "graph_a": "Ca2GeO4_mp-560647",
       "graph_b": "MgAl2O4_mp-3536",
       "cif_a": "Ca2GeO4_mp-560647.cif",
@@ -2036,7 +1831,7 @@
       "assertions": [
         {
           "assert": "cost",
-          "description": "Olivine Ca2GeO4 vs cubic spinel \u2014 first-shell-isomorphic but second-shell-different (currently fails: cost=0)",
+          "description": "Olivine Ca2GeO4 vs cubic spinel — first-shell-isomorphic but second-shell-different (currently fails: cost=0)",
           "op": "ge",
           "value": 0.5
         },
@@ -2053,11 +1848,7 @@
           "value": 1.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "srtio3_self_supercell_112",
@@ -2093,11 +1884,7 @@
           "value": 0.001
         }
       ],
-      "tags": [
-        "cost_lens"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "cost_lens"
     },
     {
       "id": "srtio3_self_supercell_211",
@@ -2133,11 +1920,7 @@
           "value": 0.001
         }
       ],
-      "tags": [
-        "cost_lens"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "cost_lens"
     },
     {
       "id": "srtio3_self_supercell_222",
@@ -2173,11 +1956,7 @@
           "value": 0.001
         }
       ],
-      "tags": [
-        "cost_lens"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "cost_lens"
     },
     {
       "id": "srtio3_supercell_to_supercell",
@@ -2213,11 +1992,7 @@
           "value": 0.001
         }
       ],
-      "tags": [
-        "cost_lens"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "cost_lens"
     },
     {
       "id": "nacl_self_supercell_222",
@@ -2253,11 +2028,7 @@
           "value": 0.001
         }
       ],
-      "tags": [
-        "cost_lens"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "cost_lens"
     },
     {
       "id": "nacl_self_supercell_333",
@@ -2293,11 +2064,7 @@
           "value": 0.001
         }
       ],
-      "tags": [
-        "cost_lens"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "cost_lens"
     },
     {
       "id": "nacl_vs_mgo_rocksalt",
@@ -2333,11 +2100,7 @@
           "value": 0.05
         }
       ],
-      "tags": [
-        "cost_lens"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "cost_lens"
     },
     {
       "id": "nacl_vs_cao_rocksalt",
@@ -2367,11 +2130,7 @@
           "value": 0.001
         }
       ],
-      "tags": [
-        "cost_lens"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "cost_lens"
     },
     {
       "id": "nacl_vs_nio_rocksalt",
@@ -2401,11 +2160,7 @@
           "value": 0.001
         }
       ],
-      "tags": [
-        "cost_lens"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "cost_lens"
     },
     {
       "id": "tifeo3_vs_mgtio3_ilmenite",
@@ -2429,11 +2184,7 @@
           "value": 0.001
         }
       ],
-      "tags": [
-        "cost_lens"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "cost_lens"
     },
     {
       "id": "tifeo3_polymorph_vs_polymorph",
@@ -2457,11 +2208,7 @@
           "value": 0.001
         }
       ],
-      "tags": [
-        "cost_lens"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "cost_lens"
     },
     {
       "id": "tio2_self_supercell_113",
@@ -2497,11 +2244,7 @@
           "value": 0.15
         }
       ],
-      "tags": [
-        "cost_lens"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "cost_lens"
     },
     {
       "id": "tio2_self_supercell_222",
@@ -2537,11 +2280,7 @@
           "value": 0.15
         }
       ],
-      "tags": [
-        "cost_lens"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "cost_lens"
     },
     {
       "id": "sr2tio4_self_supercell_112",
@@ -2577,11 +2316,7 @@
           "value": 0.1
         }
       ],
-      "tags": [
-        "cost_lens"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "cost_lens"
     },
     {
       "id": "sr2tio4_vs_la2nio4_rp_n1",
@@ -2611,11 +2346,7 @@
           "value": 0.05
         }
       ],
-      "tags": [
-        "cost_lens"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "cost_lens"
     },
     {
       "id": "sr2tio4_vs_la2cuo4_rp_n1",
@@ -2645,11 +2376,7 @@
           "value": 0.05
         }
       ],
-      "tags": [
-        "cost_lens"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "cost_lens"
     },
     {
       "id": "sr2tio4_vs_sr2ruo4_rp_n1",
@@ -2679,11 +2406,7 @@
           "value": 0.1
         }
       ],
-      "tags": [
-        "cost_lens"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "cost_lens"
     },
     {
       "id": "al2cuo4_vs_al2znse4",
@@ -2696,7 +2419,7 @@
       "assertions": [
         {
           "assert": "cost",
-          "description": "Spinel vs sphalerite-derived 1:2:4 framework \u2014 topology cost must reflect the CN-mismatch (CN=6 octahedra in spinel vs CN=4 tetrahedra in Al2ZnSe4)",
+          "description": "Spinel vs sphalerite-derived 1:2:4 framework — topology cost must reflect the CN-mismatch (CN=6 octahedra in spinel vs CN=4 tetrahedra in Al2ZnSe4)",
           "op": "ge",
           "value": 0.5
         },
@@ -2714,16 +2437,12 @@
         },
         {
           "assert": "cost_bond_length",
-          "description": "Different B-X bond lengths (Al-O ~1.9 \u00c5 vs Al/Zn-Se ~2.4-2.5 \u00c5) must register",
+          "description": "Different B-X bond lengths (Al-O ~1.9 Å vs Al/Zn-Se ~2.4-2.5 Å) must register",
           "op": "ge",
           "value": 0.5
         }
       ],
-      "tags": [
-        "cost_lens"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "cost_lens"
     },
     {
       "id": "sr2tio4_vs_mgal2o4_spinel",
@@ -2747,11 +2466,7 @@
           "value": 1.0
         }
       ],
-      "tags": [
-        "cost_lens"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "cost_lens"
     },
     {
       "id": "sr2tio4_vs_srtio3_perovskite",
@@ -2775,11 +2490,7 @@
           "value": 1.0
         }
       ],
-      "tags": [
-        "cost_lens"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "cost_lens"
     },
     {
       "id": "ba3pbo_vs_babio3_ged",
@@ -2821,11 +2532,7 @@
           "value": 0.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "alfe3c_vs_ba3pbo_ged",
@@ -2867,11 +2574,7 @@
           "value": 0.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "alfe3c_vs_babio3_ged",
@@ -2913,11 +2616,7 @@
           "value": 0.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "alfe3c_vs_batio3_ged",
@@ -2947,11 +2646,7 @@
           "value": 0.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "alfe3c_vs_srtio3_ged",
@@ -2993,11 +2688,7 @@
           "value": 0.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "alfe3c_vs_lanio3_ged",
@@ -3027,11 +2718,7 @@
           "value": 0.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "cclf3_vs_srtio3_ged",
@@ -3055,11 +2742,7 @@
           "value": 100
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "cclf3_vs_nacl_ged",
@@ -3083,11 +2766,7 @@
           "value": 100
         }
       ],
-      "tags": [
-        "formula_unit"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "formula_unit"
     },
     {
       "id": "cclf3_vs_tio2_ged",
@@ -3111,11 +2790,7 @@
           "value": 100
         }
       ],
-      "tags": [
-        "formula_unit"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "formula_unit"
     },
     {
       "id": "cclf3_vs_mgal2o4_ged",
@@ -3139,11 +2814,7 @@
           "value": 100
         }
       ],
-      "tags": [
-        "formula_unit"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "formula_unit"
     },
     {
       "id": "cclf3_vs_ba2ycu3o7_ged",
@@ -3167,11 +2838,7 @@
           "value": 100
         }
       ],
-      "tags": [
-        "formula_unit"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "formula_unit"
     },
     {
       "id": "cif3_vs_srtio3_ged",
@@ -3195,11 +2862,7 @@
           "value": 100
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "cif3_vs_mgal2o4_ged",
@@ -3223,11 +2886,7 @@
           "value": 100
         }
       ],
-      "tags": [
-        "formula_unit"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "formula_unit"
     },
     {
       "id": "cif3_vs_alfe3c_ged",
@@ -3251,11 +2910,7 @@
           "value": 100
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "cclf3_vs_cif3_ged",
@@ -3285,11 +2940,7 @@
           "value": 0.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "ccl3f_vs_cclf3_ged",
@@ -3319,11 +2970,7 @@
           "value": 0.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "kpse3_vs_srtio3_ged",
@@ -3347,11 +2994,7 @@
           "value": 100
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "kpse3_vs_batio3_ged",
@@ -3375,11 +3018,7 @@
           "value": 100
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "kpse3_vs_lanio3_ged",
@@ -3403,11 +3042,7 @@
           "value": 100
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "kpse3_vs_knbo3_ged",
@@ -3431,11 +3066,7 @@
           "value": 100
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "la3alc_vs_srtio3_ged",
@@ -3465,11 +3096,7 @@
           "value": 0.0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "la3alc_vs_batio3_ged",
@@ -3499,11 +3126,7 @@
           "description": "Perfect-match: all B mapped"
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "la3alc_vs_lanio3_ged",
@@ -3533,11 +3156,7 @@
           "description": "Perfect-match: all B mapped"
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "la3alc_vs_knbo3_ged",
@@ -3567,11 +3186,7 @@
           "description": "Perfect-match: all B mapped"
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "la3alc_vs_catio3_ged",
@@ -3601,11 +3216,7 @@
           "description": "Perfect-match: all B mapped"
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "alco3c_vs_srtio3_ged",
@@ -3635,11 +3246,7 @@
           "description": "Perfect-match: all B mapped"
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "alco3c_vs_batio3_ged",
@@ -3669,11 +3276,7 @@
           "description": "Perfect-match: all B mapped"
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "alco3c_vs_lanio3_ged",
@@ -3703,11 +3306,7 @@
           "description": "Perfect-match: all B mapped"
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "alco3c_vs_knbo3_ged",
@@ -3737,11 +3336,7 @@
           "description": "Perfect-match: all B mapped"
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "alco3c_vs_catio3_ged",
@@ -3771,11 +3366,7 @@
           "description": "Perfect-match: all B mapped"
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "la3alc_vs_tio2_ged",
@@ -3799,11 +3390,7 @@
           "description": "Cost should remain bounded (relaxed to arbitrary high bound)"
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "la3alc_vs_mgal2o4_ged",
@@ -3827,11 +3414,7 @@
           "description": "Cost should remain bounded (relaxed to arbitrary high bound)"
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "la3alc_vs_nacl_ged",
@@ -3855,11 +3438,7 @@
           "description": "Cost should remain bounded (relaxed to arbitrary high bound)"
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "la3alc_vs_kpse3_ged",
@@ -3883,11 +3462,7 @@
           "description": "Cost should remain bounded (relaxed to arbitrary high bound)"
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "alco3c_vs_tio2_ged",
@@ -3911,11 +3486,7 @@
           "description": "Cost should remain bounded (relaxed to arbitrary high bound)"
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "alco3c_vs_mgal2o4_ged",
@@ -3939,11 +3510,7 @@
           "description": "Cost should remain bounded (relaxed to arbitrary high bound)"
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "alco3c_vs_nacl_ged",
@@ -3967,11 +3534,7 @@
           "description": "Cost should remain bounded (relaxed to arbitrary high bound)"
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "alco3c_vs_kpse3_ged",
@@ -3995,11 +3558,7 @@
           "description": "Cost should remain bounded (relaxed to arbitrary high bound)"
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "mnco3_polymorphs_ged",
@@ -4023,11 +3582,7 @@
           "value": 100
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "baal2o4_polymorphs_ged",
@@ -4076,11 +3631,7 @@
           "value": 0
         }
       ],
-      "tags": [
-        "core"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core"
     },
     {
       "id": "kpse3_polymorphs_vs_srtio3_consistency",
@@ -4116,11 +3667,7 @@
           "value": 1000
         }
       ],
-      "tags": [
-        "core_consistency"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core_consistency"
     },
     {
       "id": "kpse3_polymorphs_vs_batio3_consistency",
@@ -4156,11 +3703,7 @@
           "value": 1000
         }
       ],
-      "tags": [
-        "core_consistency"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core_consistency"
     },
     {
       "id": "kpse3_polymorphs_vs_lanio3_consistency",
@@ -4196,11 +3739,7 @@
           "value": 1000
         }
       ],
-      "tags": [
-        "core_consistency"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core_consistency"
     },
     {
       "id": "knbo3_polymorphs_vs_srtio3",
@@ -4240,11 +3779,7 @@
           "value": 0.5
         }
       ],
-      "tags": [
-        "core_consistency"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core_consistency"
     },
     {
       "id": "catio3_polymorphs_vs_srtio3",
@@ -4284,11 +3819,7 @@
           "value": 0.5
         }
       ],
-      "tags": [
-        "core_consistency"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core_consistency"
     },
     {
       "id": "batio3_polymorphs_vs_srtio3",
@@ -4328,11 +3859,7 @@
           "value": 0.05
         }
       ],
-      "tags": [
-        "core_consistency"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core_consistency"
     },
     {
       "id": "lacoo3_polymorphs_vs_lanio3",
@@ -4368,11 +3895,7 @@
           "value": 0.5
         }
       ],
-      "tags": [
-        "core_consistency"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core_consistency"
     },
     {
       "id": "cubic_perovskite_compounds",
@@ -4420,11 +3943,7 @@
           "value": 0.05
         }
       ],
-      "tags": [
-        "core_consistency"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core_consistency"
     },
     {
       "id": "wurtzite_compounds_vs_zno",
@@ -4464,11 +3983,7 @@
           "value": 0.5
         }
       ],
-      "tags": [
-        "core_consistency"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core_consistency"
     },
     {
       "id": "zinc_blende_compounds_vs_gaas",
@@ -4508,11 +4023,7 @@
           "value": 0.5
         }
       ],
-      "tags": [
-        "core_consistency"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core_consistency"
     },
     {
       "id": "rocksalt_compounds_vs_nacl",
@@ -4560,11 +4071,7 @@
           "value": 0.05
         }
       ],
-      "tags": [
-        "core_consistency"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core_consistency"
     },
     {
       "id": "corundum_compounds_vs_al2o3",
@@ -4596,11 +4103,7 @@
           "value": 0.05
         }
       ],
-      "tags": [
-        "core_consistency"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core_consistency"
     },
     {
       "id": "pyrochlore_compounds_vs_nd2zr2o7",
@@ -4632,11 +4135,7 @@
           "value": 0.05
         }
       ],
-      "tags": [
-        "core_consistency"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core_consistency"
     },
     {
       "id": "rutile_compounds_vs_tio2",
@@ -4668,11 +4167,7 @@
           "value": 0.05
         }
       ],
-      "tags": [
-        "core_consistency"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core_consistency"
     },
     {
       "id": "fluorite_compounds_vs_caf2",
@@ -4704,11 +4199,7 @@
           "value": 0.05
         }
       ],
-      "tags": [
-        "core_consistency"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core_consistency"
     },
     {
       "id": "spinel_compounds_vs_mgal2o4",
@@ -4730,11 +4221,7 @@
           "value": 0.05
         }
       ],
-      "tags": [
-        "core_consistency"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core_consistency"
     },
     {
       "id": "srtio3_supercells_vs_batio3",
@@ -4774,11 +4261,7 @@
           "value": 0.05
         }
       ],
-      "tags": [
-        "core_consistency"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core_consistency"
     },
     {
       "id": "nacl_supercells_vs_mgo",
@@ -4814,11 +4297,7 @@
           "value": 0.05
         }
       ],
-      "tags": [
-        "core_consistency"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core_consistency"
     },
     {
       "id": "tio2_supercells_vs_sno2",
@@ -4854,11 +4333,7 @@
           "value": 0.05
         }
       ],
-      "tags": [
-        "core_consistency"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core_consistency"
     },
     {
       "id": "nanbo3_polymorphs_vs_srtio3",
@@ -4898,11 +4373,7 @@
           "value": 0.5
         }
       ],
-      "tags": [
-        "core_consistency"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "core_consistency"
     },
     {
       "id": "SrTiO3_vs_AlBO3",
@@ -4932,11 +4403,7 @@
           "value": 0
         }
       ],
-      "tags": [
-        "reach"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "reach"
     },
     {
       "id": "LaNiO3_vs_AlBO3",
@@ -4966,11 +4433,7 @@
           "value": 0
         }
       ],
-      "tags": [
-        "reach"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "reach"
     },
     {
       "id": "La3AlC_vs_AlBO3",
@@ -5000,11 +4463,7 @@
           "value": 0
         }
       ],
-      "tags": [
-        "reach"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "reach"
     },
     {
       "id": "Ba3PbO_vs_AlBO3",
@@ -5034,11 +4493,7 @@
           "value": 0
         }
       ],
-      "tags": [
-        "reach"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "reach"
     },
     {
       "id": "ybco_vs_srtio3_ged",
@@ -5069,11 +4524,7 @@
           "description": "All Cu (B-site in YBCO, including square-planar CN=4 via vacancy-inflation) must map to Ti (B-site in SrTiO3)"
         }
       ],
-      "tags": [
-        "defect"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "defect"
     },
     {
       "id": "ybco_vs_batio3_ged",
@@ -5110,11 +4561,7 @@
           "description": "Ba (A-site in YBCO) must map to Ba (A-site in BaTiO3) \u2014 same element preserved"
         }
       ],
-      "tags": [
-        "defect"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "defect"
     },
     {
       "id": "ybco_vs_ktao3_ged",
@@ -5145,11 +4592,7 @@
           "description": "All Cu (B-site in YBCO) must map to Ta (B-site in KTaO3)"
         }
       ],
-      "tags": [
-        "defect"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "defect"
     },
     {
       "id": "srtio3_vs_reo3_ged",
@@ -5179,11 +4622,7 @@
           "value": 0
         }
       ],
-      "tags": [
-        "defect"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "defect"
     },
     {
       "id": "srtio3_vs_cu3au_ged",
@@ -5213,11 +4652,7 @@
           "value": 0
         }
       ],
-      "tags": [
-        "defect"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "defect"
     },
     {
       "id": "SrTiO3_vs_Ca2Al2O5_ged",
@@ -5247,11 +4682,7 @@
           "value": 0
         }
       ],
-      "tags": [
-        "defect"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "defect"
     },
     {
       "id": "LaNiO3_vs_Ca2Al2O5_ged",
@@ -5281,11 +4712,7 @@
           "value": 0
         }
       ],
-      "tags": [
-        "defect"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "defect"
     },
     {
       "id": "agsbo3_vs_nd2zr2o7_ged",
@@ -5303,11 +4730,7 @@
           "value": 0.5
         }
       ],
-      "tags": [
-        "defect"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "defect"
     },
     {
       "id": "nd2zr2o7_vs_agsbo3_ged",
@@ -5337,11 +4760,7 @@
           "description": "Zr (B-site, CN=6) must map to Sb (B-site, CN=6)"
         }
       ],
-      "tags": [
-        "defect"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "defect"
     },
     {
       "id": "ca2al2o5_vs_laalo3_ged",
@@ -5359,11 +4778,7 @@
           "value": 1.0
         }
       ],
-      "tags": [
-        "defect"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "defect"
     },
     {
       "id": "ba3sno_vs_lanio3_ged",
@@ -5381,11 +4796,7 @@
           "value": 1.0
         }
       ],
-      "tags": [
-        "defect"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "defect"
     },
     {
       "id": "reo3_vs_tio2_ged",
@@ -5403,11 +4814,7 @@
           "value": 5.0
         }
       ],
-      "tags": [
-        "defect"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "defect"
     },
     {
       "id": "ca2al2o5_vs_tio2_ged",
@@ -5431,11 +4838,7 @@
           "value": 100
         }
       ],
-      "tags": [
-        "defect"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "defect"
     },
     {
       "id": "ybco_vs_tio2_ged",
@@ -5453,11 +4856,7 @@
           "value": 5.0
         }
       ],
-      "tags": [
-        "defect"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "defect"
     },
     {
       "id": "reo3_polymorphs_vs_srtio3_consistency",
@@ -5501,11 +4900,7 @@
           "value": 0.05
         }
       ],
-      "tags": [
-        "defect_consistency"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "defect_consistency"
     },
     {
       "id": "reo3_polymorphs_vs_lanio3_consistency",
@@ -5549,11 +4944,7 @@
           "value": 0.05
         }
       ],
-      "tags": [
-        "defect_consistency"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "defect_consistency"
     },
     {
       "id": "reo3_polymorphs_vs_tifeo3_consistency",
@@ -5597,11 +4988,7 @@
           "value": 100
         }
       ],
-      "tags": [
-        "defect_consistency"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "defect_consistency"
     },
     {
       "id": "reo3_polymorphs_vs_la3alc_consistency",
@@ -5639,11 +5026,7 @@
           "value": 0.05
         }
       ],
-      "tags": [
-        "defect_consistency"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "defect_consistency"
     },
     {
       "id": "reo3_polymorphs_vs_ba3pbo_consistency",
@@ -5687,11 +5070,7 @@
           "value": 0.05
         }
       ],
-      "tags": [
-        "defect_consistency"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "defect_consistency"
     },
     {
       "id": "spinel_vs_perovskite_ged",
@@ -5715,11 +5094,7 @@
           "value": 100
         }
       ],
-      "tags": [
-        "formula_unit"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "formula_unit"
     },
     {
       "id": "la3alc_vs_reo3_ged",
@@ -5755,11 +5130,7 @@
           "value": 0
         }
       ],
-      "tags": [
-        "formula_unit"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "formula_unit"
     },
     {
       "id": "srtio3_vs_sr2tio4_ged",
@@ -5802,11 +5173,7 @@
           "description": "Ti (B-site) maps to Ti in RP"
         }
       ],
-      "tags": [
-        "formula_unit"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "formula_unit"
     },
     {
       "id": "srtio3_vs_sr3ti2o7_ged",
@@ -5849,11 +5216,7 @@
           "description": "Ti in perovskite maps to Ti in RP-327"
         }
       ],
-      "tags": [
-        "formula_unit"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "formula_unit"
     },
     {
       "id": "srtio3_vs_sr4ti3o10_ged",
@@ -5903,11 +5266,7 @@
           "description": "All perovskite Ti maps to Ti in RP-313"
         }
       ],
-      "tags": [
-        "formula_unit"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "formula_unit"
     },
     {
       "id": "sr2tio4_vs_sr4ti3o10_ged",
@@ -5950,11 +5309,7 @@
           "description": "Ti in RP-214 maps to Ti in RP-313"
         }
       ],
-      "tags": [
-        "formula_unit"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "formula_unit"
     },
     {
       "id": "srtio3_vs_sro_ged",
@@ -5984,11 +5339,7 @@
           "value": 1.0
         }
       ],
-      "tags": [
-        "formula_unit"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "formula_unit"
     },
     {
       "id": "la2nio4_vs_lanio3_ged",
@@ -6006,11 +5357,7 @@
           "value": 3.0
         }
       ],
-      "tags": [
-        "formula_unit"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "formula_unit"
     },
     {
       "id": "sr3ru2o7_vs_srruo3_ged",
@@ -6028,11 +5375,7 @@
           "value": 3.0
         }
       ],
-      "tags": [
-        "formula_unit"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "formula_unit"
     },
     {
       "id": "batio3_vs_sr2tio4_ged",
@@ -6050,11 +5393,7 @@
           "value": 3.0
         }
       ],
-      "tags": [
-        "formula_unit"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "formula_unit"
     },
     {
       "id": "nacl_vs_tio2_ged",
@@ -6072,11 +5411,7 @@
           "value": 5.0
         }
       ],
-      "tags": [
-        "formula_unit"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "formula_unit"
     },
     {
       "id": "nacl_vs_srtio3_ged",
@@ -6094,11 +5429,7 @@
           "value": 5.0
         }
       ],
-      "tags": [
-        "formula_unit"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "formula_unit"
     },
     {
       "id": "tio2_vs_mgal2o4_ged",
@@ -6116,11 +5447,7 @@
           "value": 5.0
         }
       ],
-      "tags": [
-        "formula_unit"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "formula_unit"
     },
     {
       "id": "mgal2o4_vs_nd2zr2o7_ged",
@@ -6144,11 +5471,7 @@
           "value": 100
         }
       ],
-      "tags": [
-        "formula_unit"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
+      "category": "formula_unit"
     },
     {
       "id": "caf2_vs_srtio3_ged",
@@ -6166,1478 +5489,7 @@
           "value": 5.0
         }
       ],
-      "tags": [
-        "formula_unit"
-      ],
-      "optimizer": "v1",
-      "cost_function": "v1"
-    },
-    {
-      "id": "srtio3_vs_srtio3_v2_brute_force",
-      "type": "ged",
-      "description": "v2 brute_force + cn_core_diff: SrTiO3 self-comparison must yield cost=0",
-      "graph_a": "SrTiO3_mp-5229",
-      "graph_b": "SrTiO3_mp-5229",
-      "cif_a": "SrTiO3_mp-5229.cif",
-      "cif_b": "SrTiO3_mp-5229.cif",
-      "tags": [
-        "v2",
-        "smoke",
-        "core"
-      ],
-      "optimizer": "brute_force",
-      "cost_function": "cn_core_diff",
-      "assertions": [
-        {
-          "assert": "cost",
-          "description": "Self-comparison: identical cn_core profile, identity permutation gives cost=0",
-          "op": "le",
-          "value": 0.0
-        },
-        {
-          "assert": "unassigned_a_count",
-          "description": "All A-nodes assigned in pure-bijection v2 output",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "unassigned_b_count",
-          "description": "All B-nodes assigned in pure-bijection v2 output",
-          "op": "le",
-          "value": 0
-        }
-      ]
-    },
-    {
-      "id": "srtio3_vs_catio3_v2_brute_force",
-      "type": "ged",
-      "description": "v2 brute_force + cn_core_diff: SrTiO3 vs CaTiO3, identical cn_core multiset (12,6,6,6,6) so brute force must find a zero-cost permutation",
-      "graph_a": "SrTiO3_mp-5229",
-      "graph_b": "CaTiO3_mp-5827",
-      "cif_a": "SrTiO3_mp-5229.cif",
-      "cif_b": "CaTiO3_mp-5827.cif",
-      "tags": [
-        "v2",
-        "smoke",
-        "core"
-      ],
-      "optimizer": "brute_force",
-      "cost_function": "cn_core_diff",
-      "assertions": [
-        {
-          "assert": "cost",
-          "description": "Both structures share cn_core multiset (12,6,6,6,6); a bijection mapping Sr\u2192Ca, Ti\u2192Ti, O\u2192O yields cost=0",
-          "op": "le",
-          "value": 0.0
-        },
-        {
-          "assert": "unassigned_a_count",
-          "description": "Pure bijection: no unassigned A-nodes",
-          "op": "le",
-          "value": 0
-        }
-      ]
-    },
-    {
-      "id": "srtio3_vs_srtio3_v2_topology",
-      "type": "ged",
-      "description": "v2 brute_force + topology port of srtio3_vs_srtio3_ged: SrTiO3 vs itself: self-comparison must return cost=0 with all nodes assigned",
-      "graph_a": "SrTiO3_mp-5229",
-      "graph_b": "SrTiO3_mp-5229",
-      "cif_a": "SrTiO3_mp-5229.cif",
-      "cif_b": "SrTiO3_mp-5229.cif",
-      "tags": [
-        "core",
-        "core_port",
-        "perovskite",
-        "smoke",
-        "v2"
-      ],
-      "optimizer": "brute_force",
-      "cost_function": "topology",
-      "assertions": [
-        {
-          "assert": "cost",
-          "description": "Self-comparison must return exactly zero cost",
-          "op": "le",
-          "value": 0.0
-        },
-        {
-          "assert": "unassigned_a_count",
-          "description": "No unassigned A-nodes in self-comparison",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "unassigned_b_count",
-          "description": "No unassigned B-nodes in self-comparison",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "vacancy_a_count",
-          "description": "Perfect-match case: all A-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        },
-        {
-          "assert": "vacancy_b_count",
-          "description": "Perfect-match case: all B-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        }
-      ]
-    },
-    {
-      "id": "srtio3_vs_batio3_v2_topology",
-      "type": "ged",
-      "description": "v2 brute_force + topology port of srtio3_vs_batio3_ged: SrTiO3 vs BaTiO3 (both cubic Pm-3m perovskite): identical bond topology, cost should be ~0",
-      "graph_a": "SrTiO3_mp-5229",
-      "graph_b": "BaTiO3_mp-5020",
-      "cif_a": "SrTiO3_mp-5229.cif",
-      "cif_b": "BaTiO3_mp-5020.cif",
-      "tags": [
-        "core",
-        "core_port",
-        "perovskite",
-        "smoke",
-        "v2"
-      ],
-      "optimizer": "brute_force",
-      "cost_function": "topology",
-      "assertions": [
-        {
-          "assert": "cost",
-          "description": "Isostructural cubic perovskites: bond topology is identical, cost must be near zero",
-          "op": "le",
-          "value": 0.05
-        },
-        {
-          "assert": "unassigned_a_count",
-          "description": "Same formula unit size: all A-nodes must be assigned",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "unassigned_b_count",
-          "description": "Same formula unit size: all B-nodes must be assigned",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "vacancy_a_count",
-          "description": "Perfect-match case: all A-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        },
-        {
-          "assert": "vacancy_b_count",
-          "description": "Perfect-match case: all B-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        }
-      ]
-    },
-    {
-      "id": "srtio3_vs_ktao3_v2_topology",
-      "type": "ged",
-      "description": "v2 brute_force + topology port of srtio3_vs_ktao3_ged: SrTiO3 vs KTaO3 (both cubic Pm-3m perovskite): different A/B chemistry, identical connectivity",
-      "graph_a": "SrTiO3_mp-5229",
-      "graph_b": "KTaO3_mp-3614",
-      "cif_a": "SrTiO3_mp-5229.cif",
-      "cif_b": "KTaO3_mp-3614.cif",
-      "tags": [
-        "core",
-        "core_port",
-        "perovskite",
-        "smoke",
-        "v2"
-      ],
-      "optimizer": "brute_force",
-      "cost_function": "topology",
-      "assertions": [
-        {
-          "assert": "cost",
-          "description": "Cubic perovskite pair: same corner-sharing topology, cost must be near zero",
-          "op": "le",
-          "value": 0.05
-        },
-        {
-          "assert": "unassigned_a_count",
-          "description": "Same formula unit size: no unassigned A-nodes",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "unassigned_b_count",
-          "description": "Same formula unit size: no unassigned B-nodes",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "vacancy_a_count",
-          "description": "Perfect-match case: all A-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        },
-        {
-          "assert": "vacancy_b_count",
-          "description": "Perfect-match case: all B-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        }
-      ]
-    },
-    {
-      "id": "mgo_vs_nacl_v2_topology",
-      "type": "ged",
-      "description": "v2 brute_force + topology port of mgo_vs_nacl_ged: MgO vs NaCl: both rock-salt (Fm-3m), identical bond topology \u2014 cost should be near zero",
-      "graph_a": "MgO_mp-1265",
-      "graph_b": "NaCl_mp-22862",
-      "cif_a": "MgO_mp-1265.cif",
-      "cif_b": "NaCl_mp-22862.cif",
-      "tags": [
-        "core",
-        "core_port",
-        "rock_salt",
-        "smoke",
-        "v2"
-      ],
-      "optimizer": "brute_force",
-      "cost_function": "topology",
-      "assertions": [
-        {
-          "assert": "cost",
-          "description": "Isostructural rock-salt pair: topology is identical, cost must be near zero",
-          "op": "le",
-          "value": 0.05
-        },
-        {
-          "assert": "unassigned_a_count",
-          "description": "Same formula unit size: no unassigned A-nodes",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "unassigned_b_count",
-          "description": "Same formula unit size: no unassigned B-nodes",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "vacancy_a_count",
-          "description": "Perfect-match case: all A-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        },
-        {
-          "assert": "vacancy_b_count",
-          "description": "Perfect-match case: all B-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        }
-      ]
-    },
-    {
-      "id": "babio3_vs_ba3pbo_v2_topology",
-      "type": "ged",
-      "description": "v2 brute_force + topology port of babio3_vs_ba3pbo_ged: BaBiO3 (perovskite) vs Ba3PbO (antiperovskite): identical bond topology, inverted cation/anion roles. Role-swap trial should detect the equivalence and return cost ~0. Correct mapping: O\u00d73\u2194Ba\u00d73, Bi\u2194O, Ba\u2194Pb.",
-      "graph_a": "BaBiO3_mp-545783",
-      "graph_b": "Ba3PbO_mp-29242",
-      "cif_a": "BaBiO3_mp-545783.cif",
-      "cif_b": "Ba3PbO_mp-29242.cif",
-      "tags": [
-        "antiperovskite",
-        "core",
-        "core_port",
-        "perovskite",
-        "smoke",
-        "v2"
-      ],
-      "optimizer": "brute_force",
-      "cost_function": "topology",
-      "assertions": [
-        {
-          "assert": "cost",
-          "description": "Perovskite and antiperovskite share identical bond topology \u2014 cost must be near zero after role-swap trial",
-          "op": "le",
-          "value": 0.05
-        },
-        {
-          "assert": "unassigned_a_count",
-          "description": "All BaBiO3 nodes have a topological counterpart in Ba3PbO",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "unassigned_b_count",
-          "description": "All Ba3PbO nodes have a topological counterpart in BaBiO3",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "vacancy_a_count",
-          "description": "Perfect-match case: all A-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        },
-        {
-          "assert": "vacancy_b_count",
-          "description": "Perfect-match case: all B-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        }
-      ]
-    },
-    {
-      "id": "babio3_vs_batio3_v2_topology",
-      "type": "ged",
-      "description": "v2 brute_force + topology port of babio3_vs_batio3_ged: BaBiO3 (perovskite, mp-545783) vs BaTiO3 (cubic perovskite, mp-5020): both ABO3 perovskites sharing Ba A-site \u2014 cost should be near zero",
-      "graph_a": "BaBiO3_mp-545783",
-      "graph_b": "BaTiO3_mp-5020",
-      "cif_a": "BaBiO3_mp-545783.cif",
-      "cif_b": "BaTiO3_mp-5020.cif",
-      "tags": [
-        "core",
-        "core_port",
-        "perovskite",
-        "smoke",
-        "v2"
-      ],
-      "optimizer": "brute_force",
-      "cost_function": "topology",
-      "assertions": [
-        {
-          "assert": "cost",
-          "description": "Both perovskites with shared Ba A-site: topology is identical, cost must be near zero",
-          "op": "le",
-          "value": 0.05
-        },
-        {
-          "assert": "unassigned_a_count",
-          "description": "Same formula unit size: no unassigned A-nodes",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "unassigned_b_count",
-          "description": "Same formula unit size: no unassigned B-nodes",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "vacancy_a_count",
-          "description": "Perfect-match case: all A-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        },
-        {
-          "assert": "vacancy_b_count",
-          "description": "Perfect-match case: all B-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        }
-      ]
-    },
-    {
-      "id": "ba3pbo_vs_ba3sno_v2_topology",
-      "type": "ged",
-      "description": "v2 brute_force + topology port of ba3pbo_vs_ba3sno_ged: Ba3PbO vs Ba3SnO (both antiperovskite, mp-29242 and mp-29243): same bond topology with different B-site (Pb vs Sn) \u2014 cost should be near zero",
-      "graph_a": "Ba3PbO_mp-29242",
-      "graph_b": "Ba3SnO_mp-29243",
-      "cif_a": "Ba3PbO_mp-29242.cif",
-      "cif_b": "Ba3SnO_mp-29243.cif",
-      "tags": [
-        "antiperovskite",
-        "core",
-        "core_port",
-        "smoke",
-        "v2"
-      ],
-      "optimizer": "brute_force",
-      "cost_function": "topology",
-      "assertions": [
-        {
-          "assert": "cost",
-          "description": "Isostructural antiperovskite pair: topology is identical, cost must be near zero",
-          "op": "le",
-          "value": 0.05
-        },
-        {
-          "assert": "unassigned_a_count",
-          "description": "Same formula unit size: no unassigned A-nodes",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "unassigned_b_count",
-          "description": "Same formula unit size: no unassigned B-nodes",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "vacancy_a_count",
-          "description": "Perfect-match case: all A-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        },
-        {
-          "assert": "vacancy_b_count",
-          "description": "Perfect-match case: all B-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        }
-      ]
-    },
-    {
-      "id": "kcl_vs_nacl_v2_topology",
-      "type": "ged",
-      "description": "v2 brute_force + topology port of kcl_vs_nacl_ged: KCl vs NaCl: both rock-salt (Fm-3m), identical bond topology \u2014 cost should be near zero",
-      "graph_a": "KCl_mp-23193",
-      "graph_b": "NaCl_mp-22862",
-      "cif_a": "KCl_mp-23193.cif",
-      "cif_b": "NaCl_mp-22862.cif",
-      "tags": [
-        "core",
-        "core_port",
-        "rock_salt",
-        "smoke",
-        "v2"
-      ],
-      "optimizer": "brute_force",
-      "cost_function": "topology",
-      "assertions": [
-        {
-          "assert": "cost",
-          "description": "Isostructural pair: bond topology is identical, cost must be near zero",
-          "op": "le",
-          "value": 0.05
-        },
-        {
-          "assert": "unassigned_a_count",
-          "description": "Same formula unit size: no unassigned A-nodes",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "unassigned_b_count",
-          "description": "Same formula unit size: no unassigned B-nodes",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "vacancy_a_count",
-          "description": "Perfect-match case: all A-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        },
-        {
-          "assert": "vacancy_b_count",
-          "description": "Perfect-match case: all B-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        }
-      ]
-    },
-    {
-      "id": "lif_vs_nacl_v2_topology",
-      "type": "ged",
-      "description": "v2 brute_force + topology port of lif_vs_nacl_ged: LiF vs NaCl: both rock-salt, identical bond topology",
-      "graph_a": "LiF_mp-1138",
-      "graph_b": "NaCl_mp-22862",
-      "cif_a": "LiF_mp-1138.cif",
-      "cif_b": "NaCl_mp-22862.cif",
-      "tags": [
-        "core",
-        "core_port",
-        "rock_salt",
-        "smoke",
-        "v2"
-      ],
-      "optimizer": "brute_force",
-      "cost_function": "topology",
-      "assertions": [
-        {
-          "assert": "cost",
-          "description": "Isostructural pair: bond topology is identical, cost must be near zero",
-          "op": "le",
-          "value": 0.05
-        },
-        {
-          "assert": "unassigned_a_count",
-          "description": "Same formula unit size: no unassigned A-nodes",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "unassigned_b_count",
-          "description": "Same formula unit size: no unassigned B-nodes",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "vacancy_a_count",
-          "description": "Perfect-match case: all A-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        },
-        {
-          "assert": "vacancy_b_count",
-          "description": "Perfect-match case: all B-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        }
-      ]
-    },
-    {
-      "id": "cao_vs_mgo_v2_topology",
-      "type": "ged",
-      "description": "v2 brute_force + topology port of cao_vs_mgo_ged: CaO vs MgO: both rock-salt, identical bond topology",
-      "graph_a": "CaO_mp-2605",
-      "graph_b": "MgO_mp-1265",
-      "cif_a": "CaO_mp-2605.cif",
-      "cif_b": "MgO_mp-1265.cif",
-      "tags": [
-        "core",
-        "core_port",
-        "rock_salt",
-        "smoke",
-        "v2"
-      ],
-      "optimizer": "brute_force",
-      "cost_function": "topology",
-      "assertions": [
-        {
-          "assert": "cost",
-          "description": "Isostructural pair: bond topology is identical, cost must be near zero",
-          "op": "le",
-          "value": 0.05
-        },
-        {
-          "assert": "unassigned_a_count",
-          "description": "Same formula unit size: no unassigned A-nodes",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "unassigned_b_count",
-          "description": "Same formula unit size: no unassigned B-nodes",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "vacancy_a_count",
-          "description": "Perfect-match case: all A-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        },
-        {
-          "assert": "vacancy_b_count",
-          "description": "Perfect-match case: all B-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        }
-      ]
-    },
-    {
-      "id": "nio_vs_mgo_v2_topology",
-      "type": "ged",
-      "description": "v2 brute_force + topology port of nio_vs_mgo_ged: NiO vs MgO: both rock-salt \u2014 TM oxide vs alkaline-earth oxide, same topology",
-      "graph_a": "NiO_mp-19009",
-      "graph_b": "MgO_mp-1265",
-      "cif_a": "NiO_mp-19009.cif",
-      "cif_b": "MgO_mp-1265.cif",
-      "tags": [
-        "core",
-        "core_port",
-        "rock_salt",
-        "smoke",
-        "v2"
-      ],
-      "optimizer": "brute_force",
-      "cost_function": "topology",
-      "assertions": [
-        {
-          "assert": "cost",
-          "description": "Isostructural pair: bond topology is identical, cost must be near zero",
-          "op": "le",
-          "value": 0.05
-        },
-        {
-          "assert": "unassigned_a_count",
-          "description": "Same formula unit size: no unassigned A-nodes",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "unassigned_b_count",
-          "description": "Same formula unit size: no unassigned B-nodes",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "vacancy_a_count",
-          "description": "Perfect-match case: all A-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        },
-        {
-          "assert": "vacancy_b_count",
-          "description": "Perfect-match case: all B-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        }
-      ]
-    },
-    {
-      "id": "zno_vs_gan_v2_topology",
-      "type": "ged",
-      "description": "v2 brute_force + topology port of zno_vs_gan_ged: ZnO vs GaN: both wurtzite (P63mc), identical bond topology",
-      "graph_a": "ZnO_mp-2133",
-      "graph_b": "GaN_mp-804",
-      "cif_a": "ZnO_mp-2133.cif",
-      "cif_b": "GaN_mp-804.cif",
-      "tags": [
-        "core",
-        "core_port",
-        "smoke",
-        "v2",
-        "wurtzite",
-        "zinc_blende"
-      ],
-      "optimizer": "brute_force",
-      "cost_function": "topology",
-      "assertions": [
-        {
-          "assert": "cost",
-          "description": "Isostructural pair: bond topology is identical, cost must be near zero",
-          "op": "le",
-          "value": 0.05
-        },
-        {
-          "assert": "unassigned_a_count",
-          "description": "Same formula unit size: no unassigned A-nodes",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "unassigned_b_count",
-          "description": "Same formula unit size: no unassigned B-nodes",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "vacancy_a_count",
-          "description": "Perfect-match case: all A-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        },
-        {
-          "assert": "vacancy_b_count",
-          "description": "Perfect-match case: all B-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        }
-      ]
-    },
-    {
-      "id": "aln_vs_gan_v2_topology",
-      "type": "ged",
-      "description": "v2 brute_force + topology port of aln_vs_gan_ged: AlN vs GaN: both wurtzite, isostructural III-V nitrides",
-      "graph_a": "AlN_mp-661",
-      "graph_b": "GaN_mp-804",
-      "cif_a": "AlN_mp-661.cif",
-      "cif_b": "GaN_mp-804.cif",
-      "tags": [
-        "core",
-        "core_port",
-        "smoke",
-        "v2",
-        "zinc_blende"
-      ],
-      "optimizer": "brute_force",
-      "cost_function": "topology",
-      "assertions": [
-        {
-          "assert": "cost",
-          "description": "Isostructural pair: bond topology is identical, cost must be near zero",
-          "op": "le",
-          "value": 0.05
-        },
-        {
-          "assert": "unassigned_a_count",
-          "description": "Same formula unit size: no unassigned A-nodes",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "unassigned_b_count",
-          "description": "Same formula unit size: no unassigned B-nodes",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "vacancy_a_count",
-          "description": "Perfect-match case: all A-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        },
-        {
-          "assert": "vacancy_b_count",
-          "description": "Perfect-match case: all B-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        }
-      ]
-    },
-    {
-      "id": "beo_vs_zno_v2_topology",
-      "type": "ged",
-      "description": "v2 brute_force + topology port of beo_vs_zno_ged: BeO vs ZnO: both wurtzite (P6_3mc), structurally identical. The crystal_graph_v4 builder reports CN=13 for BeO and CN=14 for ZnO due to the adaptive cutoff giving slightly different second/third-shell counts in the two cells. With polyhedral / angle features the cost would be exactly zero; under the current bond-only representation the residual CN-mismatch produces a small non-zero cost.",
-      "graph_a": "BeO_mp-2542",
-      "graph_b": "ZnO_mp-2133",
-      "cif_a": "BeO_mp-2542.cif",
-      "cif_b": "ZnO_mp-2133.cif",
-      "tags": [
-        "core",
-        "core_port",
-        "v2",
-        "wurtzite"
-      ],
-      "optimizer": "brute_force",
-      "cost_function": "topology",
-      "assertions": [
-        {
-          "assert": "cost",
-          "description": "Both wurtzite \u2014 should be cost 0 with polyhedral-aware graphs. Current graph allows residual \u2264 0.5 from CN=13 vs CN=14 cutoff difference.",
-          "op": "le",
-          "value": 0.5
-        },
-        {
-          "assert": "unassigned_a_count",
-          "description": "Same FU: all matched",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "unassigned_b_count",
-          "description": "Same FU: all matched",
-          "op": "le",
-          "value": 0
-        }
-      ]
-    },
-    {
-      "id": "gaas_vs_inp_v2_topology",
-      "type": "ged",
-      "description": "v2 brute_force + topology port of gaas_vs_inp_ged: GaAs vs InP: both zinc blende (F-43m), isostructural III-V semiconductors",
-      "graph_a": "GaAs_mp-2534",
-      "graph_b": "InP_mp-20351",
-      "cif_a": "GaAs_mp-2534.cif",
-      "cif_b": "InP_mp-20351.cif",
-      "tags": [
-        "core",
-        "core_port",
-        "smoke",
-        "v2",
-        "zinc_blende"
-      ],
-      "optimizer": "brute_force",
-      "cost_function": "topology",
-      "assertions": [
-        {
-          "assert": "cost",
-          "description": "Isostructural pair: bond topology is identical, cost must be near zero",
-          "op": "le",
-          "value": 0.05
-        },
-        {
-          "assert": "unassigned_a_count",
-          "description": "Same formula unit size: no unassigned A-nodes",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "unassigned_b_count",
-          "description": "Same formula unit size: no unassigned B-nodes",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "vacancy_a_count",
-          "description": "Perfect-match case: all A-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        },
-        {
-          "assert": "vacancy_b_count",
-          "description": "Perfect-match case: all B-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        }
-      ]
-    },
-    {
-      "id": "zns_vs_gaas_v2_topology",
-      "type": "ged",
-      "description": "v2 brute_force + topology port of zns_vs_gaas_ged: ZnS vs GaAs: both zinc blende, II-VI vs III-V, same topology",
-      "graph_a": "ZnS_mp-10695",
-      "graph_b": "GaAs_mp-2534",
-      "cif_a": "ZnS_mp-10695.cif",
-      "cif_b": "GaAs_mp-2534.cif",
-      "tags": [
-        "core",
-        "core_port",
-        "smoke",
-        "v2",
-        "zinc_blende"
-      ],
-      "optimizer": "brute_force",
-      "cost_function": "topology",
-      "assertions": [
-        {
-          "assert": "cost",
-          "description": "Isostructural pair: bond topology is identical, cost must be near zero",
-          "op": "le",
-          "value": 0.05
-        },
-        {
-          "assert": "unassigned_a_count",
-          "description": "Same formula unit size: no unassigned A-nodes",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "unassigned_b_count",
-          "description": "Same formula unit size: no unassigned B-nodes",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "vacancy_a_count",
-          "description": "Perfect-match case: all A-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        },
-        {
-          "assert": "vacancy_b_count",
-          "description": "Perfect-match case: all B-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        }
-      ]
-    },
-    {
-      "id": "caf2_vs_zro2_v2_topology",
-      "type": "ged",
-      "description": "v2 brute_force + topology port of caf2_vs_zro2_ged: CaF2 vs ZrO2: both fluorite (Fm-3m), isostructural",
-      "graph_a": "CaF2_mp-2741",
-      "graph_b": "ZrO2_mp-1565",
-      "cif_a": "CaF2_mp-2741.cif",
-      "cif_b": "ZrO2_mp-1565.cif",
-      "tags": [
-        "core",
-        "core_port",
-        "fluorite",
-        "smoke",
-        "v2"
-      ],
-      "optimizer": "brute_force",
-      "cost_function": "topology",
-      "assertions": [
-        {
-          "assert": "cost",
-          "description": "Isostructural pair: bond topology is identical, cost must be near zero",
-          "op": "le",
-          "value": 0.05
-        },
-        {
-          "assert": "unassigned_a_count",
-          "description": "Same formula unit size: no unassigned A-nodes",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "unassigned_b_count",
-          "description": "Same formula unit size: no unassigned B-nodes",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "vacancy_a_count",
-          "description": "Perfect-match case: all A-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        },
-        {
-          "assert": "vacancy_b_count",
-          "description": "Perfect-match case: all B-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        }
-      ]
-    },
-    {
-      "id": "tho2_vs_caf2_v2_topology",
-      "type": "ged",
-      "description": "v2 brute_force + topology port of tho2_vs_caf2_ged: ThO2 vs CaF2: both fluorite, identical topology",
-      "graph_a": "ThO2_mp-643",
-      "graph_b": "CaF2_mp-2741",
-      "cif_a": "ThO2_mp-643.cif",
-      "cif_b": "CaF2_mp-2741.cif",
-      "tags": [
-        "core",
-        "core_port",
-        "fluorite",
-        "smoke",
-        "v2"
-      ],
-      "optimizer": "brute_force",
-      "cost_function": "topology",
-      "assertions": [
-        {
-          "assert": "cost",
-          "description": "Isostructural pair: bond topology is identical, cost must be near zero",
-          "op": "le",
-          "value": 0.05
-        },
-        {
-          "assert": "unassigned_a_count",
-          "description": "Same formula unit size: no unassigned A-nodes",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "unassigned_b_count",
-          "description": "Same formula unit size: no unassigned B-nodes",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "vacancy_a_count",
-          "description": "Perfect-match case: all A-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        },
-        {
-          "assert": "vacancy_b_count",
-          "description": "Perfect-match case: all B-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        }
-      ]
-    },
-    {
-      "id": "knbo3_vs_srtio3_v2_topology",
-      "type": "ged",
-      "description": "v2 brute_force + topology port of knbo3_vs_srtio3_ged: KNbO3 vs SrTiO3: both cubic perovskite \u2014 different A/B chemistry, same topology",
-      "graph_a": "KNbO3_mp-7375",
-      "graph_b": "SrTiO3_mp-5229",
-      "cif_a": "KNbO3_mp-7375.cif",
-      "cif_b": "SrTiO3_mp-5229.cif",
-      "tags": [
-        "core",
-        "core_port",
-        "perovskite",
-        "smoke",
-        "v2"
-      ],
-      "optimizer": "brute_force",
-      "cost_function": "topology",
-      "assertions": [
-        {
-          "assert": "cost",
-          "description": "Isostructural pair: bond topology is identical, cost must be near zero",
-          "op": "le",
-          "value": 0.05
-        },
-        {
-          "assert": "unassigned_a_count",
-          "description": "Same formula unit size: no unassigned A-nodes",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "unassigned_b_count",
-          "description": "Same formula unit size: no unassigned B-nodes",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "vacancy_a_count",
-          "description": "Perfect-match case: all A-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        },
-        {
-          "assert": "vacancy_b_count",
-          "description": "Perfect-match case: all B-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        }
-      ]
-    },
-    {
-      "id": "nacl_vs_cscl_v2_topology",
-      "type": "ged",
-      "description": "v2 brute_force + topology port of nacl_vs_cscl_ged: NaCl (rock-salt, octahedral CN=6) vs CsCl (CsCl-type, cubic CN=8): both MX with same FU but different coordination topology.  Under the current graph builder + sibling filter, the CN distinction shows up as a moderate residual cost rather than a strong signal.  No strict lower bound enforced; future polyhedral-aware graphs should distinguish these families more cleanly.",
-      "graph_a": "NaCl_mp-22862",
-      "graph_b": "CsCl_mp-22865",
-      "cif_a": "NaCl_mp-22862.cif",
-      "cif_b": "CsCl_mp-22865.cif",
-      "tags": [
-        "core",
-        "core_port",
-        "rock_salt",
-        "v2"
-      ],
-      "optimizer": "brute_force",
-      "cost_function": "topology",
-      "assertions": [
-        {
-          "assert": "cost",
-          "description": "Cost should remain bounded",
-          "op": "le",
-          "value": 6.0
-        }
-      ]
-    },
-    {
-      "id": "baco3_vs_ba3pbo_v2_topology",
-      "type": "ged",
-      "description": "v2 brute_force + topology port of baco3_vs_ba3pbo_ged: BaCO3 (witherite, Pmcn \u2014 molecular CO3 carbonate with planar CO3 triangles and Ba 9-coordinate to O) vs Ba3PbO (cubic antiperovskite Pm-3m \u2014 3D cation framework with O at body-center, Pb at corner).  Both share an ABX3-type 5-atom unit cell with one 12-coord cation (Ba) and one 3-coord cation (C in BaCO3 / role-swapped O in Ba3PbO), but the underlying topology is incompatible: BaCO3 has isolated CO3 anion molecules, Ba3PbO has a corner-sharing octahedral X-site framework.  Currently a known false positive \u2014 the algorithm reaches cost=0 via role-swap + cross-CN fallback + NN-list rectification.  This test pins the philosophical answer; the cost lower bound is what we'd want once second-shell or stricter rectification rules are in place.",
-      "graph_a": "BaCO3_mp-4559",
-      "graph_b": "Ba3PbO_mp-29242",
-      "cif_a": "BaCO3_mp-4559.cif",
-      "cif_b": "Ba3PbO_mp-29242.cif",
-      "tags": [
-        "antiperovskite",
-        "carbonate",
-        "core",
-        "core_port",
-        "v2"
-      ],
-      "optimizer": "brute_force",
-      "cost_function": "topology",
-      "assertions": [
-        {
-          "assert": "cost",
-          "description": "Carbonate vs antiperovskite: triangular CO3 anions are topologically incompatible with corner-sharing X-site framework \u2014 cost must reflect mismatch (relaxed to arbitrary high bound while the false positive stands)",
-          "op": "le",
-          "value": 100
-        }
-      ]
-    },
-    {
-      "id": "baco3_vs_babio3_v2_topology",
-      "type": "ged",
-      "description": "v2 brute_force + topology port of baco3_vs_babio3_ged: BaCO3 (witherite carbonate) vs BaBiO3 (perovskite Pm-3m): same Ba A-site cation but completely different topology \u2014 BaCO3 has planar CO3 anionic groups while BaBiO3 has a 3D corner-sharing BiO6 octahedral framework.  Companion to baco3_vs_ba3pbo_ged covering the perovskite (not antiperovskite) direction.  Currently a known false positive via the same failure mode.",
-      "graph_a": "BaCO3_mp-4559",
-      "graph_b": "BaBiO3_mp-545783",
-      "cif_a": "BaCO3_mp-4559.cif",
-      "cif_b": "BaBiO3_mp-545783.cif",
-      "tags": [
-        "carbonate",
-        "core",
-        "core_port",
-        "perovskite",
-        "v2"
-      ],
-      "optimizer": "brute_force",
-      "cost_function": "topology",
-      "assertions": [
-        {
-          "assert": "cost",
-          "description": "Carbonate vs perovskite: BiO6 octahedral framework topology is incompatible with isolated CO3 triangles \u2014 cost must reflect mismatch (relaxed to arbitrary high bound while the false positive stands)",
-          "op": "le",
-          "value": 100
-        }
-      ]
-    },
-    {
-      "id": "baco3_vs_srtio3_v2_topology",
-      "type": "ged",
-      "description": "v2 brute_force + topology port of baco3_vs_srtio3_ged: BaCO3 (witherite carbonate) vs SrTiO3 (cubic Pm-3m perovskite): no shared cation, different stoichiometric layout, fundamentally different topology (planar CO3 anionic groups vs corner-sharing TiO6 octahedral framework).  Cleanest of the BaCO3 false-positive trio because there's no shared element to anchor a misleading mapping; if the algorithm still scores this near zero, the failure is clearly in the bond-multiset/role-swap/NN-rectification stack rather than in element identity.",
-      "graph_a": "BaCO3_mp-4559",
-      "graph_b": "SrTiO3_mp-5229",
-      "cif_a": "BaCO3_mp-4559.cif",
-      "cif_b": "SrTiO3_mp-5229.cif",
-      "tags": [
-        "carbonate",
-        "core",
-        "core_port",
-        "perovskite",
-        "v2"
-      ],
-      "optimizer": "brute_force",
-      "cost_function": "topology",
-      "assertions": [
-        {
-          "assert": "cost",
-          "description": "Carbonate vs perovskite, no shared cation: different topology and chemistry \u2014 cost must reflect mismatch (relaxed to arbitrary high bound while the false positive stands)",
-          "op": "le",
-          "value": 100
-        }
-      ]
-    },
-    {
-      "id": "ba3pbo_vs_babio3_v2_topology",
-      "type": "ged",
-      "description": "v2 brute_force + topology port of ba3pbo_vs_babio3_ged: Ba3PbO (antiperovskite, mp-29242) vs BaBiO3 (perovskite, mp-545783): identical bond topology with inverted cation/anion roles.  The role-swap trial in match_nodes_ged should detect the perovskite \u2194 antiperovskite equivalence and return cost \u2248 0.  Cation/anion mapping after swap: Ba (antiperov anion) \u2194 O (perov anion) is the X-site; Pb (antiperov cation X-site) \u2194 Ba (perov A-site); O (antiperov B-site) \u2194 Bi (perov B-site).",
-      "graph_a": "Ba3PbO_mp-29242",
-      "graph_b": "BaBiO3_mp-545783",
-      "cif_a": "Ba3PbO_mp-29242.cif",
-      "cif_b": "BaBiO3_mp-545783.cif",
-      "tags": [
-        "antiperovskite",
-        "core",
-        "core_port",
-        "perovskite",
-        "smoke",
-        "v2"
-      ],
-      "optimizer": "brute_force",
-      "cost_function": "topology",
-      "assertions": [
-        {
-          "assert": "cost",
-          "description": "Antiperovskite vs perovskite share identical topology; cost must be near zero after role-swap",
-          "op": "le",
-          "value": 0.05
-        },
-        {
-          "assert": "unassigned_a_count",
-          "description": "Same FU size: all A-nodes must be matched",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "unassigned_b_count",
-          "description": "Same FU size: all B-nodes must be matched",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "vacancy_a_count",
-          "description": "Perfect-match case: all A-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        },
-        {
-          "assert": "vacancy_b_count",
-          "description": "Perfect-match case: all B-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        }
-      ]
-    },
-    {
-      "id": "alfe3c_vs_ba3pbo_v2_topology",
-      "type": "ged",
-      "description": "v2 brute_force + topology port of alfe3c_vs_ba3pbo_ged: AlFe3C (Cu3Au-derived 'inverse perovskite' carbide, mp-22793) vs Ba3PbO (antiperovskite, mp-29242): both have the same FCC ordered topology with corner / face-centre / body-centre occupation.  AlFe3C has Al(corner)/Fe(faces)/C(body), Ba3PbO has Pb(corner)/Ba(faces)/O(body).  Roles align directly without swap because both have the minority element as cation at the corner \u2014 cost should be near zero.",
-      "graph_a": "AlFe3C_mp-22793",
-      "graph_b": "Ba3PbO_mp-29242",
-      "cif_a": "AlFe3C_mp-22793.cif",
-      "cif_b": "Ba3PbO_mp-29242.cif",
-      "tags": [
-        "antiperovskite",
-        "core",
-        "core_port",
-        "smoke",
-        "v2"
-      ],
-      "optimizer": "brute_force",
-      "cost_function": "topology",
-      "assertions": [
-        {
-          "assert": "cost",
-          "description": "Cu3Au-derived AlFe3C and antiperovskite Ba3PbO share topology \u2014 cost near zero",
-          "op": "le",
-          "value": 0.05
-        },
-        {
-          "assert": "unassigned_a_count",
-          "description": "Same FU size: all matched",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "unassigned_b_count",
-          "description": "Same FU size: all matched",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "vacancy_a_count",
-          "description": "Perfect-match case: all A-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        },
-        {
-          "assert": "vacancy_b_count",
-          "description": "Perfect-match case: all B-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        }
-      ]
-    },
-    {
-      "id": "alfe3c_vs_babio3_v2_topology",
-      "type": "ged",
-      "description": "v2 brute_force + topology port of alfe3c_vs_babio3_ged: AlFe3C (Cu3Au-derived 'inverse perovskite' carbide) vs BaBiO3 (perovskite): role-swap on BaBiO3 inverts cation/anion to align Fe\u2194O (X-site) and C\u2194Bi (B-site).  Wildcard pass (cross-role same-CN) then matches Al(cation,CN=12) to Ba(anion,CN=12 after swap) \u2014 both at the corner A-site.  Tests that the cost-function correctly identifies AlFe3C \u2245 perovskite topology even when the role labels don't perfectly invert.",
-      "graph_a": "AlFe3C_mp-22793",
-      "graph_b": "BaBiO3_mp-545783",
-      "cif_a": "AlFe3C_mp-22793.cif",
-      "cif_b": "BaBiO3_mp-545783.cif",
-      "tags": [
-        "antiperovskite",
-        "core",
-        "core_port",
-        "perovskite",
-        "smoke",
-        "v2"
-      ],
-      "optimizer": "brute_force",
-      "cost_function": "topology",
-      "assertions": [
-        {
-          "assert": "cost",
-          "description": "AlFe3C and BaBiO3 perovskite share topology after role-swap + wildcard \u2014 cost near zero",
-          "op": "le",
-          "value": 0.05
-        },
-        {
-          "assert": "unassigned_a_count",
-          "description": "Same FU size: all matched",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "unassigned_b_count",
-          "description": "Same FU size: all matched",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "vacancy_a_count",
-          "description": "Perfect-match case: all A-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        },
-        {
-          "assert": "vacancy_b_count",
-          "description": "Perfect-match case: all B-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        }
-      ]
-    },
-    {
-      "id": "alfe3c_vs_srtio3_v2_topology",
-      "type": "ged",
-      "description": "v2 brute_force + topology port of alfe3c_vs_srtio3_ged: AlFe3C vs cubic SrTiO3 perovskite: same Cu3Au \u2194 perovskite topology match.  Confirms consistency across different perovskite chemistries.",
-      "graph_a": "AlFe3C_mp-22793",
-      "graph_b": "SrTiO3_mp-5229",
-      "cif_a": "AlFe3C_mp-22793.cif",
-      "cif_b": "SrTiO3_mp-5229.cif",
-      "tags": [
-        "antiperovskite",
-        "core",
-        "core_port",
-        "perovskite",
-        "smoke",
-        "v2"
-      ],
-      "optimizer": "brute_force",
-      "cost_function": "topology",
-      "assertions": [
-        {
-          "assert": "cost",
-          "description": "AlFe3C vs SrTiO3 perovskite \u2014 cost near zero",
-          "op": "le",
-          "value": 0.05
-        },
-        {
-          "assert": "unassigned_a_count",
-          "description": "Same FU size: all matched",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "unassigned_b_count",
-          "description": "Same FU size: all matched",
-          "op": "le",
-          "value": 0
-        },
-        {
-          "assert": "vacancy_a_count",
-          "description": "Perfect-match case: all A-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        },
-        {
-          "assert": "vacancy_b_count",
-          "description": "Perfect-match case: all B-atoms must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        }
-      ]
-    },
-    {
-      "id": "la3alc_vs_srtio3_v2_topology",
-      "type": "ged",
-      "description": "v2 brute_force + topology port of la3alc_vs_srtio3_ged: La3AlC (intermetallic antiperovskite, Pm-3m, 5 atoms / FU: 3 La A-sites + Al B-site + C body-center) vs SrTiO3 (cubic perovskite). Same 5-atom corner-sharing topology \u2014 under role-swap (cation\u2194anion) the antiperovskite C maps to perovskite Ti and the role correspondence is exact. Cost must be near zero and every atom mapped.",
-      "graph_a": "La3AlC_mp-10600",
-      "graph_b": "SrTiO3_mp-5229",
-      "cif_a": "La3AlC_mp-10600.cif",
-      "cif_b": "SrTiO3_mp-5229.cif",
-      "tags": [
-        "antiperovskite",
-        "core",
-        "core_port",
-        "perovskite",
-        "smoke",
-        "v2"
-      ],
-      "optimizer": "brute_force",
-      "cost_function": "topology",
-      "assertions": [
-        {
-          "assert": "cost",
-          "description": "Intermetallic antiperovskite vs ionic perovskite \u2014 same 5-atom corner-sharing topology, role-swap should give cost \u2248 0",
-          "op": "le",
-          "value": 0.05
-        },
-        {
-          "assert": "vacancy_a_count",
-          "description": "Perfect-match case: every A-atom must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        },
-        {
-          "assert": "vacancy_b_count",
-          "description": "Perfect-match case: every B-atom must be mapped (no free vacancies)",
-          "op": "le",
-          "value": 0.0
-        }
-      ]
-    },
-    {
-      "id": "la3alc_vs_knbo3_v2_topology",
-      "type": "ged",
-      "description": "v2 brute_force + topology port of la3alc_vs_knbo3_ged: La3AlC vs KNbO3 (cubic perovskite). Same family as the SrTiO3 comparison.",
-      "graph_a": "La3AlC_mp-10600",
-      "graph_b": "KNbO3_mp-935811",
-      "cif_a": "La3AlC_mp-10600.cif",
-      "cif_b": "KNbO3_mp-935811.cif",
-      "tags": [
-        "antiperovskite",
-        "core",
-        "core_port",
-        "perovskite",
-        "smoke",
-        "v2"
-      ],
-      "optimizer": "brute_force",
-      "cost_function": "topology",
-      "assertions": [
-        {
-          "assert": "cost",
-          "op": "le",
-          "value": 0.05,
-          "description": "Antiperovskite vs perovskite \u2014 cost \u2248 0"
-        },
-        {
-          "assert": "vacancy_a_count",
-          "op": "le",
-          "value": 0.0,
-          "description": "Perfect-match: all A mapped"
-        },
-        {
-          "assert": "vacancy_b_count",
-          "op": "le",
-          "value": 0.0,
-          "description": "Perfect-match: all B mapped"
-        }
-      ]
-    },
-    {
-      "id": "alco3c_vs_srtio3_v2_topology",
-      "type": "ged",
-      "description": "v2 brute_force + topology port of alco3c_vs_srtio3_ged: AlCo3C (intermetallic Cu3Au+C antiperovskite, Pm-3m, 5 atoms / FU: Al A-site + 3 Co face-centered + C body-center) vs SrTiO3 (cubic perovskite). Co is encoded as 'neutral' (no clear oxidation state in the metallic carbide), but the bond topology IS antiperovskite \u2014 role-swap + NN-list rectification should give cost \u2248 0 with every atom mapped.",
-      "graph_a": "AlCo3C_mp-10037",
-      "graph_b": "SrTiO3_mp-5229",
-      "cif_a": "AlCo3C_mp-10037.cif",
-      "cif_b": "SrTiO3_mp-5229.cif",
-      "tags": [
-        "antiperovskite",
-        "core",
-        "core_port",
-        "perovskite",
-        "smoke",
-        "v2"
-      ],
-      "optimizer": "brute_force",
-      "cost_function": "topology",
-      "assertions": [
-        {
-          "assert": "cost",
-          "op": "le",
-          "value": 0.05,
-          "description": "Intermetallic antiperovskite (with neutral B-site Co) vs ionic perovskite \u2014 cost \u2248 0"
-        },
-        {
-          "assert": "vacancy_a_count",
-          "op": "le",
-          "value": 0.0,
-          "description": "Perfect-match: all A mapped"
-        },
-        {
-          "assert": "vacancy_b_count",
-          "op": "le",
-          "value": 0.0,
-          "description": "Perfect-match: all B mapped"
-        }
-      ]
-    },
-    {
-      "id": "alco3c_vs_knbo3_v2_topology",
-      "type": "ged",
-      "description": "v2 brute_force + topology port of alco3c_vs_knbo3_ged: AlCo3C vs KNbO3 (cubic perovskite).",
-      "graph_a": "AlCo3C_mp-10037",
-      "graph_b": "KNbO3_mp-935811",
-      "cif_a": "AlCo3C_mp-10037.cif",
-      "cif_b": "KNbO3_mp-935811.cif",
-      "tags": [
-        "antiperovskite",
-        "core",
-        "core_port",
-        "perovskite",
-        "smoke",
-        "v2"
-      ],
-      "optimizer": "brute_force",
-      "cost_function": "topology",
-      "assertions": [
-        {
-          "assert": "cost",
-          "op": "le",
-          "value": 0.05,
-          "description": "Cost \u2248 0"
-        },
-        {
-          "assert": "vacancy_a_count",
-          "op": "le",
-          "value": 0.0,
-          "description": "Perfect-match: all A mapped"
-        },
-        {
-          "assert": "vacancy_b_count",
-          "op": "le",
-          "value": 0.0,
-          "description": "Perfect-match: all B mapped"
-        }
-      ]
+      "category": "formula_unit"
     }
   ]
 }

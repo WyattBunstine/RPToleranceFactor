@@ -72,12 +72,12 @@ import copy
 import itertools
 import math
 from collections import Counter, defaultdict
-from typing import Any, Callable, Dict, List, Optional, Sequence, Set, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
 
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 
-from crystal_graph_matching import (
+from scripts.crystal_graph_matching import (
     _cn_bucket,
     _build_cost_matrix as _fp_cost_matrix,
     _fingerprint_distance,
@@ -295,7 +295,7 @@ def _bucket_atoms(
     in ``cn_map`` are virtual ``(atom_id, slot)`` tuples and the role is
     looked up via ``role_map[atom_id]``.
     """
-    from crystal_graph_matching import _cn_bucket
+    from scripts.crystal_graph_matching import _cn_bucket
     groups: Dict[Tuple[str, str], List[Any]] = defaultdict(list)
     for nid, cn in cn_map.items():
         atom_id = nid[0] if is_virtual else nid
@@ -360,7 +360,7 @@ def _try_resolve_size_mismatch(
     Returns True if any edge was admitted (caller should re-evaluate),
     False if no resolvable mismatch was found.
     """
-    from crystal_graph_matching import _cn_bucket
+    from scripts.crystal_graph_matching import _cn_bucket
     cn_a = _cn_per_atom(edges_a)
     cn_b = _cn_per_atom(edges_b)
     buckets_a = _bucket_atoms(cn_a, role_a, is_virtual=False)
@@ -431,7 +431,7 @@ def _bucket_atoms_cn_only(
     role-agnostic phase 2 fallback when the two graphs have no
     overlapping ``(cn_bucket, role)`` keys (e.g. neutral-role
     intermetallic carbide vs cation/anion ionic structure)."""
-    from crystal_graph_matching import _cn_bucket
+    from scripts.crystal_graph_matching import _cn_bucket
     groups: Dict[str, List[Any]] = defaultdict(list)
     for nid, cn in cn_map.items():
         groups[_cn_bucket(cn)].append(nid)
@@ -448,7 +448,7 @@ def _admission_keeps_buckets_a(
     boundary (which could cascade through bucket alignments and
     destabilize convergence).
     """
-    from crystal_graph_matching import _cn_bucket
+    from scripts.crystal_graph_matching import _cn_bucket
     src, tgt = edge_key
     for atom in (src, tgt):
         cur_cn = int(sum(edges_a.get(atom, Counter()).values()))
@@ -465,7 +465,7 @@ def _admission_keeps_buckets_b(
 ) -> bool:
     """Cascade guard for B side: same logic, accounting for virtual
     atom ids.  Both endpoints' admissions happen within the same slot."""
-    from crystal_graph_matching import _cn_bucket
+    from scripts.crystal_graph_matching import _cn_bucket
     src, tgt = edge_key
     s = virt_id[1]
     for atom in (src, tgt):
@@ -496,7 +496,7 @@ def _try_resolve_cn_mismatch(
     push either endpoint across a ``cn_bucket`` boundary, since that
     would cascade through subsequent bucket alignments unpredictably.
     """
-    from crystal_graph_matching import _cn_bucket
+    from scripts.crystal_graph_matching import _cn_bucket
     cn_a = _cn_per_atom(edges_a)
     cn_b = _cn_per_atom(edges_b)
 

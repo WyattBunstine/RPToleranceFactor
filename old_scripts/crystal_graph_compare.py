@@ -45,7 +45,7 @@ from itertools import permutations as _permutations
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from crystal_graph_matching import match_graph_nodes
+from scripts.crystal_graph_matching import match_graph_nodes
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -153,7 +153,7 @@ def _refine_assignment(
     refined_map : updated node_map
     n_groups    : number of symmetric groups found (for diagnostics)
     """
-    from crystal_graph_matching import _node_fingerprint, _fingerprint_distance
+    from scripts.crystal_graph_matching import _node_fingerprint, _fingerprint_distance
 
     pedges_a = graph_a.get("polyhedral_edges", [])
 

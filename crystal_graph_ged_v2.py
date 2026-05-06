@@ -526,6 +526,49 @@ class Mapping:
     def from_json(cls, s: str) -> "Mapping":
         return cls.from_dict(json.loads(s))
 
+    # ── v1 compatibility ────────────────────────────────────────────────────
+
+    def to_v1_result(self) -> dict:
+        """Translate this Mapping to a v1-style result dict so legacy
+        unit-test assertions can probe v2 outputs.
+
+        Coverage: pure-bijection mappings (no vacancies) get all
+        unmatched lists empty.  ``node_map`` reflects the forward
+        list-per-A.  ``cross_fu_k`` is derived from list_length_a.
+
+        Vacancy categorization (vacancy/unassigned/unforced split) is
+        not yet supported by v2, so all those bins are empty.  When
+        vacancy semantics are added later, this method will populate
+        them accordingly.
+        """
+        node_map: Dict[int, List[int]] = {
+            int(a): [int(s) for s in self._a_to_b[a] if not _is_sentinel(s)]
+            for a in self._a_ids
+        }
+        unmatched_a: List[int] = sorted(self.unassigned_a())
+        # B-side: unmatched B atoms are those with all-sentinel reverse lists.
+        unmatched_b: List[int] = sorted(
+            b for b in self._b_ids
+            if all(_is_sentinel(s) for s in self._b_to_a[b])
+        )
+
+        return {
+            "node_map":              node_map,
+            "vacancy_a":             [],
+            "vacancy_b":             [],
+            "unassigned_a":          unmatched_a,
+            "unassigned_b":          unmatched_b,
+            "unforced_vacancy_a":    [],
+            "unforced_vacancy_b":    [],
+            "unforced_unassigned_a": [],
+            "unforced_unassigned_b": [],
+            "cost":                  float(self.cost) if self.cost is not None else 0.0,
+            "n_iter":                0,
+            "converged":             True,
+            "role_swapped":          False,
+            "cross_fu_k":            self._length_a,
+        }
+
 
 def _slot_sort_key(s: Slot) -> Tuple[int, Any]:
     """Stable sort key: real ints first, then sentinels by name."""
@@ -772,6 +815,39 @@ class BruteForceOptimizer(Optimizer):
 # Module-level convenience
 # ─────────────────────────────────────────────────────────────────────────────
 
+# Short-tag registries: used by the unit-test runner to look up
+# optimizer / cost-function classes by their JSON-test tag.  Add new
+# entries here whenever a new concrete subclass is introduced.
+
+OPTIMIZER_REGISTRY: Dict[str, type] = {
+    "brute_force": BruteForceOptimizer,
+}
+
+COST_FUNCTION_REGISTRY: Dict[str, type] = {
+    "cn_core_diff": CnCoreDiffCost,
+}
+
+
+def match_nodes_ged_v2(
+    graph_a: dict,
+    graph_b: dict,
+    optimizer_cls: type = BruteForceOptimizer,
+    cost_fn_cls: type = CnCoreDiffCost,
+    optimizer_params: Optional[Dict[str, Any]] = None,
+    cost_function_params: Optional[Dict[str, Any]] = None,
+) -> Mapping:
+    """Top-level entry point: instantiate the requested optimizer + cost
+    function, run optimization, return the resulting Mapping.
+
+    Used by the unit-test runner to invoke v2 with explicit optimizer
+    and cost-function selections per test.
+    """
+    cost_fn = cost_fn_cls(**(cost_function_params or {}))
+    optimizer = optimizer_cls(graph_a, graph_b, cost_fn,
+                              **(optimizer_params or {}))
+    return optimizer.optimize()
+
+
 __all__ = [
     "VACANCY",
     "UNASSIGNED",
@@ -780,4 +856,7 @@ __all__ = [
     "CnCoreDiffCost",
     "Optimizer",
     "BruteForceOptimizer",
+    "OPTIMIZER_REGISTRY",
+    "COST_FUNCTION_REGISTRY",
+    "match_nodes_ged_v2",
 ]

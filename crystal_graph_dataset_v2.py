@@ -30,13 +30,13 @@ import json
 import warnings
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 import numpy as np
 from sklearn.cluster import DBSCAN
 from pymatgen.core import Structure
 
-from crystal_graph_comparison import compare_graph_files as compare_crystal_graphs, _build_node_descriptors, _load_graph
+from old_scripts.crystal_graph_comparison import compare_graph_files as compare_crystal_graphs, _load_graph
 
 # ---------------------------------------------------------------------------
 # Thresholds and parameters

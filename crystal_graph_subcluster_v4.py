@@ -76,7 +76,7 @@ from crystal_graph_ged import (
     _build_nn_sets,
     score_mapping,
 )
-from crystal_graph_matching import compute_fingerprints
+from scripts.crystal_graph_matching import compute_fingerprints
 
 
 # ---------------------------------------------------------------------------

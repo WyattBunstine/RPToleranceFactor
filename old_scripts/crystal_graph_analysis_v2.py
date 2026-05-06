@@ -579,7 +579,7 @@ def compare_crystal_graphs_matched(
         ratio        : int|None   Supercell ratio (|B|/|A|) if detected, else None.
     """
     try:
-        from crystal_graph_matching import match_graph_nodes
+        from scripts.crystal_graph_matching import match_graph_nodes
     except ImportError as exc:
         raise ImportError(
             "crystal_graph_matching.py is required for the matched comparison. "

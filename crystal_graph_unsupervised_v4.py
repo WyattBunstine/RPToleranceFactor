@@ -60,7 +60,7 @@ from crystal_graph_ged import (
     match_nodes_ged,
     match_nodes_ged_symmetric,
 )
-from crystal_graph_matching import compute_fingerprints
+from scripts.crystal_graph_matching import compute_fingerprints
 
 # ---------------------------------------------------------------------------
 # Distortion metric (carried over from v3 for prototype seeding order)
