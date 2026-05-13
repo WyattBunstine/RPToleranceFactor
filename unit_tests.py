@@ -32,6 +32,7 @@ import json
 import shutil
 import sys
 import tempfile
+import time
 import traceback
 from datetime import datetime
 from pathlib import Path
@@ -480,10 +481,14 @@ def _run_ged_test(
             ga = json.load(f)
         with open(path_b) as f:
             gb = json.load(f)
+        n_nodes_a = len(ga["nodes"])
+        n_nodes_b = len(gb["nodes"])
+        t0 = time.perf_counter()
         ged = _run_ged_match(
             ga, gb, optimizer_tag, cost_fn_tag,
             optimizer_params, cost_function_params,
         )
+        elapsed_fwd = time.perf_counter() - t0
     except Exception as exc:
         import traceback as _tb
         return {
@@ -495,13 +500,16 @@ def _run_ged_test(
     # Asymmetry probe: run the reverse direction and check the costs agree.
     # Pass/fail criteria are unchanged; this is purely diagnostic.
     cost_reverse: Optional[float] = None
+    elapsed_rev: Optional[float] = None
     is_symmetric: Optional[bool] = None
     asym_error: Optional[str] = None
     try:
+        t0 = time.perf_counter()
         ged_rev = _run_ged_match(
             gb, ga, optimizer_tag, cost_fn_tag,
             optimizer_params, cost_function_params,
         )
+        elapsed_rev = time.perf_counter() - t0
         cost_reverse = float(ged_rev["cost"])
         is_symmetric = abs(float(ged["cost"]) - cost_reverse) < 1e-4
     except Exception as exc:
@@ -638,6 +646,10 @@ def _run_ged_test(
             "unassigned_a_count": len(ged["unassigned_a"]),
             "unassigned_b_count": len(ged["unassigned_b"]),
             "n_iter":             ged["n_iter"],
+            "n_nodes_a":          n_nodes_a,
+            "n_nodes_b":          n_nodes_b,
+            "elapsed_fwd_s":      elapsed_fwd,
+            "elapsed_rev_s":      elapsed_rev,
         },
         "symmetric": is_symmetric,
         "asymmetry_error": asym_error,
@@ -879,9 +891,12 @@ def _run_ged_consistency_test(
     with open(cache_dir / f"{ref_stem}.json") as f:
         g_ref = json.load(f)
 
+    n_nodes_ref = len(g_ref["nodes"])
     per_cand_costs: Dict[str, float] = {}
     per_cand_costs_reverse: Dict[str, float] = {}
     per_cand_symmetric: Dict[str, bool] = {}
+    per_cand_n_nodes: Dict[str, int] = {}
+    per_cand_elapsed: Dict[str, float] = {}
     errors: List[str] = []
     for cand in test.get("candidates", []):
         cstem = cand["graph"]
@@ -897,7 +912,10 @@ def _run_ged_consistency_test(
         try:
             with open(cache_dir / f"{cstem}.json") as f:
                 g_cand = json.load(f)
+            per_cand_n_nodes[cstem] = len(g_cand["nodes"])
+            t0 = time.perf_counter()
             r = match_nodes_ged(g_ref, g_cand)
+            per_cand_elapsed[cstem] = time.perf_counter() - t0
             per_cand_costs[cstem] = float(r["cost"])
             # Asymmetry probe — run reverse direction.
             try:
@@ -956,9 +974,12 @@ def _run_ged_consistency_test(
         **result_base,
         "status": status,
         "error_message": "; ".join(errors) if errors else None,
+        "n_nodes_ref": n_nodes_ref,
         "per_candidate_costs": per_cand_costs,
         "per_candidate_costs_reverse": per_cand_costs_reverse,
         "per_candidate_symmetric": per_cand_symmetric,
+        "per_candidate_n_nodes": per_cand_n_nodes,
+        "per_candidate_elapsed": per_cand_elapsed,
         "symmetric": is_symmetric,
         "assertions": assertion_results,
     }
@@ -1215,22 +1236,41 @@ def print_suite_summary(suite_result: Dict[str, Any]) -> None:
 
             if t["type"] == "ged" and "ged_result" in t:
                 g = t["ged_result"]
+                na = g.get("n_nodes_a")
+                nb = g.get("n_nodes_b")
+                nodes_str = f"  nodes={na}+{nb}" if na is not None else ""
+                ef = g.get("elapsed_fwd_s")
+                time_str = f"  time={ef:.3f}s" if ef is not None else ""
                 print(f"      cost={g['cost']:.4f}  "
                       f"unassigned_a={g['unassigned_a_count']}  "
                       f"unassigned_b={g['unassigned_b_count']}  "
-                      f"iters={g['n_iter']}")
+                      f"iters={g['n_iter']}"
+                      f"{nodes_str}{time_str}")
                 if t.get("symmetric") is not None:
                     cr = g.get("cost_reverse")
                     cr_str = f"{cr:.4f}" if isinstance(cr, float) else "?"
+                    er = g.get("elapsed_rev_s")
+                    rev_time_str = f"  time={er:.3f}s" if er is not None else ""
                     sym_label = "symmetric" if t["symmetric"] else "ASYMMETRIC"
-                    print(f"      cost_reverse={cr_str}  [{sym_label}]")
+                    print(f"      cost_reverse={cr_str}  [{sym_label}]{rev_time_str}")
 
             if t["type"] == "ged_consistency" and t.get("symmetric") is not None:
                 pcs = t.get("per_candidate_symmetric", {})
                 n_s = sum(1 for v in pcs.values() if v)
                 n_t = len(pcs)
                 sym_label = "symmetric" if t["symmetric"] else "ASYMMETRIC"
-                print(f"      [{sym_label}] {n_s}/{n_t} candidates symmetric")
+                n_ref = t.get("n_nodes_ref")
+                ref_str = f"  ref_nodes={n_ref}" if n_ref is not None else ""
+                print(f"      [{sym_label}] {n_s}/{n_t} candidates symmetric{ref_str}")
+                costs = t.get("per_candidate_costs", {})
+                nn = t.get("per_candidate_n_nodes", {})
+                el = t.get("per_candidate_elapsed", {})
+                for stem in costs:
+                    c_str = f"cost={costs[stem]:.4f}"
+                    n_str = f"  nodes={n_ref}+{nn[stem]}" if stem in nn and n_ref is not None else ""
+                    t_str = f"  time={el[stem]:.3f}s" if stem in el else ""
+                    sym_c = ("sym" if pcs.get(stem) else "ASYM") if stem in pcs else ""
+                    print(f"        {stem}: {c_str}{n_str}{t_str}  [{sym_c}]")
 
             if t["type"] == "comparison" and "scores" in t:
                 s = t["scores"]

@@ -54,6 +54,7 @@ import argparse
 import functools
 import json
 import signal
+import threading
 import warnings
 from collections import defaultdict
 from pathlib import Path
@@ -382,6 +383,51 @@ def _site_shannon_radius_angstrom(
 # Oxidation state guessing
 # ---------------------------------------------------------------------------
 
+def _oxi_guess_all_with_timeout(structure, timeout: int = 30):
+    """Run oxi_state_guesses(all_oxi_states=True) with a wall-clock timeout.
+
+    Uses SIGALRM on POSIX (exact, zero overhead) and a daemon thread on
+    Windows (thread keeps running silently in background after timeout, but
+    the main thread is unblocked and returns the fallback immediately).
+
+    Returns (guesses, oxi_source) in both cases.
+    """
+    if hasattr(signal, "SIGALRM"):
+        # POSIX path — clean signal-based timeout.
+        class _Timeout(Exception):
+            pass
+
+        def _handle_alarm(signum, frame):
+            raise _Timeout()
+
+        old_handler = signal.signal(signal.SIGALRM, _handle_alarm)
+        signal.alarm(timeout)
+        try:
+            guesses = structure.composition.oxi_state_guesses(all_oxi_states=True)
+            return guesses, "composition_guess_all_oxi"
+        except _Timeout:
+            return [], "unavailable_default_0"
+        finally:
+            signal.alarm(0)
+            signal.signal(signal.SIGALRM, old_handler)
+    else:
+        # Windows path — daemon thread; main thread gives up after timeout.
+        result: list = [None]
+
+        def _worker():
+            try:
+                result[0] = structure.composition.oxi_state_guesses(all_oxi_states=True)
+            except Exception:
+                pass
+
+        t = threading.Thread(target=_worker, daemon=True)
+        t.start()
+        t.join(timeout=timeout)
+        if t.is_alive() or result[0] is None:
+            return [], "unavailable_default_0"
+        return result[0], "composition_guess_all_oxi"
+
+
 def _guess_site_oxidation_states(
     structure: Structure, species_infos: List[List[Dict[str, Any]]]
 ) -> Tuple[List[float], str]:
@@ -400,23 +446,7 @@ def _guess_site_oxidation_states(
     guesses = structure.composition.oxi_state_guesses(max_sites=-1)
     oxi_source = "composition_guess"
     if not guesses:
-        class _Timeout(Exception):
-            pass
-
-        def _handle_alarm(signum, frame):
-            raise _Timeout()
-
-        old_handler = signal.signal(signal.SIGALRM, _handle_alarm)
-        signal.alarm(30)
-        try:
-            guesses = structure.composition.oxi_state_guesses(all_oxi_states=True)
-            oxi_source = "composition_guess_all_oxi"
-        except _Timeout:
-            guesses = []
-            oxi_source = "unavailable_default_0"
-        finally:
-            signal.alarm(0)
-            signal.signal(signal.SIGALRM, old_handler)
+        guesses, oxi_source = _oxi_guess_all_with_timeout(structure, timeout=30)
 
     if guesses:
         element_oxi = {str(el): float(val) for el, val in guesses[0].items()}

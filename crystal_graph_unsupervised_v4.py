@@ -60,6 +60,12 @@ from crystal_graph_ged import (
     match_nodes_ged,
     match_nodes_ged_symmetric,
 )
+from crystal_graph_ged_v2 import (
+    OPTIMIZER_REGISTRY as _V2_OPTIMIZER_REGISTRY,
+    COST_FUNCTION_REGISTRY as _V2_COST_FUNCTION_REGISTRY,
+    match_nodes_ged_v2,
+)
+import crystal_graph_costs_v2  # noqa: registers TopologyCost in COST_FUNCTION_REGISTRY
 from scripts.crystal_graph_matching import compute_fingerprints
 
 # ---------------------------------------------------------------------------
@@ -117,6 +123,8 @@ _g_edges:             List[Dict[int, Any]]  = []
 _g_nn:                List[Dict[int, Any]]  = []
 _g_brute_force_limit: int                   = 7
 _g_symmetric:         bool                  = False
+_g_optimizer_tag:     str                   = "stoichiometry_constrained"
+_g_cost_fn_tag:       str                   = "topology"
 
 
 def _pool_init(
@@ -126,14 +134,19 @@ def _pool_init(
     nn_list:           List[Dict[int, Any]],
     brute_force_limit: int,
     symmetric:         bool,
+    optimizer_tag:     str,
+    cost_fn_tag:       str,
 ) -> None:
     global _g_graphs, _g_fps, _g_edges, _g_nn, _g_brute_force_limit, _g_symmetric
+    global _g_optimizer_tag, _g_cost_fn_tag
     _g_graphs            = graphs
     _g_fps               = fps_list
     _g_edges             = edges_list
     _g_nn                = nn_list
     _g_brute_force_limit = brute_force_limit
     _g_symmetric         = symmetric
+    _g_optimizer_tag     = optimizer_tag
+    _g_cost_fn_tag       = cost_fn_tag
 
 
 # ---------------------------------------------------------------------------
@@ -141,6 +154,43 @@ def _pool_init(
 # ---------------------------------------------------------------------------
 
 _ZERO_COST_EPSILON = 1e-9
+
+
+def _call_ged(
+    g_a:     Dict[str, Any],
+    g_b:     Dict[str, Any],
+    fps_a:   Optional[Dict[int, Any]] = None,
+    fps_b:   Optional[Dict[int, Any]] = None,
+    edges_a: Optional[Dict[int, Any]] = None,
+    edges_b: Optional[Dict[int, Any]] = None,
+    nn_a:    Optional[Dict[int, Any]] = None,
+    nn_b:    Optional[Dict[int, Any]] = None,
+) -> Dict[str, Any]:
+    """Route a GED call to v1 or v2 based on the worker-global optimizer tag.
+
+    v1  (``_g_optimizer_tag == "v1"``) — calls ``match_nodes_ged`` /
+        ``match_nodes_ged_symmetric``, using the pre-computed fps/edges/nn.
+    v2  (any other tag) — calls ``match_nodes_ged_v2`` with the chosen
+        optimizer and cost-function classes, then returns the v1-compatible
+        result dict via ``Mapping.to_v1_result()``.  The fps/edges/nn args
+        are ignored for v2.
+    """
+    if _g_optimizer_tag == "v1":
+        if _g_symmetric:
+            return match_nodes_ged_symmetric(
+                g_a, g_b, brute_force_limit=_g_brute_force_limit,
+            )
+        return match_nodes_ged(
+            g_a, g_b,
+            fps_a=fps_a, fps_b=fps_b,
+            edges_a=edges_a, edges_b=edges_b,
+            nn_a=nn_a, nn_b=nn_b,
+            brute_force_limit=_g_brute_force_limit,
+        )
+    opt_cls = _V2_OPTIMIZER_REGISTRY[_g_optimizer_tag]
+    cfn_cls = _V2_COST_FUNCTION_REGISTRY[_g_cost_fn_tag]
+    mapping = match_nodes_ged_v2(g_a, g_b, optimizer_cls=opt_cls, cost_fn_cls=cfn_cls)
+    return mapping.to_v1_result()
 
 
 def _ged_vs_protos(
@@ -165,21 +215,13 @@ def _ged_vs_protos(
     out: List[Tuple[int, int, float]] = []
     for proto_idx in proto_indices:
         try:
-            if _g_symmetric:
-                r = match_nodes_ged_symmetric(
-                    g_mat, _g_graphs[proto_idx],
-                    brute_force_limit=_g_brute_force_limit,
-                )
-                cost = float(r["cost"])
-            else:
-                r = match_nodes_ged(
-                    g_mat, _g_graphs[proto_idx],
-                    fps_a=fps_mat,    fps_b=_g_fps[proto_idx],
-                    edges_a=edges_mat, edges_b=_g_edges[proto_idx],
-                    nn_a=nn_mat,       nn_b=_g_nn[proto_idx],
-                    brute_force_limit=_g_brute_force_limit,
-                )
-                cost = float(r["cost"])
+            r = _call_ged(
+                g_mat, _g_graphs[proto_idx],
+                fps_a=fps_mat,    fps_b=_g_fps[proto_idx],
+                edges_a=edges_mat, edges_b=_g_edges[proto_idx],
+                nn_a=nn_mat,       nn_b=_g_nn[proto_idx],
+            )
+            cost = float(r["cost"])
         except Exception:
             cost = float("inf")
         out.append((mat_idx, proto_idx, cost))
@@ -233,19 +275,12 @@ def _compute_mapping(args: Tuple[int, int]) -> Tuple[int, int, Optional[Dict[str
     the serialized result dict (or None on exception)."""
     mat_idx, proto_idx = args
     try:
-        if _g_symmetric:
-            r = match_nodes_ged_symmetric(
-                _g_graphs[mat_idx], _g_graphs[proto_idx],
-                brute_force_limit=_g_brute_force_limit,
-            )
-        else:
-            r = match_nodes_ged(
-                _g_graphs[mat_idx], _g_graphs[proto_idx],
-                fps_a=_g_fps[mat_idx],    fps_b=_g_fps[proto_idx],
-                edges_a=_g_edges[mat_idx], edges_b=_g_edges[proto_idx],
-                nn_a=_g_nn[mat_idx],       nn_b=_g_nn[proto_idx],
-                brute_force_limit=_g_brute_force_limit,
-            )
+        r = _call_ged(
+            _g_graphs[mat_idx], _g_graphs[proto_idx],
+            fps_a=_g_fps[mat_idx],    fps_b=_g_fps[proto_idx],
+            edges_a=_g_edges[mat_idx], edges_b=_g_edges[proto_idx],
+            nn_a=_g_nn[mat_idx],       nn_b=_g_nn[proto_idx],
+        )
         return (mat_idx, proto_idx, _serialize_mapping_result(r))
     except Exception:
         return (mat_idx, proto_idx, None)
@@ -527,8 +562,24 @@ def run_clustering(
     symmetric:         bool  = False,
     ratio:             Optional[str] = None,
     element:           Optional[str] = None,
+    optimizer_tag:     str   = "stoichiometry_constrained",
+    cost_fn_tag:       str   = "topology",
 ) -> None:
     t0 = time.time()
+
+    # ── Validate optimizer / cost-function tags ────────────────────────────
+    if optimizer_tag != "v1":
+        if optimizer_tag not in _V2_OPTIMIZER_REGISTRY:
+            raise ValueError(
+                f"Unknown optimizer: '{optimizer_tag}'. "
+                f"Available v2 optimizers: {sorted(_V2_OPTIMIZER_REGISTRY)}. "
+                f"Use 'v1' for the legacy match_nodes_ged."
+            )
+        if cost_fn_tag not in _V2_COST_FUNCTION_REGISTRY:
+            raise ValueError(
+                f"Unknown cost function: '{cost_fn_tag}'. "
+                f"Available: {sorted(_V2_COST_FUNCTION_REGISTRY)}."
+            )
 
     # ── Load graphs ────────────────────────────────────────────────────────
     graph_paths = sorted(
@@ -582,13 +633,18 @@ def run_clustering(
     n = len(graphs)
     print(f"Loaded {n} graphs  ({time.time()-t0:.1f}s)", flush=True)
 
-    # ── D: pre-compute per-graph structures ────────────────────────────────
-    print("Pre-computing fingerprints, edge adjacency, NN sets ...", flush=True)
-    t_fps = time.time()
-    fps_list   = [compute_fingerprints(g)   for g in graphs]
-    edges_list = [_build_edge_adjacency(g)  for g in graphs]
-    nn_list    = [_build_nn_sets(g)         for g in graphs]
-    print(f"Pre-compute done  ({time.time()-t_fps:.1f}s)", flush=True)
+    # ── D: pre-compute per-graph structures (v1 only) ─────────────────────
+    if optimizer_tag == "v1":
+        print("Pre-computing fingerprints, edge adjacency, NN sets ...", flush=True)
+        t_fps = time.time()
+        fps_list   = [compute_fingerprints(g)   for g in graphs]
+        edges_list = [_build_edge_adjacency(g)  for g in graphs]
+        nn_list    = [_build_nn_sets(g)         for g in graphs]
+        print(f"Pre-compute done  ({time.time()-t_fps:.1f}s)", flush=True)
+    else:
+        fps_list   = [{} for _ in graphs]
+        edges_list = [{} for _ in graphs]
+        nn_list    = [{} for _ in graphs]
 
     # ── Distortion + intermetallic flag ────────────────────────────────────
     distortion    = [_compute_distortion(g)  for g in graphs]
@@ -607,7 +663,10 @@ def run_clustering(
     )
 
     eff_batch = batch_size if batch_size > 0 else max(workers * 2, 1)
-    mode_str = "symmetric (avg of A→B and B→A)" if symmetric else "directional"
+    if optimizer_tag == "v1":
+        mode_str = "v1/" + ("symmetric" if symmetric else "directional")
+    else:
+        mode_str = f"v2/{optimizer_tag}+{cost_fn_tag}"
     print(f"Workers={workers}  batch_size={eff_batch}  GED mode={mode_str}",
           flush=True)
     print(f"Threshold (cost ≤ x → same family): {threshold}", flush=True)
@@ -618,14 +677,16 @@ def run_clustering(
     # ── Start worker pool ──────────────────────────────────────────────────
     if workers <= 1:
         _pool_init(graphs, fps_list, edges_list, nn_list,
-                   brute_force_limit, symmetric)
+                   brute_force_limit, symmetric,
+                   optimizer_tag, cost_fn_tag)
         pool_ctx: Optional[multiprocessing.pool.Pool] = None
     else:
         pool_ctx = multiprocessing.Pool(
             processes=workers,
             initializer=_pool_init,
             initargs=(graphs, fps_list, edges_list, nn_list,
-                      brute_force_limit, symmetric),
+                      brute_force_limit, symmetric,
+                      optimizer_tag, cost_fn_tag),
         )
 
     try:
@@ -765,7 +826,9 @@ def run_clustering(
         "n_materials":      n,
         "n_families":       n_families,
         "threshold":        threshold,
-        "ged_mode":         "symmetric" if symmetric else "directional",
+        "ged_mode":         mode_str,
+        "optimizer":        optimizer_tag,
+        "cost_function":    cost_fn_tag if optimizer_tag != "v1" else "v1_builtin",
         "n_comparisons":    len(cost_cache),
         "elapsed_s":        round(time.time() - t0, 1),
         "families":         families_out,
@@ -780,6 +843,9 @@ def run_clustering(
     print(f"  Families        : {n_families}")
     print(f"  Threshold       : {threshold}")
     print(f"  GED mode        : {mode_str}")
+    if optimizer_tag != "v1":
+        print(f"  Optimizer       : {optimizer_tag}")
+        print(f"  Cost function   : {cost_fn_tag}")
     print(f"  GED comparisons : {len(cost_cache)}")
     print(f"  Elapsed         : {elapsed:.1f}s")
     print(f"{'─'*52}")
@@ -812,10 +878,20 @@ def main() -> None:
                         help="Max CN-bucket size for brute-force permutation "
                              "search during GED refinement (default 7). "
                              "Set to 0 to disable brute-force entirely.")
+    parser.add_argument("--optimizer",     type=str,
+                        default="stoichiometry_constrained",
+                        help="GED optimizer.  'v1' uses the legacy match_nodes_ged; "
+                             "any other value is looked up in the v2 OPTIMIZER_REGISTRY "
+                             "(e.g. 'stoichiometry_constrained', 'brute_force'). "
+                             "Default: stoichiometry_constrained.")
+    parser.add_argument("--cost-function", type=str, default="topology",
+                        dest="cost_function",
+                        help="v2 cost function tag (ignored when --optimizer v1). "
+                             "Available: topology, cn_core_diff.  "
+                             "Default: topology.")
     parser.add_argument("--symmetric",    action="store_true",
                         help="Use match_nodes_ged_symmetric (averages A→B and "
-                             "B→A; ~2× slower but more defensive against "
-                             "direction-asymmetric edge cases).")
+                             "B→A; ~2× slower).  Only applies when --optimizer v1.")
     parser.add_argument("--ratio",        type=str, default=None,
                         help="Restrict to graphs whose reduced composition "
                              "matches the given stoichiometry ratio.  Accepts "
@@ -845,6 +921,8 @@ def main() -> None:
         symmetric=args.symmetric,
         ratio=args.ratio,
         element=args.element,
+        optimizer_tag=args.optimizer,
+        cost_fn_tag=args.cost_function,
     )
 
 

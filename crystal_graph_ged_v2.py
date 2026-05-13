@@ -40,6 +40,10 @@ from __future__ import annotations
 import itertools
 import json
 from abc import ABC, abstractmethod
+from collections import Counter
+from dataclasses import dataclass, field
+from math import gcd
+from functools import reduce
 from typing import Any, Dict, Iterator, List, Optional, Set, Tuple, Union
 
 
@@ -645,6 +649,137 @@ class CnCoreDiffCost(CostFunction):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Formula-unit grouping
+# ─────────────────────────────────────────────────────────────────────────────
+
+class FormulaGroupError(ValueError):
+    """Raised when two graphs have incompatible stoichiometric count groups."""
+
+
+@dataclass
+class ConstraintBlock:
+    """One stoichiometric count group.
+
+    ``element_assignments`` lists all bijections from the A-side element
+    set to the B-side element set (length 1 when unambiguous, n! when n
+    distinct elements share the same reduced count on both sides).
+    """
+    count: int
+    a_ids: List[AtomID]
+    b_ids: List[AtomID]
+    element_assignments: List[Dict[str, str]] = field(default_factory=list)
+
+
+class FormulaGrouper:
+    """Partitions atoms into stoichiometric count groups for cross-graph mapping.
+
+    Two atoms are in the same count group when their elements have the same
+    count in the reduced (GCD-normalised) formula unit.  Cross-composition
+    comparisons (e.g. SrTiO3 vs BaTiO3) are supported: Sr and Ba both have
+    reduced count 1, so they form an ambiguous pool with Ti.
+
+    Raises
+    ------
+    FormulaGroupError
+        If any count group has a different number of distinct elements on
+        the A-side vs B-side (genuine composition mismatch), or if the
+        formula-unit ratio between the two graphs is not an integer.
+    """
+
+    def __init__(self, graph_a: dict, graph_b: dict) -> None:
+        raw_a: Counter = Counter(n["element"] for n in graph_a["nodes"])
+        raw_b: Counter = Counter(n["element"] for n in graph_b["nodes"])
+
+        def _multi_gcd(counts: Counter) -> int:
+            return reduce(gcd, counts.values())
+
+        gcd_a = _multi_gcd(raw_a)
+        gcd_b = _multi_gcd(raw_b)
+
+        if gcd_b % gcd_a != 0 and gcd_a % gcd_b != 0:
+            raise FormulaGroupError(
+                f"Formula-unit counts are incompatible: graph A has {gcd_a} "
+                f"formula unit(s), graph B has {gcd_b}; ratio {gcd_b}/{gcd_a} "
+                f"is not an integer in either direction."
+            )
+
+        self._gcd_a = gcd_a
+        self._gcd_b = gcd_b
+        self._k: int = max(gcd_a, gcd_b) // min(gcd_a, gcd_b)
+        # A is the "smaller" side when each A atom maps to k B atoms.
+        self._a_is_smaller: bool = gcd_a <= gcd_b
+
+        reduced_a = {el: c // gcd_a for el, c in raw_a.items()}
+        reduced_b = {el: c // gcd_b for el, c in raw_b.items()}
+
+        count_to_a: Dict[int, List[str]] = {}
+        count_to_b: Dict[int, List[str]] = {}
+        for el, c in reduced_a.items():
+            count_to_a.setdefault(c, []).append(el)
+        for el, c in reduced_b.items():
+            count_to_b.setdefault(c, []).append(el)
+
+        all_counts = set(count_to_a) | set(count_to_b)
+        for c in sorted(all_counts):
+            a_els = count_to_a.get(c, [])
+            b_els = count_to_b.get(c, [])
+            if len(a_els) != len(b_els):
+                raise FormulaGroupError(
+                    f"Count group {c}: graph A has {len(a_els)} element(s) "
+                    f"({sorted(a_els)}) but graph B has {len(b_els)} "
+                    f"({sorted(b_els)}); cannot form element-level bijections."
+                )
+
+        self._count_to_a: Dict[int, List[str]] = count_to_a
+        self._count_to_b: Dict[int, List[str]] = count_to_b
+        self._graph_a = graph_a
+        self._graph_b = graph_b
+
+    @property
+    def k(self) -> int:
+        """Supercell multiplicity: the larger graph has k times more formula units."""
+        return self._k
+
+    @property
+    def a_is_smaller(self) -> bool:
+        """True iff graph_a has ≤ formula units than graph_b (A maps to k B's each)."""
+        return self._a_is_smaller
+
+    def constraint_blocks(self) -> List[ConstraintBlock]:
+        """Return one ConstraintBlock per shared reduced-count value."""
+        a_by_el: Dict[str, List[AtomID]] = {}
+        for n in self._graph_a["nodes"]:
+            a_by_el.setdefault(n["element"], []).append(int(n["id"]))
+        b_by_el: Dict[str, List[AtomID]] = {}
+        for n in self._graph_b["nodes"]:
+            b_by_el.setdefault(n["element"], []).append(int(n["id"]))
+
+        blocks: List[ConstraintBlock] = []
+        for count in sorted(self._count_to_a):
+            a_elements = self._count_to_a[count]
+            b_elements = self._count_to_b[count]
+
+            a_ids: List[AtomID] = []
+            for el in a_elements:
+                a_ids.extend(a_by_el.get(el, []))
+            b_ids: List[AtomID] = []
+            for el in b_elements:
+                b_ids.extend(b_by_el.get(el, []))
+
+            assignments = [
+                dict(zip(a_elements, perm))
+                for perm in itertools.permutations(b_elements)
+            ]
+            blocks.append(ConstraintBlock(
+                count=count,
+                a_ids=sorted(a_ids),
+                b_ids=sorted(b_ids),
+                element_assignments=assignments,
+            ))
+        return blocks
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Optimizers
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -672,7 +807,10 @@ class BruteForceOptimizer(Optimizer):
 
     Limitations
     -----------
-      - Each graph must have at most ``MAX_NODES`` atoms.
+      - Each graph must have at most ``MAX_NODES`` atoms (class default: 10).
+        Pass ``max_nodes`` to the constructor to raise the cap for a single
+        instance — used by StoichiometryConstrainedOptimizer, which operates
+        on per-element sub-graphs that are much smaller than full graphs.
       - Only enumerates k values where ``|A| × k == |B|`` (or vice
         versa); incompatible sizes raise ValueError.
       - No vacancy support.
@@ -683,15 +821,17 @@ class BruteForceOptimizer(Optimizer):
     MAX_NODES: int = 10
 
     def __init__(self, graph_a: dict, graph_b: dict, cost_fn: CostFunction,
-                 zero_tolerance: float = 1e-9) -> None:
+                 zero_tolerance: float = 1e-9,
+                 max_nodes: Optional[int] = None) -> None:
         super().__init__(graph_a, graph_b, cost_fn)
         self.zero_tolerance = zero_tolerance
+        effective_max = max_nodes if max_nodes is not None else self.MAX_NODES
         n_a = len(graph_a["nodes"])
         n_b = len(graph_b["nodes"])
-        if max(n_a, n_b) > self.MAX_NODES:
+        if max(n_a, n_b) > effective_max:
             raise ValueError(
                 f"BruteForceOptimizer only supports graphs of up to "
-                f"{self.MAX_NODES} atoms; got |A|={n_a}, |B|={n_b}"
+                f"{effective_max} atoms; got |A|={n_a}, |B|={n_b}"
             )
         self._n_a = n_a
         self._n_b = n_b
@@ -744,11 +884,27 @@ class BruteForceOptimizer(Optimizer):
         """Yield Mapping instances covering all pure bijections.
 
         Strategy depends on which side is smaller:
-          - n_a == n_b: enumerate permutations of B (each a → 1 b).
-          - n_a < n_b (k = n_b/n_a): partition B into n_a groups of
-            size k; each a gets one group.
-          - n_a > n_b (k = n_a/n_b): partition A into n_b groups of
-            size k; each b gets one group of a's mapped to it.
+          - n_a == n_b: treated as k=1 partition (same pruning applies).
+          - n_a < n_b (k = n_b/n_a): partition B into n_a groups of size k.
+          - n_a > n_b (k = n_a/n_b): partition A into n_b groups of size k.
+
+        All three cases go through ``_partition_and_yield``, which applies
+        two symmetry prunings:
+
+        1. **Small-atom canonical ordering** — atoms on the smaller side are
+           sorted by their bonding fingerprint.  For two small atoms with the
+           same fingerprint the assigned group on the larger side must be
+           lexicographically ≥ the previous one, eliminating n_equiv! redundant
+           orderings per equivalence class.
+
+        2. **Large-atom group deduplication** — for a given small atom, all
+           k-subsets of the remaining large atoms that share the same sorted
+           fingerprint tuple produce identical costs.  Only one representative
+           per unique group fingerprint is explored.
+
+        For sub-graphs where all atoms of the same element are topologically
+        equivalent (no intra-element edges, e.g. O in most perovskites),
+        both prunings together collapse the search to a single candidate.
         """
         a_ids = sorted(self.graph_a["nodes"], key=lambda n: int(n["id"]))
         b_ids = sorted(self.graph_b["nodes"], key=lambda n: int(n["id"]))
@@ -756,22 +912,56 @@ class BruteForceOptimizer(Optimizer):
         b_id_list = [int(n["id"]) for n in b_ids]
 
         if self._smaller_side == "equal":
-            for perm in itertools.permutations(b_id_list):
-                m = Mapping(self.graph_a, self.graph_b, list_length=1)
-                for a, b in zip(a_id_list, perm):
-                    m.set_pair(a, b, slot=0)
-                yield m
-
+            yield from self._partition_and_yield(
+                a_id_list, b_id_list, 1, smaller="a"
+            )
         elif self._smaller_side == "a":
-            # Partition b_id_list into len(a_id_list) groups of size k.
             yield from self._partition_and_yield(
                 a_id_list, b_id_list, self._k, smaller="a"
             )
-
         else:  # smaller == "b"
             yield from self._partition_and_yield(
                 b_id_list, a_id_list, self._k, smaller="b"
             )
+
+    # ── fingerprinting ──────────────────────────────────────────────────────
+
+    def _node_fingerprints(
+        self,
+        node_ids: List[AtomID],
+        graph: dict,
+    ) -> Dict[AtomID, tuple]:
+        """Edge-profile fingerprint for each node: (cn_core, sorted neighbor counts).
+
+        Two nodes with the same fingerprint are indistinguishable to any cost
+        function that operates solely on local bonding structure (TopologyCost,
+        CnCoreDiffCost).  Used by ``_partition_and_yield`` to detect equivalent
+        atoms and prune redundant combinations.
+        """
+        elem: Dict[AtomID, str] = {
+            int(n["id"]): n.get("element", "")
+            for n in graph["nodes"]
+        }
+        cn: Dict[AtomID, int] = {
+            int(n["id"]): int(n.get("cn_core", n.get("coordination_number", 0)))
+            for n in graph["nodes"]
+        }
+        id_set = set(node_ids)
+        nbr: Dict[AtomID, Dict[str, int]] = {nid: {} for nid in node_ids}
+        for e in graph.get("edges", []):
+            s, t = int(e["source"]), int(e["target"])
+            if s in id_set:
+                el = elem.get(t, "?")
+                nbr[s][el] = nbr[s].get(el, 0) + 1
+            if t in id_set:
+                el = elem.get(s, "?")
+                nbr[t][el] = nbr[t].get(el, 0) + 1
+        return {
+            nid: (cn.get(nid, 0), tuple(sorted(nbr[nid].items())))
+            for nid in node_ids
+        }
+
+    # ── partition enumeration ───────────────────────────────────────────────
 
     def _partition_and_yield(
         self,
@@ -780,35 +970,168 @@ class BruteForceOptimizer(Optimizer):
         k: int,
         smaller: str,
     ) -> Iterator[Mapping]:
-        """Yield Mapping instances where each id in small_ids is paired
-        with k ids from large_ids (each large_id used exactly once).
+        """Yield Mappings pairing each small atom with k large atoms.
 
-        Depending on ``smaller`` ('a' or 'b'), constructs the Mapping in
-        the appropriate direction.
+        Applies two prunings (see ``_enumerate_bijections`` docstring):
+          1. Small-atom canonical ordering (sort small by fingerprint;
+             require non-decreasing group assignment for equal-fp smalls).
+          2. Large-atom group deduplication (skip k-subsets whose sorted
+             fingerprint tuple was already tried for this small atom).
         """
-        def _gen(idx: int, remaining: Tuple[AtomID, ...]):
-            if idx == len(small_ids):
+        graph_small = self.graph_a if smaller == "a" else self.graph_b
+        graph_large = self.graph_b if smaller == "a" else self.graph_a
+
+        fp_small = self._node_fingerprints(small_ids, graph_small)
+        fp_large = self._node_fingerprints(large_ids, graph_large)
+
+        # Sort small atoms by fingerprint for canonical ordering.
+        sorted_small = sorted(small_ids, key=lambda x: fp_small[x])
+        fps_s = [fp_small[x] for x in sorted_small]
+
+        def _gen(
+            idx: int,
+            remaining: Tuple[AtomID, ...],
+            last_by_pair: Dict[tuple, Tuple],
+        ):
+            if idx == len(sorted_small):
                 yield ()
                 return
+            current_fp = fps_s[idx]
+            seen_group_fps: set = set()   # large-group dedup
+
             for chosen in itertools.combinations(remaining, k):
+                # Pruning 2: large-atom group deduplication.
+                group_fp = tuple(sorted(fp_large[b] for b in chosen))
+                if group_fp in seen_group_fps:
+                    continue
+                seen_group_fps.add(group_fp)
+
+                # Pruning 1: small-atom canonical ordering.
+                # Only constrains assignments where BOTH the small atom fp
+                # and the large group fp match a previous assignment —
+                # cross-type assignments (e.g. O→Zn vs O→O) must not be
+                # blocked by a lower bound derived from the other type.
+                pair_key = (current_fp, group_fp)
+                lower = last_by_pair.get(pair_key)
+                if lower is not None and chosen < lower:
+                    continue
+
                 new_remaining = tuple(x for x in remaining if x not in chosen)
-                for rest in _gen(idx + 1, new_remaining):
+                new_last = {**last_by_pair, pair_key: chosen}
+                for rest in _gen(idx + 1, new_remaining, new_last):
                     yield (chosen,) + rest
 
-        for partition in _gen(0, tuple(large_ids)):
+        for partition in _gen(0, tuple(large_ids), {}):
             if smaller == "a":
                 m = Mapping(self.graph_a, self.graph_b, list_length=k)
-                for a, group in zip(small_ids, partition):
+                for a, group in zip(sorted_small, partition):
                     for slot, b in enumerate(group):
                         m.set_pair(a, b, slot=slot)
                 yield m
             else:  # smaller == "b"
-                # Build with reversed direction: each b matched by k a's.
                 m = Mapping(self.graph_a, self.graph_b, list_length=1)
-                for b, group in zip(small_ids, partition):
+                for b, group in zip(sorted_small, partition):
                     for a in group:
                         m.set_pair(a, b, slot=0)
                 yield m
+
+
+class StoichiometryConstrainedOptimizer(Optimizer):
+    """Optimizer that constrains mappings by stoichiometric count groups.
+
+    Atoms of element X in graph A may only map to atoms of element Y in
+    graph B when X and Y share the same count in their respective reduced
+    formula units.  Within each count group, all bijections between the
+    A-side and B-side element sets are tried (the "element assignment"
+    layer); within each such assignment the inner optimizer finds the
+    best atom-level permutation.
+
+    Parameters
+    ----------
+    inner_optimizer_cls:
+        Optimizer subclass used to solve each per-element sub-problem.
+        Defaults to BruteForceOptimizer.  Must accept the same
+        ``(graph_a, graph_b, cost_fn)`` positional signature.
+    inner_max_nodes:
+        Node cap passed to BruteForceOptimizer inner instances.  Defaults
+        to 25 — higher than BruteForceOptimizer.MAX_NODES (10) because
+        sub-graphs here contain only a single element at a time, so their
+        size is much smaller than the full graph.  Ignored when
+        ``inner_optimizer_cls`` is not BruteForceOptimizer.
+
+    Raises
+    ------
+    FormulaGroupError
+        Propagated from FormulaGrouper when the two graphs have
+        incompatible stoichiometric count groups.
+    """
+
+    def __init__(
+        self,
+        graph_a: dict,
+        graph_b: dict,
+        cost_fn: CostFunction,
+        inner_optimizer_cls: Optional[type] = None,
+        inner_max_nodes: int = 25,
+    ) -> None:
+        super().__init__(graph_a, graph_b, cost_fn)
+        self._inner_cls = inner_optimizer_cls or BruteForceOptimizer
+        self._inner_max_nodes = inner_max_nodes
+        self._grouper = FormulaGrouper(graph_a, graph_b)
+
+    def optimize(self) -> Mapping:
+        blocks = self._grouper.constraint_blocks()
+        list_length = self._grouper.k if self._grouper.a_is_smaller else 1
+
+        best_mapping: Optional[Mapping] = None
+        best_cost = float("inf")
+
+        for assignment_combo in itertools.product(
+            *(b.element_assignments for b in blocks)
+        ):
+            full = Mapping(self.graph_a, self.graph_b, list_length=list_length)
+
+            for block, elem_assignment in zip(blocks, assignment_combo):
+                for e_a, e_b in elem_assignment.items():
+                    sub_a = self._subgraph(self.graph_a, e_a)
+                    sub_b = self._subgraph(self.graph_b, e_b)
+                    if self._inner_cls is BruteForceOptimizer:
+                        inner = self._inner_cls(sub_a, sub_b, self.cost_fn,
+                                                max_nodes=self._inner_max_nodes)
+                    else:
+                        inner = self._inner_cls(sub_a, sub_b, self.cost_fn)
+                    sub_mapping = inner.optimize()
+                    for a, b in sub_mapping.pairs():
+                        full.set_pair(a, b)
+
+            cost = self.cost_fn.evaluate(full)
+            if cost < best_cost:
+                best_cost = cost
+                best_mapping = full.copy()
+                best_mapping.cost = cost
+                best_mapping.cost_function = self.cost_fn
+                if best_cost == 0.0:
+                    return best_mapping
+
+        if best_mapping is None:
+            raise RuntimeError(
+                "StoichiometryConstrainedOptimizer: no valid mapping produced"
+            )
+        return best_mapping
+
+    @staticmethod
+    def _subgraph(graph: dict, element: str) -> dict:
+        """Return a graph dict filtered to nodes of the given element."""
+        nodes = [n for n in graph["nodes"] if n["element"] == element]
+        node_ids = {int(n["id"]) for n in nodes}
+        edges = [
+            e for e in graph.get("edges", [])
+            if int(e["source"]) in node_ids and int(e["target"]) in node_ids
+        ]
+        result = dict(graph)
+        result["nodes"] = nodes
+        result["edges"] = edges
+        return result
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -821,6 +1144,7 @@ class BruteForceOptimizer(Optimizer):
 
 OPTIMIZER_REGISTRY: Dict[str, type] = {
     "brute_force": BruteForceOptimizer,
+    "stoichiometry_constrained": StoichiometryConstrainedOptimizer,
 }
 
 COST_FUNCTION_REGISTRY: Dict[str, type] = {
@@ -856,6 +1180,10 @@ __all__ = [
     "CnCoreDiffCost",
     "Optimizer",
     "BruteForceOptimizer",
+    "FormulaGroupError",
+    "ConstraintBlock",
+    "FormulaGrouper",
+    "StoichiometryConstrainedOptimizer",
     "OPTIMIZER_REGISTRY",
     "COST_FUNCTION_REGISTRY",
     "match_nodes_ged_v2",
