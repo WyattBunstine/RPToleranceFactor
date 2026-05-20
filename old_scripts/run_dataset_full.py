@@ -10,7 +10,7 @@ Run from PyCharm (pymatgen must be available):
 import re
 from pathlib import Path
 
-from build_graphs_batch import build_graphs_batch
+from scripts.build_graphs_batch import build_graphs_batch
 from crystal_graph_dataset_v2 import build_dataset, PROTOTYPE_SPECS
 
 CIF_DIR    = Path("../data/cifs")

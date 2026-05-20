@@ -7,8 +7,12 @@ per-bond contribution.
 """
 
 import math
+import sys
 from collections import Counter, defaultdict
+from pathlib import Path
 from typing import Dict, List, Optional
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import json
 import crystal_graph_ged as ged_mod

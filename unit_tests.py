@@ -1027,12 +1027,16 @@ def _display_category(tags: List[str]) -> str:
     return tags[0] if tags else "uncategorized"
 
 
+_V1_TEST_TYPES = {"ged", "comparison", "family"}
+
+
 def run_suite(
     suite_path: Path,
     repo_root: Path,
     rebuild: bool = False,
     filter_tags: Optional[Set[str]] = None,
     exclude_tags: Optional[Set[str]] = None,
+    include_v1: bool = False,
 ) -> Dict[str, Any]:
     """Run all tests in one JSON suite file.  Returns a result dict.
 
@@ -1067,6 +1071,13 @@ def run_suite(
             n_skipped += 1
             continue
         if exclude_tags and exclude_tags & tag_set:
+            n_skipped += 1
+            continue
+        # Default: skip v1-optimizer tests.  v1 is frozen legacy code and
+        # the active work lives on v2; gating this behind --include-v1 keeps
+        # the default suite fast and focused.
+        if not include_v1 and test.get("optimizer", "v1") == "v1" \
+                and test.get("type", "") in _V1_TEST_TYPES:
             n_skipped += 1
             continue
 
@@ -1404,6 +1415,12 @@ def main() -> None:
              "(e.g. --exclude-tag formula_unit excludes only that tag and "
              "no longer auto-excludes slow).",
     )
+    parser.add_argument(
+        "--include-v1", action="store_true",
+        help="Also run tests using the legacy v1 optimizer.  By default "
+             "only v2-optimizer tests are run (v1 is frozen legacy code; "
+             "active development is on v2).",
+    )
     args = parser.parse_args()
     filter_tags: Set[str] = set(args.tag) if args.tag else {"core"}
     exclude_tags: Set[str] = (
@@ -1428,6 +1445,7 @@ def main() -> None:
             rebuild=args.rebuild_graphs,
             filter_tags=filter_tags,
             exclude_tags=exclude_tags,
+            include_v1=args.include_v1,
         )
         all_results.append(result)
         print_suite_summary(result)

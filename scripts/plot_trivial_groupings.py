@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """
-Scatter plot for unsupervised family discovery (dataset_unsupervised.csv).
+Scatter plot for the trivial-groups ABO3 dataset (data/trivial_groups_113.csv).
+
+Restricted to materials whose reduced formula is 1-1-3 AND whose count-3
+species is oxygen — i.e. true ABO3 perovskite-like compositions, excluding
+anti-perovskites (e.g. Ba3PbO) and 113 intermetallics (e.g. AlCo3C).
 
 Each discovered family gets a unique colour + marker.
 Singleton families are shown as small gray crosses.
@@ -38,8 +42,8 @@ def _expand_formula(formula: str) -> str:
     return formula
 
 
-def _formula_ratio(formula: str) -> Tuple[int, ...]:
-    """Return the normalised sorted count tuple for a reduced formula string."""
+def _reduced_counts(formula: str) -> Dict[str, int]:
+    """Return per-element counts after reducing the formula by its GCD."""
     formula = _expand_formula(formula)
     tokens = re.findall(r"([A-Z][a-z]?)(\d*\.?\d*)", formula)
     counts: Dict[str, float] = {}
@@ -48,16 +52,75 @@ def _formula_ratio(formula: str) -> Tuple[int, ...]:
             continue
         counts[sym] = counts.get(sym, 0.0) + (float(num) if num else 1.0)
     if not counts:
-        return ()
-    int_counts = [int(round(v)) for v in counts.values()]
-    g = reduce(gcd, int_counts)
-    return tuple(sorted(v // g for v in int_counts))
+        return {}
+    int_counts = {k: int(round(v)) for k, v in counts.items()}
+    g = reduce(gcd, int_counts.values())
+    return {k: v // g for k, v in int_counts.items()}
 
 
-DEFAULT_GRAPH_DIR   = Path("data/crystal_graphs_v3")
-DEFAULT_INPUT       = Path("data/dataset_unsupervised.csv")
-DEFAULT_OUTPUT      = Path("data/unsupervised_family_scatter.png")
+def _formula_ratio(formula: str) -> Tuple[int, ...]:
+    """Return the normalised sorted count tuple for a reduced formula string."""
+    counts = _reduced_counts(formula)
+    return tuple(sorted(counts.values()))
+
+
+def _is_abo3_oxygen_third(formula: str) -> bool:
+    """True iff reduced formula is 1-1-3 and oxygen is the count-3 species."""
+    counts = _reduced_counts(formula)
+    if sorted(counts.values()) != [1, 1, 3]:
+        return False
+    return counts.get("O", 0) == 3
+
+
+DEFAULT_INPUT       = Path("data/trivial_groups_tol0.01.csv")
+DEFAULT_OUTPUT      = Path("data/trivial_groups_tol0.01_oxide_scatter.png")
 DEFAULT_CANDIDATE   = Path("data/abo3_candidate_list.csv")
+
+# Override the auto-generated "F{fid}: {proto}" legend chunk for the family that
+# contains the listed anchor stem. Keyed by exact CSV `stem` value.
+# Plot's intent is to show clustering over-fragmentation of distorted-perovskite
+# families, so all the visibly distinct perovskite-distortion families are named.
+FAMILY_NAMES: Dict[str, str] = {
+    # Canonical perovskite + non-perovskite anchors
+    "SrTiO3_mp-5229":     "SrTiO₃ - Cubic Perovskite",
+    # fid=1 prototype is BaPuO3 (Pnma); cubic BaPuO3 polymorph (mp-7143) sits
+    # in the Pm-3m family instead.
+    "BaPuO3_mp-505025":   "BaPuO₃ - Orthorhombic Perovskite",
+    "CaCO3_mp-4626":      "CaCO₃ - Aragonite",
+    # AgSbO3 polymorphs head two distinct families: R-3 ilmenite (TiFeO3 is a
+    # member here, not the prototype) and Fd-3m vacant pyrochlore.
+    "AgSbO3_mp-545999":   "AgSbO₃ - Ilmenite",
+    "AgSbO3_mp-540872":   "AgSbO₃ - Vacant Pyrochlore",
+    # AlBO3 is the prototype of fid=15 (R-3c); CaCO3-calcite is a member.
+    "AlBO3_mp-8110":      "AlBO₃ - Calcite-structured",
+    # tol=0.01 fid=1 prototype (BaUS3) is non-oxide and falls out of this plot;
+    # GdFeO3 is the canonical oxide name for the mixed-anion Pnma family.
+    "GdFeO3_mp-600576":   "GdFeO₃ - Orthorhombic Perovskite",
+    # Two distinct CaIrO3 polymorphs: Cmcm post-perovskite (fid=103 at tol=0.01)
+    # and Pnma orthorhombic perovskite (fid=17 at tol=0.01).
+    "CaIrO3_mp-4243":     "CaIrO₃ - Post-Perovskite",
+    "CaIrO3_mp-555735":   "CaIrO₃ - Orthorhombic Perovskite",
+    "DyMnO3_mp-542479":   "DyMnO₃ - Hexagonal Manganite",
+    "DyMnO3_mp-22103":    "DyMnO₃ - Orthorhombic Perovskite",
+    "BaTiO3_mp-5933":     "BaTiO₃ - Hexagonal Perovskite",
+    # Fragmented distorted-perovskite families (the over-fragmentation point)
+    "CaZrO3_mp-4571":     "CaZrO₃ - Orthorhombic Perovskite",
+    "YFeO3_mp-20783":     "YFeO₃ - Distorted Perovskite",
+    "LaCoO3_mp-1185232":  "LaCoO₃ - Distorted Perovskite",
+    "DyGaO3_mp-755612":   "DyGaO₃ - Orthorhombic Perovskite",
+    "BaPbO3_mp-20991":    "BaPbO₃ - Tetragonal Perovskite",
+    "LiTaO3_mp-3666":     "LiTaO₃ - Acentric Rhombohedral Perovskite",
+    "LaGaO3_mp-3336":     "LaGaO₃ - Rhombohedral Perovskite",
+    "LaAlO3_mp-2920":     "LaAlO₃ - Rhombohedral Perovskite",
+    # Other large common families (not perovskite, included for completeness)
+    "MgCO3_mp-5348":      "MgCO₃ - Calcite-type",
+    "MgSiO3_mp-4321":     "MgSiO₃ - Pyroxene",
+    # Non-oxide families. Filtered out of the current oxide-only figure; retained
+    # for future renderings that include halide/chalcogenide/intermetallic ABX3.
+    "CsPbBr3_mp-567681":  "CsPbBr₃ - Orthorhombic Perovskite (halide)",
+    "CeNiSb3_mp-568237":  "CeNiSb₃ - Ternary Antimonide Intermetallic",
+    "CeErS3_mp-1202288":  "CeErS₃ - Ternary Rare-Earth Sulfide",
+}
 
 COMMON_ANIONS = {"O", "F", "S", "Se", "Cl", "Br", "I", "N"}
 
@@ -67,7 +130,6 @@ SINGLETON_MARKER = "x"
 GUIDE_LINES = [
     (0.343718, 1.27279, "GS = 0.9, Orthorhombic",  "dimgray", "-."),
     (0.521909, 1.41421, "GS = 1.0, Hex./Tet.",      "gray",    "-"),
-    (0.00515545, 1.00409, "GS = 0.71, Ilmenite",      "gray",    "--"),
 ]
 
 MARKER_CYCLE = ["o", "s", "^", "D", "P", "v", ">", "<", "h", "*", "p", "H"]
@@ -160,6 +222,11 @@ def build_plot(
     marker_size_base: float,
     dpi: int,
     label_fontsize: float,
+    legend_fontsize: float,
+    legend_title_fontsize: float,
+    axis_label_fontsize: float,
+    title_fontsize: float,
+    tick_fontsize: float,
     show_formula_labels: bool,
     show_spacegroup: bool,
     show_mp_id: bool,
@@ -168,19 +235,17 @@ def build_plot(
     element: Optional[str],
     min_family_size: int,
     show: bool,
-    ratio: Optional[Tuple[int, ...]] = None,
     candidate_csv: Optional[Path] = None,
 ) -> None:
     df = pd.read_csv(input_csv).copy()
 
-    if ratio is not None:
-        mask = df["formula"].apply(lambda f: _formula_ratio(str(f)) == ratio)
-        n_before = len(df)
-        df = df[mask].copy()
-        print(f"Ratio filter {'-'.join(str(x) for x in ratio)}: "
-              f"{len(df)} / {n_before} rows kept")
-        if df.empty:
-            raise RuntimeError(f"No rows match ratio {ratio} in {input_csv}.")
+    # Hard-coded filter: reduced formula 1-1-3 with oxygen as the count-3 species.
+    n_before = len(df)
+    mask = df["formula"].apply(lambda f: _is_abo3_oxygen_third(str(f)))
+    df = df[mask].copy()
+    print(f"ABO3 (oxygen-as-count-3) filter: {len(df)} / {n_before} rows kept")
+    if df.empty:
+        raise RuntimeError(f"No ABO3 (oxygen-as-count-3) rows in {input_csv}.")
 
     total_rows = len(df)
     elem = _normalize_element(element)
@@ -201,6 +266,8 @@ def build_plot(
     family_meta: Dict[int, Tuple[int, str, bool, str, str, str, str]] = {}
     for row in df.itertuples(index=False):
         fid  = int(getattr(row, "family_id"))
+        # family_size in the CSV reflects the full (unfiltered) group;
+        # recompute below from the filtered frame so legend counts match what is plotted.
         size = int(getattr(row, "family_size"))
         sing = str(getattr(row, "is_singleton")).lower() in ("true", "1")
         pf   = str(getattr(row, "prototype_formula", ""))
@@ -210,13 +277,11 @@ def build_plot(
         if aflow_label in ("nan", "None"):
             aflow_label = ""
         if fid not in family_meta:
-            # prefer the prototype row for legend metadata; fall back to first seen
-            proto_sg   = str(getattr(row, "spacegroup_symbol", "")) if show_spacegroup else ""
+            proto_sg   = str(getattr(row, "spacegroup_symbol", ""))
             proto_mpid = _extract_mp_id(str(getattr(row, "graph_json_path", ""))) if show_mp_id else ""
             family_meta[fid] = (size, pf, sing, proto_sg, proto_mpid, type_name, aflow_label)
         elif is_proto:
-            # overwrite with authoritative prototype row
-            proto_sg   = str(getattr(row, "spacegroup_symbol", "")) if show_spacegroup else ""
+            proto_sg   = str(getattr(row, "spacegroup_symbol", ""))
             proto_mpid = _extract_mp_id(str(getattr(row, "graph_json_path", ""))) if show_mp_id else ""
             old = family_meta[fid]
             family_meta[fid] = (
@@ -225,6 +290,26 @@ def build_plot(
                 type_name  or old[5],
                 aflow_label or old[6],
             )
+
+    # Recompute family sizes on the oxide-only subset so the legend counts reflect
+    # only members that actually appear in the figure.
+    post_filter_sizes = df.groupby("family_id").size().to_dict()
+    for fid, meta in family_meta.items():
+        new_size = int(post_filter_sizes.get(fid, 0))
+        family_meta[fid] = (new_size,) + meta[1:]
+
+    # Resolve human-readable family names by anchor stem (FAMILY_NAMES).
+    fid_to_name: Dict[int, str] = {}
+    if "stem" in df.columns:
+        for row in df.itertuples(index=False):
+            stem = str(getattr(row, "stem", ""))
+            if stem in FAMILY_NAMES:
+                fid_to_name[int(getattr(row, "family_id"))] = FAMILY_NAMES[stem]
+    missing_anchors = sorted(set(FAMILY_NAMES) - set(
+        df["stem"].astype(str)) if "stem" in df.columns else FAMILY_NAMES)
+    if missing_anchors:
+        print(f"Warning: FAMILY_NAMES anchors not present in input: "
+              f"{', '.join(missing_anchors)}")
 
     # Sort families by size descending for color assignment
     non_singleton_families = sorted(
@@ -261,7 +346,7 @@ def build_plot(
             continue
 
         fid  = int(getattr(row, "family_id"))
-        size = int(getattr(row, "family_size"))
+        size = family_meta[fid][0]
         sing = str(getattr(row, "is_singleton")).lower() in ("true", "1")
 
         sg_sym = str(getattr(row, "spacegroup_symbol", "")) if show_spacegroup else ""
@@ -290,17 +375,6 @@ def build_plot(
     plot_df = pd.DataFrame(rows)
     if plot_df.empty:
         raise RuntimeError("No rows to plot after A/B/X assignment.")
-
-    # Detect binary mode: majority of rows came from 1-cation compounds.
-    # In that case axes represent (cation radius, anion radius) rather than (B-site, A-site).
-    ox_col = "species_avg_oxidation_states_json"
-    n_binary = sum(
-        1 for row in df.itertuples(index=False)
-        if sum(1 for v in _safe_json_dict(getattr(row, ox_col, "")).values() if v > 1e-8) == 1
-    )
-    binary_mode = (n_binary / max(len(df), 1)) > 0.5
-
-    ratio_hint = input_csv.stem.replace("dataset_unsupervised", "").lstrip("-_")
 
     fig, ax = plt.subplots(figsize=(14, 10))
 
@@ -346,9 +420,10 @@ def build_plot(
             legend_parts.append(type_name)
         if show_aflow_label and aflow_label:
             legend_parts.append(aflow_label)
-        legend_parts.append(f"F{fid}: {proto}")
+        name_part = fid_to_name.get(fid, f"F{fid}: {proto}")
         if proto_sg:
-            legend_parts.append(proto_sg)
+            name_part = f"{name_part} ({proto_sg})"
+        legend_parts.append(name_part)
         if proto_mpid:
             legend_parts.append(proto_mpid)
         legend_parts.append(f"n={size}")
@@ -359,34 +434,32 @@ def build_plot(
             label=" | ".join(legend_parts),
         ))
 
-    # Singleton legend entry
+    # Singleton legend entry — describes the gray-x bucket (true singletons;
+    # threshold value is interpolated so the legend stays accurate when the
+    # caller changes --min-family-size).
     legend_handles.append(Line2D(
         [0], [0], marker=SINGLETON_MARKER, color=SINGLETON_COLOR,
         markersize=7, linestyle="None",
-        label=f"Singleton (n={len(sing_df)})",
+        label=f"Families n < {min_family_size} (n={len(sing_df)})",
     ))
 
-    # Goldschmidt guide lines (only meaningful for ABO3 ternary data)
+    # Goldschmidt guide lines — always drawn (ABO3 ternary mode is forced).
     x_min = float(plot_df["b_rad"].min())
     x_max = float(plot_df["b_rad"].max())
     x_pad = 0.04 * max(x_max - x_min, 1.0)
     x_line = [x_min - x_pad, x_max + x_pad]
     guide_handles: List[Line2D] = []
-    if not binary_mode:
-        for intercept, slope, label, color, ls in GUIDE_LINES:
-            y_vals = [intercept + slope * x for x in x_line]
-            (h,) = ax.plot(x_line, y_vals, color=color, linestyle=ls,
-                           linewidth=1.3, alpha=0.9, label=label, zorder=1)
-            guide_handles.append(h)
+    for intercept, slope, label, color, ls in GUIDE_LINES:
+        y_vals = [intercept + slope * x for x in x_line]
+        (h,) = ax.plot(x_line, y_vals, color=color, linestyle=ls,
+                       linewidth=1.3, alpha=0.9, label=label, zorder=1)
+        guide_handles.append(h)
 
     if show_formula_labels:
-        # Merge labels for points that share the exact same coordinates.
         coord_labels: Dict[Tuple[float, float], List[str]] = {}
         for r in plot_df.itertuples(index=False):
             key = (float(r.b_rad), float(r.a_rad))
             coord_labels.setdefault(key, []).append(r.label)
-        # Include candidate (no-CIF) points — deduplicated by formula so that
-        # multiple spin-state rows for the same compound emit one label.
         if not unseen.empty:
             seen_cand: set[str] = set()
             for r in unseen.itertuples(index=False):
@@ -405,26 +478,25 @@ def build_plot(
     # Legends
     fam_legend = ax.legend(
         handles=legend_handles,
-        title=f"Discovered families (cut={0.25})",
+        title="Trivial-group families",
         loc="upper left",
-        fontsize=7,
+        fontsize=legend_fontsize,
+        title_fontsize=legend_title_fontsize,
         ncol=max(1, len(legend_handles) // 20),
     )
     ax.add_artist(fam_legend)
     if guide_handles:
         ax.legend(handles=guide_handles, title="Goldschmidt guide lines",
-                  loc="lower right", fontsize=8)
+                  loc="lower right",
+                  fontsize=legend_fontsize,
+                  title_fontsize=legend_title_fontsize)
 
-    if binary_mode:
-        ax.set_xlabel("Cation ionic radius (Å)")
-        ax.set_ylabel("Anion ionic radius (Å)")
-        ax.set_title(f"Binary ({ratio_hint}) materials: unsupervised structural families"
-                     if ratio_hint else "Binary materials: unsupervised structural families")
-    else:
-        ax.set_xlabel("B-site ionic radius (Å)")
-        ax.set_ylabel("A-site ionic radius (Å)")
-        ax.set_title(f"ABO\u2083 ({ratio_hint}) materials: unsupervised structural families"
-                     if ratio_hint else "ABO\u2083 materials: unsupervised structural families")
+    ax.set_xlabel("B-site ionic radius (Å)", fontsize=axis_label_fontsize)
+    ax.set_ylabel("A-site ionic radius (Å)", fontsize=axis_label_fontsize)
+    ax.set_title("ABO₃ trivial-group families", fontsize=title_fontsize)
+    ax.tick_params(axis="both", labelsize=tick_fontsize)
+    ax.set_xlim(0.0, 1.25)
+    ax.set_ylim(0.5, 2.25)
     ax.grid(alpha=0.2)
     fig.tight_layout()
 
@@ -434,6 +506,12 @@ def build_plot(
     print(f"Saved: {output_png}")
     print(f"Input rows: {total_rows}  |  plotted: {len(plot_df)}  |  skipped: {skipped}")
     print(f"Families shown: {len(non_singleton_families)}  |  singletons: {len(sing_df)}")
+    all_sizes = list(post_filter_sizes.values())
+    if all_sizes:
+        print(f"Family size (all families incl. below-cutoff): "
+              f"n_families={len(all_sizes)}  "
+              f"mean={sum(all_sizes)/len(all_sizes):.2f}  "
+              f"max={max(all_sizes)}  min={min(all_sizes)}")
 
     if show:
         plt.show()
@@ -441,81 +519,56 @@ def build_plot(
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Plot unsupervised family scatter (B-site vs A-site radius)."
+        description="Plot ABO3 trivial-group scatter (B-site vs A-site radius)."
     )
-    parser.add_argument(
-        "--ratio", type=str, default=None,
-        help="Dash-separated formula ratio, e.g. '1-1-3'.  Derives --input and "
-             "--output paths automatically from data/crystal_graphs_v3/.  "
-             "Overridden by explicit --input / --output.",
-    )
-    parser.add_argument(
-        "--graph-dir", default=str(DEFAULT_GRAPH_DIR),
-        help="Graph directory used to locate CSV files when --ratio is given.",
-    )
-    parser.add_argument("--input",  default=None,
-                        help="Path to dataset_unsupervised CSV.  Defaults derived from --ratio.")
-    parser.add_argument("--output", default=None,
-                        help="Path to output PNG.  Defaults derived from --ratio.")
+    parser.add_argument("--input",  default=str(DEFAULT_INPUT),
+                        help=f"Path to trivial-groups CSV (default: {DEFAULT_INPUT}).")
+    parser.add_argument("--output", default=str(DEFAULT_OUTPUT),
+                        help=f"Path to output PNG (default: {DEFAULT_OUTPUT}).")
     parser.add_argument("--marker-size",         type=float, default=28.0)
-    parser.add_argument("--label-fontsize",      type=float, default=3.8)
+    parser.add_argument("--label-fontsize",      type=float, default=3.8,
+                        help="Point annotation font size (when --show-formula-labels).")
+    parser.add_argument("--legend-fontsize",     type=float, default=7.0,
+                        help="Legend entry font size.")
+    parser.add_argument("--legend-title-fontsize", type=float, default=9.0,
+                        help="Legend section title font size.")
+    parser.add_argument("--axis-label-fontsize", type=float, default=12.0,
+                        help="X- and Y-axis label font size.")
+    parser.add_argument("--title-fontsize",      type=float, default=14.0,
+                        help="Plot title font size.")
+    parser.add_argument("--tick-fontsize",       type=float, default=10.0,
+                        help="Axis tick label font size.")
     parser.add_argument("--show-formula-labels", action="store_true")
-    parser.add_argument("--show-spacegroup",     action="store_true",
-                        help="Append spacegroup symbol to point labels and legend entries.")
-    parser.add_argument("--show-mp-id",          action="store_true",
-                        help="Append Materials Project ID to point labels and legend entries.")
-    parser.add_argument("--show-aflow-label",    action="store_true",
-                        help="Show AFLOW prototype label (e.g. AB3_cP4_221_a_c) in legend entries.")
-    parser.add_argument("--show-type-name",      action="store_true",
-                        help="Show structural type name (e.g. '(Cubic) Perovskite') in legend entries.")
+    parser.add_argument("--show-spacegroup",     action="store_true")
+    parser.add_argument("--show-mp-id",          action="store_true")
+    parser.add_argument("--show-aflow-label",    action="store_true")
+    parser.add_argument("--show-type-name",      action="store_true")
     parser.add_argument("--element",             type=str,   default=None)
-    parser.add_argument("--min-family-size",     type=int,   default=2,
-                        help="Minimum family size to show in legend (default 2).")
+    parser.add_argument("--min-family-size",     type=int,   default=2)
     parser.add_argument("--dpi",  type=int,  default=300)
     parser.add_argument("--show", action="store_true")
     parser.add_argument(
         "--candidate-csv", type=str, default=None,
-        help="Path to ABO3 candidate list CSV (from build_abo3_candidate_list.py). "
-             "When supplied, all rows with cif_exists=False are plotted as faint "
-             "background points (not included in the legend). "
-             f"Default search path if flag given without value: {DEFAULT_CANDIDATE}",
+        help="Optional ABO3 candidate list CSV. Rows with cif_exists=False are "
+             "plotted as faint background points (not included in the legend).",
     )
     args = parser.parse_args()
-
-    graph_dir = Path(args.graph_dir)
-
-    # Parse --ratio into a normalised tuple for both filename derivation and filtering
-    ratio: Optional[Tuple[int, ...]] = None
-    if args.ratio:
-        try:
-            parts = [int(x) for x in args.ratio.split("-")]
-            g = reduce(gcd, parts)
-            ratio = tuple(sorted(v // g for v in parts))
-        except Exception:
-            raise SystemExit(f"Invalid --ratio '{args.ratio}': expected dash-separated integers, e.g. '1-1-3'.")
-
-    # Derive default paths from --ratio when --input/--output not given explicitly
-    if args.ratio:
-        suffix = "-" + args.ratio
-        default_input  = graph_dir / f"dataset_unsupervised{suffix}.csv"
-        default_output = graph_dir / f"unsupervised_family_scatter{suffix}.png"
-    else:
-        default_input  = DEFAULT_INPUT
-        default_output = DEFAULT_OUTPUT
-
-    input_csv  = Path(args.input)  if args.input  else default_input
-    output_png = Path(args.output) if args.output else default_output
 
     candidate_csv: Optional[Path] = (
         Path(args.candidate_csv) if args.candidate_csv is not None else None
     )
 
     build_plot(
-        input_csv=input_csv,
-        output_png=output_png,
+        input_csv=Path(args.input),
+        output_png=Path(args.output),
         marker_size_base=float(args.marker_size),
         dpi=int(args.dpi),
         label_fontsize=float(args.label_fontsize),
+        legend_fontsize=float(args.legend_fontsize),
+        legend_title_fontsize=float(args.legend_title_fontsize),
+        axis_label_fontsize=float(args.axis_label_fontsize),
+        title_fontsize=float(args.title_fontsize),
+        tick_fontsize=float(args.tick_fontsize),
         show_formula_labels=bool(args.show_formula_labels),
         show_spacegroup=bool(args.show_spacegroup),
         show_mp_id=bool(args.show_mp_id),
@@ -524,7 +577,6 @@ def main() -> None:
         element=args.element,
         min_family_size=int(args.min_family_size),
         show=bool(args.show),
-        ratio=ratio,
         candidate_csv=candidate_csv,
     )
 

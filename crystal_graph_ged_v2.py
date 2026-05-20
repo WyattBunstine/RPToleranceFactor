@@ -1036,6 +1036,103 @@ class BruteForceOptimizer(Optimizer):
                 yield m
 
 
+def _count_atom_assignments(n_a: int, n_b: int) -> int:
+    """Number of atom-level assignments for an element pair, without
+    materialising them.  Used to gate joint enumeration before the
+    expensive partition list is built.
+    """
+    if n_a == 0 or n_b == 0:
+        return 1
+    import math
+    if n_a == n_b:
+        return math.factorial(n_a)
+    if n_a < n_b:
+        if n_b % n_a != 0:
+            return 0
+        k = n_b // n_a
+        total = 1
+        remaining = n_b
+        for _ in range(n_a):
+            total *= math.comb(remaining, k)
+            remaining -= k
+        return total
+    if n_a % n_b != 0:
+        return 0
+    k = n_a // n_b
+    total = 1
+    remaining = n_a
+    for _ in range(n_b):
+        total *= math.comb(remaining, k)
+        remaining -= k
+    return total
+
+
+def _enumerate_atom_assignments(
+    atoms_a: List[AtomID],
+    atoms_b: List[AtomID],
+) -> List[List[Tuple[AtomID, AtomID]]]:
+    """All atom-level (a, b) assignments for one element pair.
+
+    Returns a list of pairs-lists.  Each pairs-list represents a complete
+    A→B assignment covering all atoms of this element pair, including
+    cohort multiplicity when |A| ≠ |B|.
+
+    No symmetry / fingerprint pruning is applied — within an element
+    block, atoms can be topologically equivalent in the sub-graph but
+    DIFFERENT in the full graph (e.g. two Ti atoms in TiO2 supercell with
+    identical-by-element neighbour profiles but different specific O
+    neighbours).  Pruning by sub-graph fingerprints would collapse those
+    distinct full-graph contexts, breaking the joint-enumeration search.
+
+    Sizes must satisfy min divides max; raises ValueError otherwise.
+    """
+    n_a, n_b = len(atoms_a), len(atoms_b)
+    if n_a == 0 or n_b == 0:
+        return [[]]
+    if n_a == n_b:
+        return [
+            list(zip(atoms_a, perm))
+            for perm in itertools.permutations(atoms_b)
+        ]
+    if n_a < n_b:
+        if n_b % n_a != 0:
+            raise ValueError(f"|A|={n_a} doesn't divide |B|={n_b}")
+        k = n_b // n_a
+        return [
+            [(a, b) for a, group in zip(atoms_a, partition) for b in group]
+            for partition in _partition_into_groups(atoms_b, k, n_a)
+        ]
+    # n_a > n_b
+    if n_a % n_b != 0:
+        raise ValueError(f"|B|={n_b} doesn't divide |A|={n_a}")
+    k = n_a // n_b
+    return [
+        [(a, b) for b, group in zip(atoms_b, partition) for a in group]
+        for partition in _partition_into_groups(atoms_a, k, n_b)
+    ]
+
+
+def _partition_into_groups(
+    items: List[AtomID], group_size: int, n_groups: int,
+) -> Iterator[List[List[AtomID]]]:
+    """Yield all partitions of `items` into `n_groups` ORDERED groups of `group_size`.
+
+    Groups are distinguishable (i.e. partition order matters — the first
+    group is "for atom 0 on the other side", the second "for atom 1", etc).
+    """
+    if n_groups == 0:
+        yield []
+        return
+    if n_groups == 1:
+        yield [list(items)]
+        return
+    for chosen in itertools.combinations(items, group_size):
+        chosen_set = set(chosen)
+        remaining = [x for x in items if x not in chosen_set]
+        for rest in _partition_into_groups(remaining, group_size, n_groups - 1):
+            yield [list(chosen)] + rest
+
+
 class StoichiometryConstrainedOptimizer(Optimizer):
     """Optimizer that constrains mappings by stoichiometric count groups.
 
@@ -1066,6 +1163,12 @@ class StoichiometryConstrainedOptimizer(Optimizer):
         incompatible stoichiometric count groups.
     """
 
+    # Cap on joint-enumeration product size.  Above this we fall back to
+    # the per-element-block independent search.  Below it the joint
+    # enumeration is tractable (every evaluation is fast; with N=1e5 the
+    # worst-case pair-cost runtime is on the order of seconds).
+    _JOINT_PRODUCT_LIMIT: int = 100_000
+
     def __init__(
         self,
         graph_a: dict,
@@ -1073,15 +1176,44 @@ class StoichiometryConstrainedOptimizer(Optimizer):
         cost_fn: CostFunction,
         inner_optimizer_cls: Optional[type] = None,
         inner_max_nodes: int = 25,
+        joint_product_limit: Optional[int] = None,
     ) -> None:
         super().__init__(graph_a, graph_b, cost_fn)
         self._inner_cls = inner_optimizer_cls or BruteForceOptimizer
         self._inner_max_nodes = inner_max_nodes
         self._grouper = FormulaGrouper(graph_a, graph_b)
+        self._joint_product_limit = (
+            joint_product_limit if joint_product_limit is not None
+            else self._JOINT_PRODUCT_LIMIT
+        )
 
     def optimize(self) -> Mapping:
+        """Find the lowest-cost mapping via joint atom-assignment enumeration.
+
+        Strategy: for each valid element-to-element assignment (outer loop),
+        enumerate ALL atom-level assignments per element pair (without
+        intra-sub-graph fingerprint pruning) and try every joint
+        combination across element pairs, evaluating the FULL-graph cost
+        each time.  The minimum over all combinations is returned.
+
+        Rationale: the previous per-element-block independent inner search
+        couldn't see cross-element bonds (e.g. Ti's neighbours are all O,
+        but the Ti sub-graph has no edges; the inner optimizer therefore
+        picks an arbitrary Ti permutation).  For cost functions like
+        EdgeIdentityCost that require globally consistent cohort
+        partitions, that arbitrariness produces spurious mismatches.
+        Joint enumeration eliminates the issue at the cost of more
+        full-cost evaluations.
+        """
         blocks = self._grouper.constraint_blocks()
         list_length = self._grouper.k if self._grouper.a_is_smaller else 1
+
+        # Non-BruteForce inner: fall back to the old per-block-independent
+        # behaviour.  Joint enumeration depends on being able to enumerate
+        # all bijections of a sub-problem, which is a BruteForce-specific
+        # capability.
+        if self._inner_cls is not BruteForceOptimizer:
+            return self._optimize_per_block_independent(blocks, list_length)
 
         best_mapping: Optional[Mapping] = None
         best_cost = float("inf")
@@ -1089,21 +1221,126 @@ class StoichiometryConstrainedOptimizer(Optimizer):
         for assignment_combo in itertools.product(
             *(b.element_assignments for b in blocks)
         ):
-            full = Mapping(self.graph_a, self.graph_b, list_length=list_length)
+            # First pass: compute joint-product size BEFORE materialising
+            # any partition lists.  If above the limit, fall back to the
+            # per-element-block independent baseline (tractable for any
+            # reasonable sub-graph size, gives up cohort-search benefit).
+            element_atom_pairs: List[Tuple[List[AtomID], List[AtomID]]] = []
+            joint_count = 1
+            too_large = False
+            for block, elem_assignment in zip(blocks, assignment_combo):
+                for e_a, e_b in elem_assignment.items():
+                    atoms_a = [
+                        int(n["id"]) for n in self.graph_a["nodes"]
+                        if n.get("element") == e_a
+                    ]
+                    atoms_b = [
+                        int(n["id"]) for n in self.graph_b["nodes"]
+                        if n.get("element") == e_b
+                    ]
+                    if max(len(atoms_a), len(atoms_b)) > self._inner_max_nodes:
+                        raise ValueError(
+                            f"Element-pair sub-problem |A|={len(atoms_a)}, "
+                            f"|B|={len(atoms_b)} exceeds inner_max_nodes="
+                            f"{self._inner_max_nodes}"
+                        )
+                    element_atom_pairs.append((atoms_a, atoms_b))
+                    joint_count *= _count_atom_assignments(len(atoms_a), len(atoms_b))
+                    if joint_count > self._joint_product_limit:
+                        too_large = True
+                        break
+                if too_large:
+                    break
 
+            if too_large:
+                full = self._build_per_block_mapping(
+                    blocks, assignment_combo, list_length,
+                )
+                cost = self.cost_fn.evaluate(full)
+                if cost < best_cost:
+                    best_cost = cost
+                    best_mapping = full.copy()
+                    best_mapping.cost = cost
+                    best_mapping.cost_function = self.cost_fn
+                    if best_cost <= 1e-9:
+                        return best_mapping
+                continue
+
+            # Materialise per-element-pair atom-assignment pools now that
+            # we know the joint product is tractable.
+            element_pools = [
+                _enumerate_atom_assignments(a_atoms, b_atoms)
+                for a_atoms, b_atoms in element_atom_pairs
+            ]
+
+            # Joint Cartesian product over element-pair assignments.
+            for joint in itertools.product(*element_pools):
+                full = Mapping(self.graph_a, self.graph_b,
+                               list_length=list_length)
+                for pairs in joint:
+                    for a, b in pairs:
+                        full.set_pair(a, b)
+
+                cost = self.cost_fn.evaluate(full)
+                if cost < best_cost:
+                    best_cost = cost
+                    best_mapping = full.copy()
+                    best_mapping.cost = cost
+                    best_mapping.cost_function = self.cost_fn
+                    if best_cost <= 1e-9:
+                        return best_mapping
+
+        if best_mapping is None:
+            raise RuntimeError(
+                "StoichiometryConstrainedOptimizer: no valid mapping produced"
+            )
+        return best_mapping
+
+    def _build_per_block_mapping(
+        self, blocks, assignment_combo, list_length: int,
+    ) -> Mapping:
+        """Build a single Mapping for one assignment_combo by running the
+        per-element-block inner optimizer independently — fallback path
+        when the joint enumeration would exceed _joint_product_limit.
+        """
+        full = Mapping(self.graph_a, self.graph_b, list_length=list_length)
+        for block, elem_assignment in zip(blocks, assignment_combo):
+            for e_a, e_b in elem_assignment.items():
+                sub_a = self._subgraph(self.graph_a, e_a)
+                sub_b = self._subgraph(self.graph_b, e_b)
+                inner = BruteForceOptimizer(
+                    sub_a, sub_b, self.cost_fn,
+                    max_nodes=self._inner_max_nodes,
+                )
+                sub_mapping = inner.optimize()
+                for a, b in sub_mapping.pairs():
+                    full.set_pair(a, b)
+        return full
+
+    def _optimize_per_block_independent(
+        self, blocks, list_length: int,
+    ) -> Mapping:
+        """Legacy path: per-element-block independent inner search.
+
+        Used when the inner optimizer class isn't BruteForceOptimizer (we
+        can't enumerate its sub-bijections, so we just take its single
+        best).  Same behaviour as before the joint-enumeration rewrite.
+        """
+        best_mapping: Optional[Mapping] = None
+        best_cost = float("inf")
+
+        for assignment_combo in itertools.product(
+            *(b.element_assignments for b in blocks)
+        ):
+            full = Mapping(self.graph_a, self.graph_b, list_length=list_length)
             for block, elem_assignment in zip(blocks, assignment_combo):
                 for e_a, e_b in elem_assignment.items():
                     sub_a = self._subgraph(self.graph_a, e_a)
                     sub_b = self._subgraph(self.graph_b, e_b)
-                    if self._inner_cls is BruteForceOptimizer:
-                        inner = self._inner_cls(sub_a, sub_b, self.cost_fn,
-                                                max_nodes=self._inner_max_nodes)
-                    else:
-                        inner = self._inner_cls(sub_a, sub_b, self.cost_fn)
+                    inner = self._inner_cls(sub_a, sub_b, self.cost_fn)
                     sub_mapping = inner.optimize()
                     for a, b in sub_mapping.pairs():
                         full.set_pair(a, b)
-
             cost = self.cost_fn.evaluate(full)
             if cost < best_cost:
                 best_cost = cost
@@ -1134,6 +1371,200 @@ class StoichiometryConstrainedOptimizer(Optimizer):
         return result
 
 
+class StoichiometryConstrainedOptimizerBnB(StoichiometryConstrainedOptimizer):
+    """Branch-and-bound variant of StoichiometryConstrainedOptimizer.
+
+    Same outer element-assignment loop and the same per-element atom-
+    assignment enumeration as the parent, but uses recursive depth-first
+    search with partial-cost lower-bound pruning to cut the joint
+    enumeration whenever a partial mapping's cost-contribution exceeds
+    the current best.
+
+    Requires the cost function to set ``MONOTONE_PARTIAL = True`` and
+    implement ``partial_pair_total(mapping, assigned_atoms_a)``.  When
+    that contract isn't satisfied, falls back to the parent's joint-
+    enumeration (semantics-preserving).
+    """
+
+    def optimize(self) -> Mapping:
+        # Compatibility check.  Cost function must support monotone
+        # partial-cost evaluation for the lower bound to be sound.
+        if (
+            not getattr(self.cost_fn, "MONOTONE_PARTIAL", False)
+            or not hasattr(self.cost_fn, "partial_pair_total")
+        ):
+            return super().optimize()
+
+        blocks = self._grouper.constraint_blocks()
+        list_length = self._grouper.k if self._grouper.a_is_smaller else 1
+
+        self._best_mapping: Optional[Mapping] = None
+        self._best_cost = float("inf")
+
+        for assignment_combo in itertools.product(
+            *(b.element_assignments for b in blocks)
+        ):
+            # Same pool-building logic as the parent's joint enumeration.
+            element_atom_pairs: List[Tuple[List[AtomID], List[AtomID]]] = []
+            joint_count = 1
+            too_large = False
+            for block, elem_assignment in zip(blocks, assignment_combo):
+                for e_a, e_b in elem_assignment.items():
+                    atoms_a = [
+                        int(n["id"]) for n in self.graph_a["nodes"]
+                        if n.get("element") == e_a
+                    ]
+                    atoms_b = [
+                        int(n["id"]) for n in self.graph_b["nodes"]
+                        if n.get("element") == e_b
+                    ]
+                    if max(len(atoms_a), len(atoms_b)) > self._inner_max_nodes:
+                        raise ValueError(
+                            f"Element-pair sub-problem |A|={len(atoms_a)}, "
+                            f"|B|={len(atoms_b)} exceeds inner_max_nodes="
+                            f"{self._inner_max_nodes}"
+                        )
+                    element_atom_pairs.append((atoms_a, atoms_b))
+                    joint_count *= _count_atom_assignments(
+                        len(atoms_a), len(atoms_b),
+                    )
+                    if joint_count > self._joint_product_limit:
+                        too_large = True
+                        break
+                if too_large:
+                    break
+
+            if too_large:
+                # Same fallback as the joint-enumeration parent.
+                full = self._build_per_block_mapping(
+                    blocks, assignment_combo, list_length,
+                )
+                cost = self.cost_fn.evaluate(full)
+                if cost < self._best_cost:
+                    self._best_cost = cost
+                    self._best_mapping = full.copy()
+                    self._best_mapping.cost = cost
+                    self._best_mapping.cost_function = self.cost_fn
+                    if self._best_cost <= 1e-9:
+                        return self._best_mapping
+                continue
+
+            pools = [
+                _enumerate_atom_assignments(a_atoms, b_atoms)
+                for a_atoms, b_atoms in element_atom_pairs
+            ]
+            # Sort pools ASCENDING by size — minimises total partial-cost
+            # evaluations when pruning is ineffective.  For ionic
+            # compounds, single-element subgraphs typically have no edges
+            # (no cation-cation or anion-anion core bonds), so partial
+            # cost stays at 0 through the early levels and no pruning
+            # fires.  Putting the smallest pool first means fewer partial-
+            # cost evals at the outer loops; the inevitable leaf-level
+            # iteration still happens at the bottom but is unavoidable.
+            pool_order = sorted(range(len(pools)), key=lambda i: len(pools[i]))
+            ordered_pools = [pools[i] for i in pool_order]
+
+            # Determine final n_pairs by building a sample full mapping.
+            sample = Mapping(self.graph_a, self.graph_b, list_length=list_length)
+            for pool in ordered_pools:
+                if pool:
+                    for a, b in pool[0]:
+                        sample.set_pair(a, b)
+            n_pairs = sum(1 for _ in sample.pairs())
+            if n_pairs == 0:
+                n_pairs = 1  # safety
+
+            # Seed best_cost with the per-block-independent baseline for
+            # this assignment_combo — gives the BnB pruner a real bound
+            # to work against from the first branch.
+            baseline = self._build_per_block_mapping(
+                blocks, assignment_combo, list_length,
+            )
+            baseline_cost = self.cost_fn.evaluate(baseline)
+            if baseline_cost < self._best_cost:
+                self._best_cost = baseline_cost
+                self._best_mapping = baseline.copy()
+                self._best_mapping.cost = baseline_cost
+                self._best_mapping.cost_function = self.cost_fn
+                if self._best_cost <= 1e-9:
+                    return self._best_mapping
+
+            # Recursive depth-first search with pruning.
+            self._bnb_recurse(
+                idx=0,
+                pools=ordered_pools,
+                accumulated=[],
+                n_pairs=n_pairs,
+                list_length=list_length,
+            )
+
+            if self._best_cost <= 1e-9:
+                return self._best_mapping
+
+        if self._best_mapping is None:
+            raise RuntimeError(
+                "StoichiometryConstrainedOptimizerBnB: no valid mapping produced"
+            )
+        return self._best_mapping
+
+    def _bnb_recurse(
+        self,
+        idx: int,
+        pools: List[List[List[Tuple[AtomID, AtomID]]]],
+        accumulated: List[List[Tuple[AtomID, AtomID]]],
+        n_pairs: int,
+        list_length: int,
+    ) -> None:
+        # When the next block is the last, skip the partial-cost check
+        # (it's about to be redundant with the leaf evaluation).  Go
+        # straight to per-leaf evaluation.
+        if idx == len(pools) - 1:
+            for pairs in pools[idx]:
+                full = Mapping(self.graph_a, self.graph_b,
+                               list_length=list_length)
+                for pair_list in accumulated:
+                    for a, b in pair_list:
+                        full.set_pair(a, b)
+                for a, b in pairs:
+                    full.set_pair(a, b)
+                cost = self.cost_fn.evaluate(full)
+                if cost < self._best_cost:
+                    self._best_cost = cost
+                    self._best_mapping = full.copy()
+                    self._best_mapping.cost = cost
+                    self._best_mapping.cost_function = self.cost_fn
+                    if self._best_cost <= 1e-9:
+                        return
+            return
+
+        if idx == len(pools):
+            # Defensive — should be unreachable because of the
+            # idx == len(pools) - 1 fast-path above.
+            return
+
+        for pairs in pools[idx]:
+            new_accumulated = accumulated + [pairs]
+            partial = Mapping(self.graph_a, self.graph_b, list_length=list_length)
+            assigned_a: set = set()
+            for plist in new_accumulated:
+                for a, b in plist:
+                    partial.set_pair(a, b)
+                    assigned_a.add(a)
+
+            partial_total = self.cost_fn.partial_pair_total(partial, assigned_a)
+            lower_bound = partial_total / n_pairs
+
+            if lower_bound >= self._best_cost:
+                continue  # prune: no completion of this branch can beat best
+
+            self._bnb_recurse(
+                idx + 1, pools, new_accumulated, n_pairs, list_length,
+            )
+
+            if self._best_cost <= 1e-9:
+                return
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Module-level convenience
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1145,6 +1576,7 @@ class StoichiometryConstrainedOptimizer(Optimizer):
 OPTIMIZER_REGISTRY: Dict[str, type] = {
     "brute_force": BruteForceOptimizer,
     "stoichiometry_constrained": StoichiometryConstrainedOptimizer,
+    "stoich_constrained_bnb": StoichiometryConstrainedOptimizerBnB,
 }
 
 COST_FUNCTION_REGISTRY: Dict[str, type] = {
@@ -1184,7 +1616,220 @@ __all__ = [
     "ConstraintBlock",
     "FormulaGrouper",
     "StoichiometryConstrainedOptimizer",
+    "StoichiometryConstrainedOptimizerBnB",
     "OPTIMIZER_REGISTRY",
     "COST_FUNCTION_REGISTRY",
     "match_nodes_ged_v2",
 ]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CLI — for direct A↔B comparison and inspection.
+#
+# Mirrors crystal_graph_ged.py's CLI ergonomics (two positional graph paths,
+# detailed cost/mapping printout) but exposes the v2 optimizer / cost-function
+# registries so you can A/B different combinations directly.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _cli_main() -> int:
+    import argparse, json
+    from pathlib import Path
+
+    # Importing crystal_graph_costs_v2 registers TopologyCost / EdgeIdentityCost
+    # tags into COST_FUNCTION_REGISTRY.  When this file is invoked as
+    # __main__, crystal_graph_costs_v2's "from crystal_graph_ged_v2 import ..."
+    # would otherwise re-load this module under its proper name and the
+    # registry mutations would land in a different dict than the one
+    # _cli_main() sees.  Make the __main__ module also reachable as its
+    # proper name so the registry is shared.
+    import sys as _sys
+    _sys.modules.setdefault("crystal_graph_ged_v2", _sys.modules[__name__])
+    try:
+        import crystal_graph_costs_v2  # noqa: F401
+    except Exception as exc:
+        print(f"warning: could not import crystal_graph_costs_v2 ({exc})")
+
+    parser = argparse.ArgumentParser(
+        description=(
+            "v2 GED node-matching between two crystal graphs.  Selects an "
+            "optimizer + cost function pair via tags from the registries.  "
+            "Reports cost, mapping, and per-pair edge-mismatch breakdown."
+        ),
+    )
+    parser.add_argument("graph_a", help="Path to graph A JSON file.")
+    parser.add_argument("graph_b", help="Path to graph B JSON file.")
+    parser.add_argument(
+        "--optimizer", "-o", type=str, default="stoich_constrained_bnb",
+        help=f"Optimizer tag (default: stoich_constrained_bnb).  "
+             f"Available: {sorted(OPTIMIZER_REGISTRY)}.",
+    )
+    parser.add_argument(
+        "--cost-function", "-c", type=str, default="edge_identity",
+        dest="cost_function",
+        help=f"Cost function tag (default: edge_identity).  "
+             f"Available depends on imports; typical: "
+             f"edge_identity, topology, cn_core_diff.",
+    )
+    parser.add_argument(
+        "--inner-max-nodes", type=int, default=14,
+        dest="inner_max_nodes",
+        help="Cap on per-element atom count for sub-problem enumeration "
+             "(default: 14).  Lower = faster, may raise ValueError on "
+             "large element blocks.",
+    )
+    parser.add_argument(
+        "--edge-mismatch-cost", type=float, default=None,
+        dest="edge_mismatch_cost",
+        help="EdgeIdentityCost per-edge mismatch cost (default: class "
+             "default = 0.3).  Ignored for other cost functions.",
+    )
+    parser.add_argument(
+        "--breakdown", action="store_true",
+        help="Print per-pair edge-mismatch breakdown for the chosen mapping.",
+    )
+    args = parser.parse_args()
+
+    # Validate registry tags
+    if args.optimizer not in OPTIMIZER_REGISTRY:
+        parser.error(
+            f"Unknown optimizer: {args.optimizer!r}.  "
+            f"Available: {sorted(OPTIMIZER_REGISTRY)}"
+        )
+    if args.cost_function not in COST_FUNCTION_REGISTRY:
+        parser.error(
+            f"Unknown cost function: {args.cost_function!r}.  "
+            f"Available: {sorted(COST_FUNCTION_REGISTRY)}"
+        )
+
+    opt_cls = OPTIMIZER_REGISTRY[args.optimizer]
+    cost_cls = COST_FUNCTION_REGISTRY[args.cost_function]
+
+    ga = json.loads(Path(args.graph_a).read_text())
+    gb = json.loads(Path(args.graph_b).read_text())
+
+    # Cost-function params
+    cost_params: Dict[str, Any] = {}
+    if args.edge_mismatch_cost is not None:
+        cost_params["edge_mismatch_cost"] = args.edge_mismatch_cost
+
+    # Optimizer params
+    opt_params: Dict[str, Any] = {}
+    if args.optimizer in ("stoichiometry_constrained", "stoich_constrained_bnb"):
+        opt_params["inner_max_nodes"] = args.inner_max_nodes
+    elif args.optimizer == "brute_force":
+        opt_params["max_nodes"] = args.inner_max_nodes
+
+    import time
+    t0 = time.time()
+    mapping = match_nodes_ged_v2(
+        ga, gb,
+        optimizer_cls=opt_cls,
+        cost_fn_cls=cost_cls,
+        optimizer_params=opt_params,
+        cost_function_params=cost_params,
+    )
+    elapsed = time.time() - t0
+
+    nodes_a = {int(n["id"]): n for n in ga["nodes"]}
+    nodes_b = {int(n["id"]): n for n in gb["nodes"]}
+
+    # ── Header
+    a_meta = ga.get("metadata", {})
+    b_meta = gb.get("metadata", {})
+    a_label = f"{a_meta.get('formula', Path(args.graph_a).stem)} ({a_meta.get('spacegroup_symbol', '?')}, {len(ga['nodes'])} nodes)"
+    b_label = f"{b_meta.get('formula', Path(args.graph_b).stem)} ({b_meta.get('spacegroup_symbol', '?')}, {len(gb['nodes'])} nodes)"
+    print(f"A: {a_label}")
+    print(f"B: {b_label}")
+    print(f"Optimizer    : {args.optimizer}")
+    print(f"Cost function: {args.cost_function}"
+          + (f"  (edge_mismatch_cost={args.edge_mismatch_cost})"
+             if args.edge_mismatch_cost is not None else ""))
+    print(f"Cost         : {mapping.cost:.4f}")
+    print(f"Elapsed      : {elapsed:.3f}s")
+    print()
+
+    # ── Mapping
+    print("Mapping (A → B):")
+    seen_a: set = set()
+    for a, b in mapping.pairs():
+        if a in seen_a:
+            continue
+        seen_a.add(a)
+        b_images = [int(m) for m in mapping[a] if not _is_sentinel(m)]
+        a_el = nodes_a[a].get("element", "?")
+        a_role = nodes_a[a].get("ion_role", "?")
+        a_cn = nodes_a[a].get("coordination_number", "?")
+        b_strs = []
+        for bi in b_images:
+            be = nodes_b[bi].get("element", "?")
+            bc = nodes_b[bi].get("coordination_number", "?")
+            b_strs.append(f"B[{bi}]{be}(CN={bc})")
+        print(f"  A[{a}] {a_el:>3s} ({a_role}, CN={a_cn})  →  {', '.join(b_strs)}")
+
+    # ── Sentinels
+    n_vac_a = sum(1 for a in mapping for s in mapping[a] if s is VACANCY)
+    n_un_a = sum(1 for a in mapping for s in mapping[a] if s is UNASSIGNED)
+    n_vac_b = sum(1 for n in gb["nodes"]
+                  for s in mapping.inverse(int(n["id"])) if s is VACANCY)
+    n_un_b = sum(1 for n in gb["nodes"]
+                 for s in mapping.inverse(int(n["id"])) if s is UNASSIGNED)
+    if n_vac_a + n_un_a + n_vac_b + n_un_b > 0:
+        print()
+        print(f"Sentinels: A vacancy={n_vac_a}, A unassigned={n_un_a}, "
+              f"B vacancy={n_vac_b}, B unassigned={n_un_b}")
+
+    # ── Per-pair edge mismatch breakdown
+    if args.breakdown:
+        try:
+            from crystal_graph_costs_v2 import _build_graph_view
+        except ImportError:
+            print("\n(--breakdown requires crystal_graph_costs_v2)")
+            return 0
+        from collections import defaultdict
+        view_a = _build_graph_view(ga)
+        view_b = _build_graph_view(gb)
+        print()
+        print("Per-pair edge-mismatch breakdown (non-zero only):")
+        total = 0
+        n_pairs = 0
+        for a, b in mapping.pairs():
+            n_pairs += 1
+            nbrs_a = view_a.edges.get(a, {})
+            nbrs_b = view_b.edges.get(b, {})
+            claimed_b: Dict[AtomID, int] = defaultdict(int)
+            mis_a = 0
+            for n, cnt in nbrs_a.items():
+                imgs = [m for m in mapping[n] if not _is_sentinel(m)]
+                remaining = cnt
+                for m in imgs:
+                    avail = nbrs_b.get(m, 0) - claimed_b[m]
+                    take = min(remaining, max(avail, 0))
+                    claimed_b[m] += take
+                    remaining -= take
+                    if remaining == 0:
+                        break
+                mis_a += remaining
+            mis_b = 0
+            for m, cnt in nbrs_b.items():
+                unclaimed = cnt - claimed_b.get(m, 0)
+                if unclaimed > 0:
+                    inv = [aid for aid in mapping.inverse(m)
+                           if not _is_sentinel(aid)]
+                    if inv:
+                        mis_b += unclaimed
+            if mis_a + mis_b > 0:
+                ea = nodes_a[a].get("element", "?")
+                eb = nodes_b[b].get("element", "?")
+                print(f"  ({a}={ea} CN={view_a.cn.get(a, '?')} → "
+                      f"{b}={eb} CN={view_b.cn.get(b, '?')}): "
+                      f"A-mismatch={mis_a}, B-mismatch={mis_b}")
+            total += mis_a + mis_b
+        print(f"  Total mismatched edges: {total} across {n_pairs} pairs")
+
+    return 0
+
+
+if __name__ == "__main__":
+    import sys
+    sys.exit(_cli_main())

@@ -61,7 +61,14 @@
       "Bash(cd:*)",
       "Bash(PYTHONIOENCODING=utf-8 python *)",
       "Bash(PYTHONIOENCODING=utf-8 python -c ' *)",
-      "Bash(echo \"Exit: $?\")"
+      "Bash(echo \"Exit: $?\")",
+      "Bash(echo \"exit=$?\")",
+      "Bash(kill %1)",
+      "Bash(sed -n '20,28p' /home/wyatt/PycharmProjects/RPToleranceFactor/scripts/build_graphs_batch.py)",
+      "Bash(sed -n '50,60p' /home/wyatt/PycharmProjects/RPToleranceFactor/scripts/build_graphs_v4_214.py)",
+      "Bash(kill 33717 33715 33878 34058)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(ps -p 41645 -o pid,etime,pcpu)"
     ]
   }
 }

@@ -18,8 +18,11 @@ import argparse
 import csv
 import json
 import multiprocessing
+import sys
 from pathlib import Path
 from typing import List, Tuple
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from old_scripts.crystal_graph_v3 import build_crystal_graph_from_cif
 

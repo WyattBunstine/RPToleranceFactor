@@ -744,6 +744,7 @@ def build_crystal_graph_from_cif(
     ecn_core_threshold: float = 0.5,
     legacy_strict_role_filter: bool = False,
     same_role_max_bond_ratio: float = 1.15,
+    same_role_strong_voronoi_threshold: float = 0.08,
     opposite_role_max_bond_ratio: float = 1.2,
 ) -> Dict[str, Any]:
     """
@@ -1106,7 +1107,19 @@ def build_crystal_graph_from_cif(
                     if ri == rj:
                         ref = max(d_min_filt[i], d_min_filt[j])
                         if ref > 0 and d_ij > same_role_max_bond_ratio * ref:
-                            continue
+                            # Distance gate failed.  Rescue if Voronoi face
+                            # weight indicates a real first-shell contact —
+                            # covers metallic / Zintl-like same-role bonds
+                            # (e.g. BaNiSn3 Sn-Sn at 1.19× the closest bond,
+                            # weight 0.114) while still rejecting ionic
+                            # next-nearest contacts (e.g. SrTiO3 O-O at
+                            # 1.42× with weight 0.046).
+                            w_ij_probe = voronoi_weights[i].get((j, offset), 0.0)
+                            w_ji_probe = voronoi_weights[j].get(
+                                (i, (-offset[0], -offset[1], -offset[2])), 0.0,
+                            )
+                            if max(w_ij_probe, w_ji_probe) < same_role_strong_voronoi_threshold:
+                                continue
                     else:
                         # Opposite-role cap: bound cation-anion bond reach
                         # by closest same-role geometric distance at either
@@ -1539,6 +1552,7 @@ def build_crystal_graph_from_cif(
             ),
             "legacy_strict_role_filter": bool(legacy_strict_role_filter),
             "same_role_max_bond_ratio": float(same_role_max_bond_ratio),
+            "same_role_strong_voronoi_threshold": float(same_role_strong_voronoi_threshold),
             "opposite_role_max_bond_ratio": float(opposite_role_max_bond_ratio),
             "shannon_radius_type": "crystal_max_known_no_extrapolation",
             "lattice_matrix": [[float(x) for x in row] for row in lattice.matrix],
