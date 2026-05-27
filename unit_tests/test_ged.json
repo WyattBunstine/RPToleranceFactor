@@ -10436,6 +10436,538 @@
       ]
     },
     {
+      "id": "kno3_vs_ba3pbo_oxoanion_edge_identity",
+      "type": "ged",
+      "description": "KNO3 (R3m, molecular nitrate with discrete planar NO3- triangles, N CN=3, 12 edges) vs Ba3PbO (cubic anti-perovskite Pm-3m, Pb CN=12, 18 edges).  Family-0 false positive in families_v4_113: KNO3 currently transitively merges into the perovskite/anti-perovskite mega-family.  N is 3-coordinate to O while Pb is 12-coordinate to Ba in the prototype; no edge-preserving mapping should exist, so EdgeIdentityCost must score above the family-merge threshold.",
+      "graph_a": "KNO3_mp-6920",
+      "graph_b": "Ba3PbO_mp-29242",
+      "cif_a": "KNO3_mp-6920.cif",
+      "cif_b": "Ba3PbO_mp-29242.cif",
+      "optimizer": "stoichiometry_constrained",
+      "cost_function": "edge_identity",
+      "cost_function_params": {
+        "edge_mismatch_cost": 0.2
+      },
+      "assertions": [
+        {
+          "assert": "cost",
+          "op": "ge",
+          "value": 0.1,
+          "description": "Molecular nitrate must not merge with cubic anti-perovskite"
+        }
+      ],
+      "tags": [
+        "core",
+        "edge_identity",
+        "oxoanion_false_positive",
+        "stoich_constrained"
+      ]
+    },
+    {
+      "id": "kno3_vs_srtio3_oxoanion_edge_identity",
+      "type": "ged",
+      "description": "KNO3 (R3m molecular nitrate, planar NO3- groups, N CN=3) vs SrTiO3 (cubic Pm-3m perovskite, Ti CN=6 in corner-sharing TiO6 framework).  Family-0 false positive companion to kno3_vs_ba3pbo_oxoanion_edge_identity covering the perovskite direction.  No shared topology — EdgeIdentityCost must exceed family-merge threshold.",
+      "graph_a": "KNO3_mp-6920",
+      "graph_b": "SrTiO3_mp-5229",
+      "cif_a": "KNO3_mp-6920.cif",
+      "cif_b": "SrTiO3_mp-5229.cif",
+      "optimizer": "stoichiometry_constrained",
+      "cost_function": "edge_identity",
+      "cost_function_params": {
+        "edge_mismatch_cost": 0.2
+      },
+      "assertions": [
+        {
+          "assert": "cost",
+          "op": "ge",
+          "value": 0.1,
+          "description": "Molecular nitrate must not merge with cubic perovskite"
+        }
+      ],
+      "tags": [
+        "core",
+        "edge_identity",
+        "oxoanion_false_positive",
+        "stoich_constrained"
+      ]
+    },
+    {
+      "id": "agno3_vs_ba3pbo_oxoanion_edge_identity",
+      "type": "ged",
+      "description": "AgNO3 (R3m phase-II silver nitrate, discrete NO3- triangles, N CN=3, 12 edges) vs Ba3PbO (cubic anti-perovskite Pm-3m, Pb CN=12, 18 edges).  Family-0 false positive in families_v4_113.  EdgeIdentityCost must reject the merge.",
+      "graph_a": "AgNO3_mp-8196",
+      "graph_b": "Ba3PbO_mp-29242",
+      "cif_a": "AgNO3_mp-8196.cif",
+      "cif_b": "Ba3PbO_mp-29242.cif",
+      "optimizer": "stoichiometry_constrained",
+      "cost_function": "edge_identity",
+      "cost_function_params": {
+        "edge_mismatch_cost": 0.2
+      },
+      "assertions": [
+        {
+          "assert": "cost",
+          "op": "ge",
+          "value": 0.1,
+          "description": "Molecular nitrate must not merge with cubic anti-perovskite"
+        }
+      ],
+      "tags": [
+        "core",
+        "edge_identity",
+        "oxoanion_false_positive",
+        "stoich_constrained"
+      ]
+    },
+    {
+      "id": "agno3_vs_srtio3_oxoanion_edge_identity",
+      "type": "ged",
+      "description": "AgNO3 (R3m phase-II silver nitrate, planar NO3- groups, N CN=3) vs SrTiO3 (cubic Pm-3m perovskite, Ti CN=6).  Family-0 false positive companion covering the perovskite direction.",
+      "graph_a": "AgNO3_mp-8196",
+      "graph_b": "SrTiO3_mp-5229",
+      "cif_a": "AgNO3_mp-8196.cif",
+      "cif_b": "SrTiO3_mp-5229.cif",
+      "optimizer": "stoichiometry_constrained",
+      "cost_function": "edge_identity",
+      "cost_function_params": {
+        "edge_mismatch_cost": 0.2
+      },
+      "assertions": [
+        {
+          "assert": "cost",
+          "op": "ge",
+          "value": 0.1,
+          "description": "Molecular nitrate must not merge with cubic perovskite"
+        }
+      ],
+      "tags": [
+        "core",
+        "edge_identity",
+        "oxoanion_false_positive",
+        "stoich_constrained"
+      ]
+    },
+    {
+      "id": "baco3_r3m_vs_ba3pbo_oxoanion_edge_identity",
+      "type": "ged",
+      "description": "BaCO3 mp-4559 (R3m calcite-related polymorph of barium carbonate, planar CO3 triangles, C CN=3) vs Ba3PbO (cubic anti-perovskite Pm-3m, Pb CN=12).  Family-0 false positive in families_v4_113.  Distinct from the existing baco3_vs_ba3pbo_* tests which target the Pmcn witherite polymorph (mp-5504) — this is the R3m polymorph that wrongly merges into the perovskite mega-family while mp-5504 correctly clusters with aragonite (family 66).",
+      "graph_a": "BaCO3_mp-4559",
+      "graph_b": "Ba3PbO_mp-29242",
+      "cif_a": "BaCO3_mp-4559.cif",
+      "cif_b": "Ba3PbO_mp-29242.cif",
+      "optimizer": "stoichiometry_constrained",
+      "cost_function": "edge_identity",
+      "cost_function_params": {
+        "edge_mismatch_cost": 0.2
+      },
+      "assertions": [
+        {
+          "assert": "cost",
+          "op": "ge",
+          "value": 0.1,
+          "description": "R3m carbonate polymorph must not merge with cubic anti-perovskite"
+        }
+      ],
+      "tags": [
+        "core",
+        "edge_identity",
+        "oxoanion_false_positive",
+        "stoich_constrained"
+      ]
+    },
+    {
+      "id": "baco3_r3m_vs_srtio3_oxoanion_edge_identity",
+      "type": "ged",
+      "description": "BaCO3 mp-4559 (R3m calcite-related polymorph, planar CO3 triangles, C CN=3) vs SrTiO3 (cubic Pm-3m perovskite, Ti CN=6).  Family-0 false positive companion covering the perovskite direction.",
+      "graph_a": "BaCO3_mp-4559",
+      "graph_b": "SrTiO3_mp-5229",
+      "cif_a": "BaCO3_mp-4559.cif",
+      "cif_b": "SrTiO3_mp-5229.cif",
+      "optimizer": "stoichiometry_constrained",
+      "cost_function": "edge_identity",
+      "cost_function_params": {
+        "edge_mismatch_cost": 0.2
+      },
+      "assertions": [
+        {
+          "assert": "cost",
+          "op": "ge",
+          "value": 0.1,
+          "description": "R3m carbonate polymorph must not merge with cubic perovskite"
+        }
+      ],
+      "tags": [
+        "core",
+        "edge_identity",
+        "oxoanion_false_positive",
+        "stoich_constrained"
+      ]
+    },
+    {
+      "id": "kclo3_vs_ba3pbo_oxoanion_edge_identity",
+      "type": "ged",
+      "description": "KClO3 (R3m potassium chlorate, pyramidal ClO3- with lone pair, Cl CN=3, 15 edges) vs Ba3PbO (cubic anti-perovskite Pm-3m, Pb CN=12, 18 edges).  Family-0 false positive in families_v4_113.  EdgeIdentityCost must reject the merge — pyramidal molecular anion has fundamentally different topology from a 3D anti-perovskite framework.",
+      "graph_a": "KClO3_mp-550506",
+      "graph_b": "Ba3PbO_mp-29242",
+      "cif_a": "KClO3_mp-550506.cif",
+      "cif_b": "Ba3PbO_mp-29242.cif",
+      "optimizer": "stoichiometry_constrained",
+      "cost_function": "edge_identity",
+      "cost_function_params": {
+        "edge_mismatch_cost": 0.2
+      },
+      "assertions": [
+        {
+          "assert": "cost",
+          "op": "ge",
+          "value": 0.1,
+          "description": "Molecular chlorate must not merge with cubic anti-perovskite"
+        }
+      ],
+      "tags": [
+        "core",
+        "edge_identity",
+        "oxoanion_false_positive",
+        "stoich_constrained"
+      ]
+    },
+    {
+      "id": "kclo3_vs_srtio3_oxoanion_edge_identity",
+      "type": "ged",
+      "description": "KClO3 (R3m potassium chlorate, pyramidal ClO3- groups, Cl CN=3) vs SrTiO3 (cubic Pm-3m perovskite, Ti CN=6).  Family-0 false positive companion covering the perovskite direction.",
+      "graph_a": "KClO3_mp-550506",
+      "graph_b": "SrTiO3_mp-5229",
+      "cif_a": "KClO3_mp-550506.cif",
+      "cif_b": "SrTiO3_mp-5229.cif",
+      "optimizer": "stoichiometry_constrained",
+      "cost_function": "edge_identity",
+      "cost_function_params": {
+        "edge_mismatch_cost": 0.2
+      },
+      "assertions": [
+        {
+          "assert": "cost",
+          "op": "ge",
+          "value": 0.1,
+          "description": "Molecular chlorate must not merge with cubic perovskite"
+        }
+      ],
+      "tags": [
+        "core",
+        "edge_identity",
+        "oxoanion_false_positive",
+        "stoich_constrained"
+      ]
+    },
+    {
+      "id": "kbro3_vs_ba3pbo_oxoanion_edge_identity",
+      "type": "ged",
+      "description": "KBrO3 (R3m potassium bromate, pyramidal BrO3- with lone pair, Br CN=3) vs Ba3PbO (cubic anti-perovskite Pm-3m, Pb CN=12).  Family-0 false positive in families_v4_113.",
+      "graph_a": "KBrO3_mp-22958",
+      "graph_b": "Ba3PbO_mp-29242",
+      "cif_a": "KBrO3_mp-22958.cif",
+      "cif_b": "Ba3PbO_mp-29242.cif",
+      "optimizer": "stoichiometry_constrained",
+      "cost_function": "edge_identity",
+      "cost_function_params": {
+        "edge_mismatch_cost": 0.2
+      },
+      "assertions": [
+        {
+          "assert": "cost",
+          "op": "ge",
+          "value": 0.1,
+          "description": "Molecular bromate must not merge with cubic anti-perovskite"
+        }
+      ],
+      "tags": [
+        "core",
+        "edge_identity",
+        "oxoanion_false_positive",
+        "stoich_constrained"
+      ]
+    },
+    {
+      "id": "kbro3_vs_srtio3_oxoanion_edge_identity",
+      "type": "ged",
+      "description": "KBrO3 (R3m potassium bromate, pyramidal BrO3- groups, Br CN=3) vs SrTiO3 (cubic Pm-3m perovskite, Ti CN=6).  Family-0 false positive companion covering the perovskite direction.",
+      "graph_a": "KBrO3_mp-22958",
+      "graph_b": "SrTiO3_mp-5229",
+      "cif_a": "KBrO3_mp-22958.cif",
+      "cif_b": "SrTiO3_mp-5229.cif",
+      "optimizer": "stoichiometry_constrained",
+      "cost_function": "edge_identity",
+      "cost_function_params": {
+        "edge_mismatch_cost": 0.2
+      },
+      "assertions": [
+        {
+          "assert": "cost",
+          "op": "ge",
+          "value": 0.1,
+          "description": "Molecular bromate must not merge with cubic perovskite"
+        }
+      ],
+      "tags": [
+        "core",
+        "edge_identity",
+        "oxoanion_false_positive",
+        "stoich_constrained"
+      ]
+    },
+    {
+      "id": "kio3_vs_ba3pbo_oxoanion_edge_identity",
+      "type": "ged",
+      "description": "KIO3 (R3m potassium iodate, I CN=6 octahedral, 18 edges) vs Ba3PbO (cubic anti-perovskite Pm-3m, Pb CN=12, 18 edges).  Family-0 false positive and the toughest oxoanion case in families_v4_113: KIO3 has matching edge count and matching central-atom CN, so edge_identity cannot lean on a global edge-count delta to reject the merge.  The mismatch is at the level of which specific edges exist (KIO3 has an I-centered IO6 unit with discrete iodate octahedra; Ba3PbO has a 3D corner-sharing framework with O at body-center).  EdgeIdentityCost must still exceed 0.1 by finding edges that no mapping can preserve.",
+      "graph_a": "KIO3_mp-552729",
+      "graph_b": "Ba3PbO_mp-29242",
+      "cif_a": "KIO3_mp-552729.cif",
+      "cif_b": "Ba3PbO_mp-29242.cif",
+      "optimizer": "stoichiometry_constrained",
+      "cost_function": "edge_identity",
+      "cost_function_params": {
+        "edge_mismatch_cost": 0.2
+      },
+      "assertions": [
+        {
+          "assert": "cost",
+          "op": "ge",
+          "value": 0.1,
+          "description": "Iodate with discrete IO6 units must not merge with cubic anti-perovskite framework"
+        }
+      ],
+      "tags": [
+        "core",
+        "edge_identity",
+        "oxoanion_false_positive",
+        "stoich_constrained"
+      ]
+    },
+    {
+      "id": "kio3_vs_srtio3_oxoanion_edge_identity",
+      "type": "ged",
+      "description": "KIO3 (R3m potassium iodate, I CN=6 octahedral with discrete IO6 units) vs SrTiO3 (cubic Pm-3m perovskite, Ti CN=6 in 3D corner-sharing framework).  Both have CN=6 central atoms with 18 edges — the topology distinction is corner-sharing 3D vs discrete octahedral molecular units.  EdgeIdentityCost must surface this difference.",
+      "graph_a": "KIO3_mp-552729",
+      "graph_b": "SrTiO3_mp-5229",
+      "cif_a": "KIO3_mp-552729.cif",
+      "cif_b": "SrTiO3_mp-5229.cif",
+      "optimizer": "stoichiometry_constrained",
+      "cost_function": "edge_identity",
+      "cost_function_params": {
+        "edge_mismatch_cost": 0.2
+      },
+      "assertions": [
+        {
+          "assert": "cost",
+          "op": "ge",
+          "value": 0.1,
+          "description": "Discrete-IO6 iodate must not merge with corner-sharing perovskite framework"
+        }
+      ],
+      "tags": [
+        "core",
+        "edge_identity",
+        "oxoanion_false_positive",
+        "stoich_constrained"
+      ]
+    },
+    {
+      "id": "kno3_vs_pbso3_oxoanion_edge_identity",
+      "type": "ged",
+      "description": "KNO3 (R3m molecular nitrate, 5-atom primitive cell, N CN=3, 12 edges) vs PbSO3 (P2_1/m pyramidal sulfite, 10-atom cell, S CN=4, 26 edges).  Family-40 false positive in families_v4.json: KNO3 wrongly merges into the PbSO3 sulfite family.  Half-the-cell-size primitive-vs-doubled cohort mismatch — direct prototype comparison should reject this.",
+      "graph_a": "KNO3_mp-6920",
+      "graph_b": "PbSO3_mp-21190",
+      "cif_a": "KNO3_mp-6920.cif",
+      "cif_b": "PbSO3_mp-21190.cif",
+      "optimizer": "stoichiometry_constrained",
+      "cost_function": "edge_identity",
+      "cost_function_params": {
+        "edge_mismatch_cost": 0.2
+      },
+      "assertions": [
+        {
+          "assert": "cost",
+          "op": "ge",
+          "value": 0.1,
+          "description": "Planar-NO3 nitrate must not merge with pyramidal-SO3 sulfite prototype"
+        }
+      ],
+      "tags": [
+        "core",
+        "edge_identity",
+        "oxoanion_false_positive",
+        "stoich_constrained"
+      ]
+    },
+    {
+      "id": "agno3_vs_pbso3_oxoanion_edge_identity",
+      "type": "ged",
+      "description": "AgNO3 (R3m phase-II silver nitrate, planar NO3-, 5-atom cell, 12 edges) vs PbSO3 (P2_1/m pyramidal sulfite, 10-atom cell, 26 edges).  Family-40 false positive companion.",
+      "graph_a": "AgNO3_mp-8196",
+      "graph_b": "PbSO3_mp-21190",
+      "cif_a": "AgNO3_mp-8196.cif",
+      "cif_b": "PbSO3_mp-21190.cif",
+      "optimizer": "stoichiometry_constrained",
+      "cost_function": "edge_identity",
+      "cost_function_params": {
+        "edge_mismatch_cost": 0.2
+      },
+      "assertions": [
+        {
+          "assert": "cost",
+          "op": "ge",
+          "value": 0.1,
+          "description": "Planar-NO3 nitrate must not merge with pyramidal-SO3 sulfite prototype"
+        }
+      ],
+      "tags": [
+        "core",
+        "edge_identity",
+        "oxoanion_false_positive",
+        "stoich_constrained"
+      ]
+    },
+    {
+      "id": "baco3_r3m_vs_pbso3_oxoanion_edge_identity",
+      "type": "ged",
+      "description": "BaCO3 mp-4559 (R3m calcite-related carbonate polymorph, planar CO3, 5-atom cell, C CN=3, 12 edges) vs PbSO3 (P2_1/m pyramidal sulfite, 10-atom cell, 26 edges).  Family-40 false positive in families_v4.json — distinct from the existing baco3_vs_pbso3 sulfite tests because PbSO3 here is the family-40 prototype and BaCO3 mp-4559 is the calcite polymorph of barium carbonate.",
+      "graph_a": "BaCO3_mp-4559",
+      "graph_b": "PbSO3_mp-21190",
+      "cif_a": "BaCO3_mp-4559.cif",
+      "cif_b": "PbSO3_mp-21190.cif",
+      "optimizer": "stoichiometry_constrained",
+      "cost_function": "edge_identity",
+      "cost_function_params": {
+        "edge_mismatch_cost": 0.2
+      },
+      "assertions": [
+        {
+          "assert": "cost",
+          "op": "ge",
+          "value": 0.1,
+          "description": "Planar-CO3 carbonate must not merge with pyramidal-SO3 sulfite prototype"
+        }
+      ],
+      "tags": [
+        "core",
+        "edge_identity",
+        "oxoanion_false_positive",
+        "stoich_constrained"
+      ]
+    },
+    {
+      "id": "kclo3_vs_pbso3_oxoanion_edge_identity",
+      "type": "ged",
+      "description": "KClO3 mp-550506 (R3m potassium chlorate, pyramidal ClO3-, 5-atom cell, 15 edges) vs PbSO3 (P2_1/m pyramidal sulfite, 10-atom cell, 26 edges).  Family-40 false positive — both have pyramidal XO3 but the cell size and connectivity differ (KClO3 is the R3m 5-atom polymorph, distinct from the existing P2_1/m KClO3 mp-23022 already in family 40).",
+      "graph_a": "KClO3_mp-550506",
+      "graph_b": "PbSO3_mp-21190",
+      "cif_a": "KClO3_mp-550506.cif",
+      "cif_b": "PbSO3_mp-21190.cif",
+      "optimizer": "stoichiometry_constrained",
+      "cost_function": "edge_identity",
+      "cost_function_params": {
+        "edge_mismatch_cost": 0.2
+      },
+      "assertions": [
+        {
+          "assert": "cost",
+          "op": "ge",
+          "value": 0.1,
+          "description": "R3m chlorate primitive cell must not merge with P2_1/m sulfite doubled cell"
+        }
+      ],
+      "tags": [
+        "core",
+        "edge_identity",
+        "oxoanion_false_positive",
+        "stoich_constrained"
+      ]
+    },
+    {
+      "id": "nips3_vs_lino3_layered_vdw_edge_identity",
+      "type": "ged",
+      "description": "NiPS3 (C2/m 2D layered van der Waals phosphochalcogenide, P CN=7 with P-P dimers, 25 edges) vs LiNO3 (R-3c calcite-related 3D nitrate, N CN=3, 18 edges).  Family-1 false positive in families_v4.json: NiPS3 is a 2D vdW material with discrete P2S6 units, fundamentally different from a 3D calcite framework.  Edge count and central-cation CN both mismatch.",
+      "graph_a": "NiPS3_mp-676040",
+      "graph_b": "LiNO3_mp-8180",
+      "cif_a": "NiPS3_mp-676040.cif",
+      "cif_b": "LiNO3_mp-8180.cif",
+      "optimizer": "stoichiometry_constrained",
+      "cost_function": "edge_identity",
+      "cost_function_params": {
+        "edge_mismatch_cost": 0.2
+      },
+      "assertions": [
+        {
+          "assert": "cost",
+          "op": "ge",
+          "value": 0.1,
+          "description": "2D layered MPS3 vdW phosphochalcogenide must not merge with 3D calcite-type LiNO3"
+        }
+      ],
+      "tags": [
+        "core",
+        "edge_identity",
+        "layered_vdw_false_positive",
+        "stoich_constrained"
+      ]
+    },
+    {
+      "id": "crpse3_vs_lino3_layered_vdw_edge_identity",
+      "type": "ged",
+      "description": "CrPSe3 (C2/m 2D layered van der Waals phosphoselenide, P CN=11 with P-P dimer dominating coordination, 33 edges) vs LiNO3 (R-3c calcite-related 3D nitrate, N CN=3, 18 edges).  Family-1 false positive in families_v4.json: CrPSe3 has 15 more edges than the prototype and a wildly different central-atom CN.  This is the most clearly impossible direct match in the layered-vdW class.",
+      "graph_a": "CrPSe3_mp-1101069",
+      "graph_b": "LiNO3_mp-8180",
+      "cif_a": "CrPSe3_mp-1101069.cif",
+      "cif_b": "LiNO3_mp-8180.cif",
+      "optimizer": "stoichiometry_constrained",
+      "cost_function": "edge_identity",
+      "cost_function_params": {
+        "edge_mismatch_cost": 0.2
+      },
+      "assertions": [
+        {
+          "assert": "cost",
+          "op": "ge",
+          "value": 0.1,
+          "description": "2D layered MPSe3 vdW phosphoselenide must not merge with 3D calcite-type LiNO3"
+        }
+      ],
+      "tags": [
+        "core",
+        "edge_identity",
+        "layered_vdw_false_positive",
+        "stoich_constrained"
+      ]
+    },
+    {
+      "id": "crgete3_vs_lino3_layered_vdw_edge_identity",
+      "type": "ged",
+      "description": "CrGeTe3 (R-3 2D layered ferromagnetic van der Waals telluride, Ge CN=10, 31 edges) vs LiNO3 (R-3c calcite-related 3D nitrate, N CN=3, 18 edges).  Family-1 false positive in families_v4.json: CrGeTe3 is a layered ferromagnet with discrete Ge2Te6 dimer-like motifs, structurally unrelated to calcite.",
+      "graph_a": "CrGeTe3_mp-541449",
+      "graph_b": "LiNO3_mp-8180",
+      "cif_a": "CrGeTe3_mp-541449.cif",
+      "cif_b": "LiNO3_mp-8180.cif",
+      "optimizer": "stoichiometry_constrained",
+      "cost_function": "edge_identity",
+      "cost_function_params": {
+        "edge_mismatch_cost": 0.2
+      },
+      "assertions": [
+        {
+          "assert": "cost",
+          "op": "ge",
+          "value": 0.1,
+          "description": "2D layered ferromagnetic telluride must not merge with 3D calcite-type LiNO3"
+        }
+      ],
+      "tags": [
+        "core",
+        "edge_identity",
+        "layered_vdw_false_positive",
+        "stoich_constrained"
+      ]
+    },
+    {
       "id": "srtio3_vs_batio3_stoich_constrained_bnb",
       "type": "ged",
       "description": "BnB-optimizer port of srtio3_vs_batio3_stoich_constrained: SrTiO3 vs BaTiO3 with stoichiometry-constrained optimizer (cn_core_diff cost). Sr and Ba are in the same count-1 ambiguous pool with Ti; the cost function must select Sr\u2192Ba and Ti\u2192Ti (both correct site roles) over Sr\u2192Ti and Ti\u2192Ba (swapped, higher CN mismatch). O\u2192O is unambiguous (count 3). All three element mappings and near-zero cost are asserted.",
@@ -13242,6 +13774,209 @@
         "core",
         "edge_identity",
         "perovskite_cohesion",
+        "stoich_constrained",
+        "bnb"
+      ]
+    },
+    {
+      "id": "kno3_vs_pbso3_oxoanion_edge_identity_bnb",
+      "type": "ged",
+      "description": "BnB-optimizer port of kno3_vs_pbso3_oxoanion_edge_identity: KNO3 (R3m molecular nitrate, 5-atom cell, N CN=3) vs PbSO3 (P2_1/m pyramidal sulfite, 10-atom cell, S CN=4).  Family-40 false positive in families_v4.json — this is the optimizer config that produced the v4 file, so this is the actual failing direct-prototype comparison.",
+      "graph_a": "KNO3_mp-6920",
+      "graph_b": "PbSO3_mp-21190",
+      "cif_a": "KNO3_mp-6920.cif",
+      "cif_b": "PbSO3_mp-21190.cif",
+      "optimizer": "stoich_constrained_bnb",
+      "cost_function": "edge_identity",
+      "cost_function_params": {
+        "edge_mismatch_cost": 0.2
+      },
+      "assertions": [
+        {
+          "assert": "cost",
+          "op": "ge",
+          "value": 0.1,
+          "description": "Planar-NO3 nitrate must not merge with pyramidal-SO3 sulfite prototype"
+        }
+      ],
+      "tags": [
+        "core",
+        "edge_identity",
+        "oxoanion_false_positive",
+        "stoich_constrained",
+        "bnb"
+      ]
+    },
+    {
+      "id": "agno3_vs_pbso3_oxoanion_edge_identity_bnb",
+      "type": "ged",
+      "description": "BnB-optimizer port of agno3_vs_pbso3_oxoanion_edge_identity: AgNO3 (R3m phase-II silver nitrate, planar NO3-, 5-atom cell) vs PbSO3 (P2_1/m pyramidal sulfite, 10-atom cell).  Family-40 false positive companion under the BnB optimizer.",
+      "graph_a": "AgNO3_mp-8196",
+      "graph_b": "PbSO3_mp-21190",
+      "cif_a": "AgNO3_mp-8196.cif",
+      "cif_b": "PbSO3_mp-21190.cif",
+      "optimizer": "stoich_constrained_bnb",
+      "cost_function": "edge_identity",
+      "cost_function_params": {
+        "edge_mismatch_cost": 0.2
+      },
+      "assertions": [
+        {
+          "assert": "cost",
+          "op": "ge",
+          "value": 0.1,
+          "description": "Planar-NO3 nitrate must not merge with pyramidal-SO3 sulfite prototype"
+        }
+      ],
+      "tags": [
+        "core",
+        "edge_identity",
+        "oxoanion_false_positive",
+        "stoich_constrained",
+        "bnb"
+      ]
+    },
+    {
+      "id": "baco3_r3m_vs_pbso3_oxoanion_edge_identity_bnb",
+      "type": "ged",
+      "description": "BnB-optimizer port of baco3_r3m_vs_pbso3_oxoanion_edge_identity: BaCO3 mp-4559 (R3m calcite polymorph, planar CO3, 5-atom cell) vs PbSO3 (P2_1/m pyramidal sulfite, 10-atom cell).  Family-40 false positive in families_v4.json.",
+      "graph_a": "BaCO3_mp-4559",
+      "graph_b": "PbSO3_mp-21190",
+      "cif_a": "BaCO3_mp-4559.cif",
+      "cif_b": "PbSO3_mp-21190.cif",
+      "optimizer": "stoich_constrained_bnb",
+      "cost_function": "edge_identity",
+      "cost_function_params": {
+        "edge_mismatch_cost": 0.2
+      },
+      "assertions": [
+        {
+          "assert": "cost",
+          "op": "ge",
+          "value": 0.1,
+          "description": "Planar-CO3 carbonate must not merge with pyramidal-SO3 sulfite prototype"
+        }
+      ],
+      "tags": [
+        "core",
+        "edge_identity",
+        "oxoanion_false_positive",
+        "stoich_constrained",
+        "bnb"
+      ]
+    },
+    {
+      "id": "kclo3_vs_pbso3_oxoanion_edge_identity_bnb",
+      "type": "ged",
+      "description": "BnB-optimizer port of kclo3_vs_pbso3_oxoanion_edge_identity: KClO3 mp-550506 (R3m pyramidal chlorate, 5-atom cell) vs PbSO3 (P2_1/m pyramidal sulfite, 10-atom cell).  Family-40 false positive — both pyramidal XO3 but cell sizes differ.",
+      "graph_a": "KClO3_mp-550506",
+      "graph_b": "PbSO3_mp-21190",
+      "cif_a": "KClO3_mp-550506.cif",
+      "cif_b": "PbSO3_mp-21190.cif",
+      "optimizer": "stoich_constrained_bnb",
+      "cost_function": "edge_identity",
+      "cost_function_params": {
+        "edge_mismatch_cost": 0.2
+      },
+      "assertions": [
+        {
+          "assert": "cost",
+          "op": "ge",
+          "value": 0.1,
+          "description": "R3m chlorate primitive cell must not merge with P2_1/m sulfite doubled cell"
+        }
+      ],
+      "tags": [
+        "core",
+        "edge_identity",
+        "oxoanion_false_positive",
+        "stoich_constrained",
+        "bnb"
+      ]
+    },
+    {
+      "id": "nips3_vs_lino3_layered_vdw_edge_identity_bnb",
+      "type": "ged",
+      "description": "BnB-optimizer port of nips3_vs_lino3_layered_vdw_edge_identity: NiPS3 (C2/m 2D vdW phosphochalcogenide, P CN=7 with P-P dimers, 25 edges) vs LiNO3 (R-3c calcite-related, 18 edges).  Family-1 false positive in families_v4.json.",
+      "graph_a": "NiPS3_mp-676040",
+      "graph_b": "LiNO3_mp-8180",
+      "cif_a": "NiPS3_mp-676040.cif",
+      "cif_b": "LiNO3_mp-8180.cif",
+      "optimizer": "stoich_constrained_bnb",
+      "cost_function": "edge_identity",
+      "cost_function_params": {
+        "edge_mismatch_cost": 0.2
+      },
+      "assertions": [
+        {
+          "assert": "cost",
+          "op": "ge",
+          "value": 0.1,
+          "description": "2D layered MPS3 vdW phosphochalcogenide must not merge with 3D calcite-type LiNO3"
+        }
+      ],
+      "tags": [
+        "core",
+        "edge_identity",
+        "layered_vdw_false_positive",
+        "stoich_constrained",
+        "bnb"
+      ]
+    },
+    {
+      "id": "crpse3_vs_lino3_layered_vdw_edge_identity_bnb",
+      "type": "ged",
+      "description": "BnB-optimizer port of crpse3_vs_lino3_layered_vdw_edge_identity: CrPSe3 (C2/m 2D vdW phosphoselenide, P CN=11, 33 edges) vs LiNO3 (R-3c calcite, N CN=3, 18 edges).  Family-1 false positive — the most extreme CN-mismatch case in the layered-vdW class.",
+      "graph_a": "CrPSe3_mp-1101069",
+      "graph_b": "LiNO3_mp-8180",
+      "cif_a": "CrPSe3_mp-1101069.cif",
+      "cif_b": "LiNO3_mp-8180.cif",
+      "optimizer": "stoich_constrained_bnb",
+      "cost_function": "edge_identity",
+      "cost_function_params": {
+        "edge_mismatch_cost": 0.2
+      },
+      "assertions": [
+        {
+          "assert": "cost",
+          "op": "ge",
+          "value": 0.1,
+          "description": "2D layered MPSe3 vdW phosphoselenide must not merge with 3D calcite-type LiNO3"
+        }
+      ],
+      "tags": [
+        "core",
+        "edge_identity",
+        "layered_vdw_false_positive",
+        "stoich_constrained",
+        "bnb"
+      ]
+    },
+    {
+      "id": "crgete3_vs_lino3_layered_vdw_edge_identity_bnb",
+      "type": "ged",
+      "description": "BnB-optimizer port of crgete3_vs_lino3_layered_vdw_edge_identity: CrGeTe3 (R-3 layered ferromagnetic vdW telluride, Ge CN=10, 31 edges) vs LiNO3 (R-3c calcite, 18 edges).  Family-1 false positive — vdW telluride should not match a 3D calcite framework.",
+      "graph_a": "CrGeTe3_mp-541449",
+      "graph_b": "LiNO3_mp-8180",
+      "cif_a": "CrGeTe3_mp-541449.cif",
+      "cif_b": "LiNO3_mp-8180.cif",
+      "optimizer": "stoich_constrained_bnb",
+      "cost_function": "edge_identity",
+      "cost_function_params": {
+        "edge_mismatch_cost": 0.2
+      },
+      "assertions": [
+        {
+          "assert": "cost",
+          "op": "ge",
+          "value": 0.1,
+          "description": "2D layered ferromagnetic telluride must not merge with 3D calcite-type LiNO3"
+        }
+      ],
+      "tags": [
+        "core",
+        "edge_identity",
+        "layered_vdw_false_positive",
         "stoich_constrained",
         "bnb"
       ]
