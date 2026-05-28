@@ -70,7 +70,11 @@
       "Bash(echo \"EXIT=$?\")",
       "Bash(ps -p 41645 -o pid,etime,pcpu)",
       "Bash(sort -u -t: -k2)",
-      "Bash(awk '/\"id\":.*edge_identity/{start=NR-1} /\"tags\":/{if \\(start\\) {print start\"-\"NR; start=0}}' /home/wyatt/PycharmProjects/RPToleranceFactor/unit_tests/test_ged.json)"
+      "Bash(awk '/\"id\":.*edge_identity/{start=NR-1} /\"tags\":/{if \\(start\\) {print start\"-\"NR; start=0}}' /home/wyatt/PycharmProjects/RPToleranceFactor/unit_tests/test_ged.json)",
+      "Bash(dir C:\\\\Users\\\\wyatt\\\\PycharmProjects\\\\RPToleranceFactor\\\\*.py /b)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\wyatt\\\\PycharmProjects\\\\RPToleranceFactor\\\\data\\\\cifs\" -Filter \"*.cif\")",
+      "Bash(Select-Object -ExpandProperty Name)",
+      "Bash(Sort-Object)"
     ]
   }
 }

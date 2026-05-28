@@ -1,0 +1,226 @@
+{
+  "description": "Polyhedral connectivity — B-site cations in perovskite, ilmenite, and pyrochlore",
+  "cif_root": "data/cifs",
+  "graph_cache_dir": "data/unit_tests/graphs",
+  "graph_builder": "crystal_graph_v4",
+  "tests": [
+    {
+      "id": "srtio3_perovskite_polyhedral",
+      "type": "graph_build",
+      "description": "SrTiO3 cubic perovskite (Pm-3m): TiO6 corner-sharing only",
+      "tags": ["core", "polyhedral", "perovskite"],
+      "cif": "SrTiO3_mp-5229.cif",
+      "assertions": [
+        {
+          "assert": "node_cn",
+          "element": "Ti",
+          "sphere": "core",
+          "expected": 6,
+          "description": "Ti CN=6 (octahedral)"
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "element_a": "Ti",
+          "element_b": "Ti",
+          "sphere": "core",
+          "mode": "corner",
+          "min_count": 6,
+          "max_count": 6,
+          "per_node": true,
+          "description": "Each TiO6 corner-shares with exactly 6 Ti neighbours"
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "element_a": "Ti",
+          "element_b": "Ti",
+          "sphere": "core",
+          "mode": "edge",
+          "max_count": 0,
+          "description": "No Ti-Ti edge-sharing in perovskite"
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "element_a": "Ti",
+          "element_b": "Ti",
+          "sphere": "core",
+          "mode": "face",
+          "max_count": 0,
+          "description": "No Ti-Ti face-sharing in perovskite"
+        }
+      ]
+    },
+    {
+      "id": "lafeo3_perovskite_polyhedral",
+      "type": "graph_build",
+      "description": "LaFeO3 orthorhombic perovskite (Pbnm): FeO6 corner-sharing topology preserved under tilt",
+      "tags": ["core", "polyhedral", "perovskite"],
+      "cif": "LaFeO3_mp-22590.cif",
+      "assertions": [
+        {
+          "assert": "node_cn",
+          "element": "Fe",
+          "sphere": "core",
+          "expected": 6,
+          "description": "Fe CN=6 (octahedral)"
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "element_a": "Fe",
+          "element_b": "Fe",
+          "sphere": "core",
+          "mode": "corner",
+          "min_count": 6,
+          "max_count": 6,
+          "per_node": true,
+          "description": "Each FeO6 corner-shares with exactly 6 Fe neighbours"
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "element_a": "Fe",
+          "element_b": "Fe",
+          "sphere": "core",
+          "mode": "edge",
+          "max_count": 0,
+          "description": "No Fe-Fe edge-sharing in perovskite"
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "element_a": "Fe",
+          "element_b": "Fe",
+          "sphere": "core",
+          "mode": "face",
+          "max_count": 0,
+          "description": "No Fe-Fe face-sharing in perovskite"
+        }
+      ]
+    },
+    {
+      "id": "mgtio3_ilmenite_polyhedral",
+      "type": "graph_build",
+      "description": "MgTiO3 ilmenite (R-3): TiO6 edge-shares within Ti layer, face-shares across to MgO6",
+      "tags": ["core", "polyhedral", "ilmenite"],
+      "cif": "MgTiO3_mp-3771.cif",
+      "assertions": [
+        {
+          "assert": "node_cn",
+          "element": "Ti",
+          "sphere": "core",
+          "expected": 6,
+          "description": "Ti CN=6 (octahedral)"
+        },
+        {
+          "assert": "node_cn",
+          "element": "Mg",
+          "sphere": "core",
+          "expected": 6,
+          "description": "Mg CN=6 (octahedral)"
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "element_a": "Ti",
+          "element_b": "Ti",
+          "sphere": "core",
+          "mode": "edge",
+          "min_count": 3,
+          "max_count": 3,
+          "per_node": true,
+          "description": "Each TiO6 edge-shares with exactly 3 TiO6 within the Ti layer"
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "element_a": "Ti",
+          "element_b": "Mg",
+          "sphere": "core",
+          "mode": "face",
+          "min_count": 1,
+          "max_count": 1,
+          "per_node": true,
+          "description": "Each TiO6 face-shares with exactly 1 MgO6 (the A-B interlayer pair)"
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "element_a": "Ti",
+          "element_b": "Ti",
+          "sphere": "core",
+          "mode": "corner",
+          "max_count": 0,
+          "description": "No Ti-Ti corner-sharing in ilmenite"
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "element_a": "Ti",
+          "element_b": "Ti",
+          "sphere": "core",
+          "mode": "face",
+          "max_count": 0,
+          "description": "No Ti-Ti face-sharing in ilmenite"
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "element_a": "Ti",
+          "element_b": "Mg",
+          "sphere": "core",
+          "mode": "edge",
+          "max_count": 0,
+          "description": "No Ti-Mg edge-sharing in ilmenite"
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "element_a": "Ti",
+          "element_b": "Mg",
+          "sphere": "core",
+          "mode": "corner",
+          "min_count": 9,
+          "max_count": 9,
+          "per_node": true,
+          "description": "Each TiO6 corner-shares with exactly 9 MgO6 (3 below via face-layer O, 6 above via opposite-face O)"
+        }
+      ]
+    },
+    {
+      "id": "y2ti2o7_pyrochlore_polyhedral",
+      "type": "graph_build",
+      "description": "Y2Ti2O7 pyrochlore (Fd-3m): TiO6 corner-sharing network, no edge or face sharing",
+      "tags": ["core", "polyhedral", "pyrochlore"],
+      "cif": "Y2Ti2O7_mp-5373.cif",
+      "assertions": [
+        {
+          "assert": "node_cn",
+          "element": "Ti",
+          "sphere": "core",
+          "expected": 6,
+          "description": "Ti CN=6 (octahedral)"
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "element_a": "Ti",
+          "element_b": "Ti",
+          "sphere": "core",
+          "mode": "corner",
+          "min_count": 6,
+          "max_count": 6,
+          "per_node": true,
+          "description": "Each TiO6 corner-shares with exactly 6 Ti neighbours in the pyrochlore B-site network"
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "element_a": "Ti",
+          "element_b": "Ti",
+          "sphere": "core",
+          "mode": "edge",
+          "max_count": 0,
+          "description": "No Ti-Ti edge-sharing in pyrochlore (distinguishes from ilmenite)"
+        },
+        {
+          "assert": "polyhedral_sharing",
+          "element_a": "Ti",
+          "element_b": "Ti",
+          "sphere": "core",
+          "mode": "face",
+          "max_count": 0,
+          "description": "No Ti-Ti face-sharing in pyrochlore"
+        }
+      ]
+    }
+  ]
+}

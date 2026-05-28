@@ -1322,7 +1322,7 @@ def build_crystal_graph_from_cif(
     #   mean/std_path    aggregate over bridging atoms
     #   direct_distance  Cartesian |A→C| respecting to_jimage
     # ------------------------------------------------------------------
-    poly_adj: Dict[int, List[Tuple[int, Tuple[int, int, int], np.ndarray]]] = {
+    poly_adj: Dict[int, List[Tuple[int, Tuple[int, int, int], np.ndarray, bool]]] = {
         i: [] for i in range(n_nodes)
     }
     for edge in edges:
@@ -1331,10 +1331,22 @@ def build_crystal_graph_from_cif(
         img: Tuple[int, int, int] = tuple(edge["to_jimage"])      # type: ignore
         neg: Tuple[int, int, int] = (-img[0], -img[1], -img[2])
         cv  = np.asarray(edge["cart_vec"], dtype=float)
-        poly_adj[s].append((t, img,  cv))
-        poly_adj[t].append((s, neg, -cv))
+        is_core = edge.get("coordination_sphere") == "core"
+        poly_adj[s].append((t, img,  cv, is_core))
+        poly_adj[t].append((s, neg, -cv, is_core))
 
     node_roles_list = [str(n.get("ion_role", "unknown")) for n in nodes]
+
+    # cation_adj[cat] = [(anion_idx, img_from_cat, cart_vec_from_cat, is_core), ...]
+    # Used below to get a cation's ligand set for torsion computation.
+    cation_adj: Dict[int, List[Tuple[int, Tuple[int, int, int], np.ndarray, bool]]] = defaultdict(list)
+    for _m in range(n_nodes):
+        if node_roles_list[_m] != "anion":
+            continue
+        for (cat, img_cat, vec_mc, is_c) in poly_adj[_m]:
+            if node_roles_list[cat] == "cation":
+                neg_i: Tuple[int, int, int] = (-img_cat[0], -img_cat[1], -img_cat[2])
+                cation_adj[cat].append((_m, neg_i, -vec_mc, is_c))
 
     def _canonical_poly(
         a: int, img_a: Tuple[int, int, int],
@@ -1352,7 +1364,46 @@ def build_crystal_graph_from_cif(
         # when iterating from the other side of the bond, giving a second entry.
         return a, a, min(delta, neg)
 
-    # poly_paths[canonical_key] = [{angle_deg, path_length, path_type}, ...]
+    def _corner_torsion(
+        vec_mid_a: np.ndarray,
+        ligands_a: List[np.ndarray],
+        ligands_b: List[np.ndarray],
+    ) -> Optional[float]:
+        """
+        Minimum angle (0–90°) between any equatorial ligand of A and any of B,
+        projected onto the plane perpendicular to the M→A bridge axis.
+        Accounts for n-fold symmetry: 0° = perfectly aligned, 45° = maximally
+        rotated octahedra (4-fold), 90° = maximally rotated 2-fold units.
+        """
+        if not ligands_a or not ligands_b:
+            return None
+        u = vec_mid_a / float(np.linalg.norm(vec_mid_a))
+
+        def equatorial_dirs(vecs: List[np.ndarray]) -> List[np.ndarray]:
+            dirs = []
+            for v in vecs:
+                if float(np.linalg.norm(v)) < 1e-8:
+                    continue
+                perp = v - float(np.dot(v, u)) * u
+                pn = float(np.linalg.norm(perp))
+                if pn > 1e-8:
+                    dirs.append(perp / pn)
+            return dirs
+
+        dirs_a = equatorial_dirs(ligands_a)
+        dirs_b = equatorial_dirs(ligands_b)
+        if not dirs_a or not dirs_b:
+            return None
+        min_ang = 180.0
+        for da in dirs_a:
+            for db in dirs_b:
+                cos_t = float(np.clip(np.dot(da, db), -1.0, 1.0))
+                ang = float(np.degrees(np.arccos(cos_t)))
+                if ang < min_ang:
+                    min_ang = ang
+        return min_ang
+
+    # poly_paths[canonical_key] = [{angle_deg, path_length, path_type, is_core, _mid, ...}, ...]
     poly_paths: Dict[Tuple, List[Dict[str, Any]]] = defaultdict(list)
 
     for mid in range(n_nodes):
@@ -1363,14 +1414,14 @@ def build_crystal_graph_from_cif(
         role_m = node_roles_list[mid]
 
         for ka in range(k):
-            a, img_a, vec_ma = nbrs[ka]
+            a, img_a, vec_ma, is_core_a = nbrs[ka]
             len_ma = float(np.linalg.norm(vec_ma))
             if len_ma < 1e-8:
                 continue
             role_a = node_roles_list[a]
 
             for kb in range(ka + 1, k):
-                b, img_b, vec_mb = nbrs[kb]
+                b, img_b, vec_mb, is_core_b = nbrs[kb]
                 len_mb = float(np.linalg.norm(vec_mb))
                 if len_mb < 1e-8:
                     continue
@@ -1393,20 +1444,27 @@ def build_crystal_graph_from_cif(
                     "angle_deg":   angle,
                     "path_length": path_len,
                     "path_type":   path_type,
+                    "is_core":     is_core_a and is_core_b,
+                    "_mid":        mid,
+                    "_img_a":      img_a,
+                    "_img_b":      img_b,
+                    "_vec_mid_a":  vec_ma,
+                    "_vec_mid_b":  vec_mb,
                 })
 
     _MODE_LABELS: Dict[int, str] = {1: "corner", 2: "edge", 3: "face"}
     polyhedral_edges: List[Dict[str, Any]] = []
     for (na, nb, delta) in sorted(poly_paths.keys()):
-        paths  = poly_paths[(na, nb, delta)]
-        count  = len(paths)
+        paths      = poly_paths[(na, nb, delta)]
+        count_all  = len(paths)
+        count_core = sum(1 for p in paths if p["is_core"])
         angles = sorted(p["angle_deg"]   for p in paths)
         plens  = sorted(p["path_length"] for p in paths)
 
         mean_ang = float(np.mean(angles))
-        std_ang  = float(np.std(angles)) if count > 1 else 0.0
+        std_ang  = float(np.std(angles)) if count_all > 1 else 0.0
         mean_pl  = float(np.mean(plens))
-        std_pl   = float(np.std(plens))  if count > 1 else 0.0
+        std_pl   = float(np.std(plens))  if count_all > 1 else 0.0
 
         frac_ac = (
             structure[nb].frac_coords
@@ -1420,21 +1478,46 @@ def build_crystal_graph_from_cif(
             pt_counts[p["path_type"]] += 1
         path_type = max(pt_counts, key=lambda x: pt_counts[x])
 
+        def _torsion_for(use_core: bool) -> Optional[float]:
+            cands = [p for p in paths if p["is_core"]] if use_core else paths
+            if len(cands) != 1 or cands[0]["path_type"] != "cation-anion-cation":
+                return None
+            p = cands[0]
+            mid_idx = p["_mid"]
+            img_a: Tuple[int, int, int] = p["_img_a"]
+            img_b: Tuple[int, int, int] = p["_img_b"]
+            excl_a = (mid_idx, (-img_a[0], -img_a[1], -img_a[2]))
+            excl_b = (mid_idx, (-img_b[0], -img_b[1], -img_b[2]))
+            if use_core:
+                ligs_a = [cv for (an, im, cv, ic) in cation_adj[na] if ic and (an, im) != excl_a]
+                ligs_b = [cv for (an, im, cv, ic) in cation_adj[nb] if ic and (an, im) != excl_b]
+            else:
+                ligs_a = [cv for (an, im, cv, _) in cation_adj[na] if (an, im) != excl_a]
+                ligs_b = [cv for (an, im, cv, _) in cation_adj[nb] if (an, im) != excl_b]
+            return _corner_torsion(p["_vec_mid_a"], ligs_a, ligs_b)
+
+        torsion_core = _torsion_for(use_core=True)
+        torsion_all  = _torsion_for(use_core=False)
+
         polyhedral_edges.append({
-            "id":               len(polyhedral_edges),
-            "node_a":           na,
-            "node_b":           nb,
-            "to_jimage":        list(delta),
-            "path_type":        path_type,
-            "shared_count":     count,
-            "mode":             _MODE_LABELS.get(count, f"multi_{count}"),
-            "angles_deg":       [round(a, 4) for a in angles],
-            "path_lengths":     [round(pl, 6) for pl in plens],
-            "mean_angle_deg":   round(mean_ang, 4),
-            "std_angle_deg":    round(std_ang,  4),
-            "mean_path_length": round(mean_pl,  6),
-            "std_path_length":  round(std_pl,   6),
-            "direct_distance":  round(direct_dist, 6),
+            "id":                len(polyhedral_edges),
+            "node_a":            na,
+            "node_b":            nb,
+            "to_jimage":         list(delta),
+            "path_type":         path_type,
+            "shared_count_all":  count_all,
+            "shared_count_core": count_core,
+            "mode_all":          _MODE_LABELS.get(count_all,  f"multi_{count_all}"),
+            "mode_core":         _MODE_LABELS.get(count_core) if count_core > 0 else None,
+            "angles_deg":        [round(a, 4) for a in angles],
+            "path_lengths":      [round(pl, 6) for pl in plens],
+            "mean_angle_deg":    round(mean_ang, 4),
+            "std_angle_deg":     round(std_ang,  4),
+            "mean_path_length":  round(mean_pl,  6),
+            "std_path_length":   round(std_pl,   6),
+            "direct_distance":   round(direct_dist, 6),
+            "torsion_core_deg":  round(torsion_core, 4) if torsion_core is not None else None,
+            "torsion_all_deg":   round(torsion_all,  4) if torsion_all  is not None else None,
         })
 
     # ------------------------------------------------------------------
@@ -1451,13 +1534,17 @@ def build_crystal_graph_from_cif(
             else:
                 node_extended_counts[nid] += 1
 
-    sharing_hists: List[Dict[str, int]] = [
+    sharing_hists_all: List[Dict[str, int]] = [
+        {"corner": 0, "edge": 0, "face": 0, "other": 0}
+        for _ in range(n_nodes)
+    ]
+    sharing_hists_core: List[Dict[str, int]] = [
         {"corner": 0, "edge": 0, "face": 0, "other": 0}
         for _ in range(n_nodes)
     ]
     for pedge in polyhedral_edges:
         na, nb = pedge["node_a"], pedge["node_b"]
-        key = _MODE_LABELS.get(pedge["shared_count"], "other")
+        key_all = _MODE_LABELS.get(pedge["shared_count_all"], "other")
         # Always increment both endpoints, even when na == nb (self-image
         # polyhedral edge through a periodic image of the same atom).  This
         # makes the per-atom hist supercell-invariant: a self-image edge in
@@ -1466,8 +1553,12 @@ def build_crystal_graph_from_cif(
         # SrTiO3 unit-cell Sr hist {corner:6,face:8,other:3} jumps to
         # {corner:10,face:8,other:4} in a 1×1×2 supercell — same crystal,
         # different normalised proportions, breaking PolyhedralCost.
-        sharing_hists[na][key] += 1
-        sharing_hists[nb][key] += 1
+        sharing_hists_all[na][key_all] += 1
+        sharing_hists_all[nb][key_all] += 1
+        if pedge["shared_count_core"] > 0:
+            key_core = _MODE_LABELS.get(pedge["shared_count_core"], "other")
+            sharing_hists_core[na][key_core] += 1
+            sharing_hists_core[nb][key_core] += 1
 
     # ------------------------------------------------------------------
     # Nearest neighbours (all atom types, distance-ranked, MULTI-IMAGE)
@@ -1512,7 +1603,8 @@ def build_crystal_graph_from_cif(
         node["cn_core"]     = node_core_counts[idx]
         node["cn_extended"] = node_extended_counts[idx]
         node["ecn_value"]   = round(ecn_values[idx], 4)
-        node["sharing_mode_hist"] = sharing_hists[idx]
+        node["sharing_mode_hist_all"]  = sharing_hists_all[idx]
+        node["sharing_mode_hist_core"] = sharing_hists_core[idx]
         node["nearest_neighbors"] = nearest_neighbors[idx]
 
         # Use CN-specific Shannon radius (no extrapolation fallback).

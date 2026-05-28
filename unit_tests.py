@@ -105,19 +105,22 @@ def _eval_node_cn(graph: Dict[str, Any], a: Dict[str, Any]) -> AssertionResult:
     element  = a["element"]
     expected = int(a["expected"])
     tol      = int(a.get("tolerance", 0))
+    sphere   = a.get("sphere", "core")  # "core" uses cn_core; "total" uses coordination_number
+
+    cn_field = "cn_core" if sphere == "core" else "coordination_number"
 
     matches = [n for n in graph["nodes"] if n.get("element") == element]
     if not matches:
         return _fail(f"No nodes with element='{element}' found in graph")
 
-    bad = [n for n in matches if abs(n["coordination_number"] - expected) > tol]
+    bad = [n for n in matches if abs(n[cn_field] - expected) > tol]
     if bad:
-        cns = sorted(set(n["coordination_number"] for n in bad))
+        cns = sorted(set(n[cn_field] for n in bad))
         return _fail(
             f"{element} CN expected {expected}±{tol}, got {cns} "
             f"on {len(bad)}/{len(matches)} node(s)"
         )
-    cns_found = sorted(set(n["coordination_number"] for n in matches))
+    cns_found = sorted(set(n[cn_field] for n in matches))
     return _pass(f"{element} CN={cns_found} (expected {expected}±{tol})")
 
 
@@ -186,12 +189,23 @@ def _eval_num_edges(graph: Dict[str, Any], a: Dict[str, Any]) -> AssertionResult
     return _pass(f"num_edges={actual} (expected {expected}±{tol})")
 
 
+def _bounds_str(min_count: int, max_count: Optional[int]) -> str:
+    if max_count is not None and max_count == min_count:
+        return f"={max_count}"
+    if max_count is not None:
+        return f"[{min_count}, {max_count}]"
+    return f"≥{min_count}"
+
+
 def _eval_polyhedral_sharing(graph: Dict[str, Any], a: Dict[str, Any]) -> AssertionResult:
     ea        = a["element_a"]
     eb        = a["element_b"]
     mode      = a["mode"]
-    min_count = int(a.get("min_count", 1))
+    min_count = int(a.get("min_count", 0))
+    max_count = int(a["max_count"]) if "max_count" in a else None
     per_node  = bool(a.get("per_node", False))
+    sphere    = a.get("sphere", "core")  # "core" or "all"
+    mode_field = "mode_core" if sphere == "core" else "mode_all"
 
     node_element: Dict[int, str] = {
         int(n["id"]): n.get("element", "")
@@ -201,50 +215,60 @@ def _eval_polyhedral_sharing(graph: Dict[str, Any], a: Dict[str, Any]) -> Assert
     if not per_node:
         count = 0
         for conn in graph.get("polyhedral_edges", graph.get("polyhedral_connections", [])):
-            if conn.get("mode") != mode:
+            if conn.get(mode_field) != mode:
                 continue
             elem_a = node_element.get(int(conn["node_a"]), "")
             elem_b = node_element.get(int(conn["node_b"]), "")
             if (elem_a == ea and elem_b == eb) or (elem_a == eb and elem_b == ea):
                 count += 1
 
-        if count < min_count:
+        bounds = _bounds_str(min_count, max_count)
+        if count < min_count or (max_count is not None and count > max_count):
             return _fail(
-                f"{ea}-{eb} {mode}-sharing connections: found {count}, "
-                f"expected ≥ {min_count}"
+                f"{ea}-{eb} {mode}-sharing connections: found {count}, expected {bounds}"
             )
-        return _pass(f"{ea}-{eb} {mode}-sharing connections: {count} (≥ {min_count})")
+        return _pass(f"{ea}-{eb} {mode}-sharing connections: {count} ({bounds})")
 
-    # per_node=True: every node of element_a must have >= min_count connections of this mode to element_b
+    # per_node=True: every node of element_a must satisfy the count bounds.
     from collections import defaultdict
     node_counts: Dict[int, int] = defaultdict(int)
     nodes_ea = [int(n["id"]) for n in graph["nodes"] if n.get("element") == ea]
 
     for conn in graph.get("polyhedral_edges", graph.get("polyhedral_connections", [])):
-        if conn.get("mode") != mode:
+        if conn.get(mode_field) != mode:
             continue
         na = int(conn["node_a"])
         nb = int(conn["node_b"])
         elem_na = node_element.get(na, "")
         elem_nb = node_element.get(nb, "")
         if (elem_na == ea and elem_nb == eb) or (elem_na == eb and elem_nb == ea):
-            # Count for every ea-typed endpoint (both sides when ea == eb)
+            # Count both endpoints even when na == nb (self-image edge).  Each
+            # self-image polyhedral edge in the canonical representation covers two
+            # physical second-neighbour connections (e.g. the ±x direction in cubic
+            # SrTiO3 share a single O, giving one canonical edge that represents 2
+            # connections).  The double-increment restores the physical count and
+            # keeps it consistent with cross-atom edges in larger cells.
             if elem_na == ea:
                 node_counts[na] += 1
             if elem_nb == ea:
                 node_counts[nb] += 1
 
-    failing = [(nid, node_counts.get(nid, 0)) for nid in nodes_ea if node_counts.get(nid, 0) < min_count]
+    bounds = _bounds_str(min_count, max_count)
+    failing = [
+        (nid, node_counts.get(nid, 0)) for nid in nodes_ea
+        if node_counts.get(nid, 0) < min_count
+        or (max_count is not None and node_counts.get(nid, 0) > max_count)
+    ]
     if failing:
         details = ", ".join(f"node {nid}:{cnt}" for nid, cnt in failing)
         return _fail(
             f"{ea}-{eb} {mode}-sharing per node: {len(failing)}/{len(nodes_ea)} {ea} nodes "
-            f"have < {min_count} connections ({details})"
+            f"out of bounds {bounds} ({details})"
         )
     counts = [node_counts.get(nid, 0) for nid in nodes_ea]
     return _pass(
         f"{ea}-{eb} {mode}-sharing per node: all {len(nodes_ea)} {ea} nodes "
-        f"have ≥ {min_count} (counts: {counts})"
+        f"in bounds {bounds} (counts: {counts})"
     )
 
 
